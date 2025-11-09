@@ -198,7 +198,7 @@ python-magic==0.4.27
 python-multipart==0.0.6
 python-nvd3==0.16.0
 python-slugify==8.0.4
-pytz==2024.2
+pytz<2024
 pytzdata==2020.1
 PyYAML==6.0.2
 querystring-parser==1.2.4
