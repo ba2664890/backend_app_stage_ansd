@@ -152,7 +152,7 @@ opentelemetry-proto==1.27.0
 opentelemetry-sdk==1.27.0
 opentelemetry-semantic-conventions==0.48b0
 ordered-set==4.1.0
-packaging==24.1
+packaging<24
 pandas==2.1.4
 parsel==1.10.0
 passlib==1.7.4
@@ -198,7 +198,7 @@ python-magic==0.4.27
 python-multipart==0.0.6
 python-nvd3==0.16.0
 python-slugify==8.0.4
-pytz<2024
+pytz<2024.5,>=2020.1
 pytzdata==2020.1
 PyYAML==6.0.2
 querystring-parser==1.2.4
