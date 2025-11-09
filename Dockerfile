@@ -26,6 +26,10 @@ RUN pip install --no-cache-dir nltk==3.8.1
 # Télécharger les données NLTK nécessaires
 RUN python -m nltk.downloader punkt stopwords wordnet averaged_perceptron_tagger
 
+# Installer Pydantic avec le support email
+RUN pip install --no-cache-dir "pydantic[email]"
+
+
 # Installer les autres dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
