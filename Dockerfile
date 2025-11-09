@@ -1,56 +1,39 @@
-# Dockerfile pour le développement FastAPI
+# Dockerfile PRODUCTION / DEV FastAPI compatible Railway
 FROM python:3.11-slim
 
-# Définir le répertoire de travail
 WORKDIR /app
 
-# Installer les dépendances système
+# dépendances système
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    postgresql-client \
     curl \
     git \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copier le fichier requirements.txt
-COPY requirements.txt .
+# copier requirements
+COPY requirements.txt /app/requirements.txt
 
-# Installer PyTorch CPU compatible Python 3.11
+# installer pytorch cpu (plus ligh possible pour railway)
 RUN pip install --no-cache-dir torch==2.3.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
+# install deps python
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Installer NLTK avant de télécharger ses ressources
-RUN pip install --no-cache-dir nltk==3.8.1
-
-# Télécharger les données NLTK nécessaires
+# nltk + data
 RUN python -m nltk.downloader punkt stopwords wordnet averaged_perceptron_tagger
 
-# Installer Pydantic avec le support email
-RUN pip install --no-cache-dir "pydantic[email]"
+# copier app
+COPY . /app
 
-RUN pip install --no-cache-dir python-magic
-
-
-# Installer python-magic
-RUN pip install --no-cache-dir python-magic
-
-# Installer les autres dépendances Python
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copier le code de l'application
-COPY . .
-
-# Créer les répertoires nécessaires
+# create dirs
 RUN mkdir -p /app/models /app/logs /app/uploads
 
-# Définir les variables d'environnement
-ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
-ENV FLASK_ENV=development
+ENV PYTHONPATH=/app
 
-# Exposer le port 8000
 EXPOSE 8000
 
-# Commande pour démarrer l'application FastAPI
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "debug"]
+# fastapi launch
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
