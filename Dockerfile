@@ -16,8 +16,9 @@ RUN apt-get update && apt-get install -y \
 # Copier le fichier requirements.txt
 COPY requirements.txt .
 
-# Installer PyTorch CPU
-RUN pip install --no-cache-dir torch==2.9.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+# Installer PyTorch CPU compatible Python 3.11
+RUN pip install --no-cache-dir torch==2.3.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
 
 # Installer NLTK avant de télécharger ses ressources
 RUN pip install --no-cache-dir nltk==3.8.1
