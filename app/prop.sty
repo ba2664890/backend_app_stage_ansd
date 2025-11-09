@@ -1,0 +1,163 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+
+%----------------------------------
+% MISE EN PAGE
+%----------------------------------
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm}
+\setstretch{1.2}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textbf{ENSAE Dakar}}
+\lhead{\textbf{Comité Olympiades de Mathématiques}}
+\cfoot{\thepage}
+
+%----------------------------------
+% COULEURS
+%----------------------------------
+\definecolor{ensaeblue}{RGB}{0,63,114}
+\definecolor{ensaeyellow}{RGB}{255,191,0}
+
+%----------------------------------
+% TITRES
+%----------------------------------
+\titleformat{\section}
+  {\color{ensaeblue}\normalfont\Large\bfseries}
+  {\thesection}{1em}{}
+\titleformat{\subsection}
+  {\color{ensaeblue}\normalfont\large\bfseries}
+  {\thesubsection}{1em}{}
+
+%----------------------------------
+% DOCUMENT
+%----------------------------------
+\begin{document}
+
+% LOGO ET ENTÊTE
+\begin{center}
+    \includegraphics[width=3cm]{logo-ensae.png}\\[0.3cm]
+    \textbf{\Large COMITÉ D’ORGANISATION DES OLYMPIADES DE MATHÉMATIQUES}\\[0.2cm]
+    \textbf{\large École Nationale de la Statistique et de l’Analyse Économique (ENSAE)}\\[0.2cm]
+    \rule{10cm}{0.4pt}\\[0.4cm]
+    {\Large \textbf{4\textsuperscript{e} Édition des Olympiades de Mathématiques}}\\[0.3cm]
+    {\large Janvier 2026}\\[0.2cm]
+    {\large \textbf{Thème :} \textit{« Rigueur, Logique et Créativité mathématique au service du Sénégal scientifique »}}\\[0.3cm]
+    \rule{10cm}{0.4pt}
+\end{center}
+
+\vspace{1cm}
+
+%----------------------------------
+\section*{Contexte et objectifs}
+
+L’Olympiade de Mathématiques de l’ENSAE vise à promouvoir la rigueur du raisonnement, la logique et la créativité scientifique parmi les élèves du secondaire. 
+La 4\textsuperscript{e} édition, prévue en janvier 2026, s’inscrit dans la continuité des éditions précédentes tout en tenant compte du calendrier scolaire sénégalais .
+
+\begin{tcolorbox}[colback=ensaeblue!5!white,colframe=ensaeblue,title=Objectifs pédagogiques]
+\begin{itemize}[leftmargin=1.2cm]
+  \item Valoriser la logique et la créativité plutôt que la mémorisation.
+  \item Initier à la modélisation et à la résolution de problèmes ouverts.
+  \item Promouvoir la culture mathématique et les vocations scientifiques.
+\end{itemize}
+\end{tcolorbox}
+
+%----------------------------------
+\section*{Programme Première }
+
+\subsection*{1. Équations et inéquations}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Équations et inéquations du 2\textsuperscript{e} degré (forme canonique, discriminant, signe).
+  \item Équations irrationnelles simples.
+  \item Systèmes linéaires à deux ou trois inconnues.
+\end{itemize}
+
+\subsection*{2. Polynômes et identités}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Factorisation et identités remarquables.
+  \item Relations entre coefficients et racines.
+\end{itemize}
+
+\subsection*{3. Géométrie et trigonométrie}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Coordonnées, vecteurs, produit scalaire.
+  \item Cercle trigonométrique, sinus, cosinus, tangente.
+  \item Résolution de triangles.
+\end{itemize}
+
+\subsection*{4. Raisonnement et culture mathématique}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Logique, implication, contre-exemples.
+  \item Problèmes de raisonnement combinatoire.
+  \item Découverte de mathématiciens africains.
+\end{itemize}
+
+%----------------------------------
+\section*{Programme Terminale }
+
+\subsection*{1. Suites numériques}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Définitions, suites arithmétiques et géométriques.
+  \item Limites et raisonnement par récurrence.
+\end{itemize}
+
+\subsection*{2. Fonctions }
+\begin{itemize}[leftmargin=1.2cm]
+  \item Étude qualitative de fonctions polynomiales simples.
+  \item Limites et continuité.
+  \item Dérivation et applications graphiques.
+\end{itemize}
+
+\subsection*{3. Nombres complexes }
+\begin{itemize}[leftmargin=1.2cm]
+  \item Forme algébrique, module, argument.
+  \item Interprétation géométrique.
+\end{itemize}
+
+\subsection*{4. Dénombrement et combinatoire}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Principe additif et multiplicatif du dénombrement.
+  \item Permutations, arrangements et combinaisons.
+  \item Applications à des situations concrètes (organisation, sélection, codage).
+\end{itemize}
+
+\subsection*{5. Culture et raisonnement}
+\begin{itemize}[leftmargin=1.2cm]
+  \item Démonstrations par récurrence, contraposée, raisonnement logique.
+  \item Ouverture vers les applications statistiques.
+\end{itemize}
+
+%----------------------------------
+\section*{Format de l’épreuve}
+
+\begin{center}
+\begin{tabular}{|p{3cm}|p{6cm}|p{2cm}|p{2cm}|}
+\hline
+\textbf{Partie} & \textbf{Contenu} & \textbf{Durée} & \textbf{Pondération} \\
+\hline
+A & Problèmes algébriques et géométriques & 1h30 & 60\% \\
+\hline
+B & Logique, culture mathématique et applications & 1h30 & 40\% \\
+\hline
+\end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+\noindent\textbf{Date prévue :} Janvier 2026 \hfill \textbf{Lieu :} ENSAE – Dakar
+
+\vspace{0.5cm}
+\begin{flushright}
+\textit{Proposé par Abdou BÂ }\\
+\textit{Octobre 2025}
+\end{flushright}
+
+\end{document}

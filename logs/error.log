@@ -1,0 +1,1688 @@
+2025-10-25 20:01:16 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:16 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:01:16 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:01:16 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:16 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:16 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:17 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:17 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:17 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:01:17 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:01:17 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:17 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:19 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:19 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:19 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:01:19 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:01:19 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:19 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:23 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:23 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:23 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:01:23 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:01:23 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:01:23 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:01 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:01 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:01 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:01 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:01 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:01 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:02 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:02 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:02 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:02 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:02 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:02 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:04 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:04 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:04 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:04 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:04 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:04 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:05 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:05 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:05 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:05 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:05 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:05 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:06 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:06 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:06 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:06 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:06 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:06 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:08 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:08 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:08 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:08 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:08 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:08 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:41 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:41 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:41 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:41 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:41 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:41 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:42 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:42 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:42 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:42 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:43 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:43 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:45 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:45 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:45 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:45 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:45 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:45 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:54 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:54 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:02:54 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:02:54 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:54 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:02:54 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:31 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:31 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:03:31 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:03:31 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:31 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:31 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:32 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:32 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:03:32 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:03:32 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:32 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:32 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:50 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:50 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:03:50 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:03:50 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:50 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:03:50 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:04:08 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 109 - Erreur lors de l'analyse du marché: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:04:08 - app.services.analytics_service - ERROR - analytics_service - get_market_overview - 110 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/analytics_service.py", line 82, in get_market_overview
+    start_date = self.get_start_date(end_date, period)
+AttributeError: 'AnalyticsService' object has no attribute 'get_start_date'
+
+2025-10-25 20:04:08 - app.main - ERROR - main - get_market_overview - 204 - Error fetching market overview: HTTPException() takes no keyword arguments
+2025-10-25 20:04:08 - app.main - ERROR - main - get_sector_analysis - 219 - Error fetching sector analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:04:08 - app.main - ERROR - main - get_skills_analysis - 235 - Error fetching skills analysis: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 20:04:08 - app.main - ERROR - main - get_salary_trends - 250 - Error fetching salary trends: 'AnalyticsService' object has no attribute 'get_start_date'
+2025-10-25 21:16:32 - uvicorn.error - ERROR - on - send - 134 - Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/env_app_emploi/lib/python3.10/site-packages/starlette/routing.py", line 686, in lifespan
+    await receive()
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/env_app_emploi/lib/python3.10/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+  File "/usr/lib/python3.10/asyncio/queues.py", line 159, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+2025-10-26 14:19:54 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:19:54 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:28:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:28:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:29:06 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:29:06 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:31:41 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:31:41 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:33:18 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:33:19 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:33:20 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:33:20 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:33:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:33:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:33:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:33:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:33:22 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:33:23 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:33:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:33:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:33:42 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:33:42 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:46:56 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:46:56 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:47:09 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:47:09 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:48:58 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:48:58 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:50:37 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:50:37 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:56:05 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:56:06 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:56:10 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:56:10 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:56:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:56:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 14:57:23 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 14:57:23 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:01:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:01:56 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:02:05 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:02:05 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:05:13 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:05:13 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:06:32 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:06:32 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:07:57 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:07:57 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:08:10 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:08:10 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:28:16 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:28:16 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:28:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:28:22 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:28:26 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:28:26 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:30:04 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:30:04 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:30:08 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:30:08 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:36:28 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:36:28 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:50:06 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:50:06 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:58:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:58:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:59:00 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:59:00 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 15:59:43 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 15:59:43 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:00:46 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:00:46 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:05:47 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:05:47 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:05:53 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:05:53 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:11:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:11:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:11:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:11:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:12:50 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:12:50 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:13:10 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:13:10 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:15:05 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:15:06 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:17:34 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:17:35 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:18:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:18:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:23:58 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:23:58 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:23:59 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:23:59 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:23:59 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:23:59 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:27:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:27:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:27:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:27:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:27:32 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:27:32 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:28:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:28:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:28:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:28:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:28:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:28:32 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:34:08 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:34:08 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:35:56 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:35:56 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:35:56 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:35:57 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:35:57 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:35:58 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:36:42 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:36:42 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:36:42 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:36:42 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:36:43 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:36:43 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:38:43 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:38:44 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:38:44 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:38:44 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 16:47:17 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 16:47:18 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 17:02:18 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 17:02:18 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 17:10:49 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 17:10:49 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_emerging_skills - 560 - Erreur compétences émergentes: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: SELECT unnest(offres_emploi_enrichies.extracted_skills) AS skill, count(offres_emploi_enrichies.id) AS count 
+FROM offres_emploi_enrichies JOIN offres_emploi_brutes ON offres_emploi_enrichies.offre_id = offres_emploi_brutes.id 
+WHERE offres_emploi_brutes.posted_date BETWEEN %(posted_date_1)s AND %(posted_date_2)s AND offres_emploi_enrichies.extracted_skills IS NOT NULL GROUP BY skill]
+[parameters: {'posted_date_1': datetime.datetime(2025, 7, 28, 17, 10, 49, 618768), 'posted_date_2': datetime.datetime(2025, 9, 11, 17, 10, 49, 618765)}]
+(Background on this error at: https://sqlalche.me/e/14/2j85)
+2025-10-26 17:10:49 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_sector_momentum - 971 - Erreur momentum secteurs: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: SELECT DISTINCT offres_emploi_enrichies.extracted_sector AS offres_emploi_enrichies_extracted_sector 
+FROM offres_emploi_enrichies 
+WHERE offres_emploi_enrichies.extracted_sector IS NOT NULL]
+(Background on this error at: https://sqlalche.me/e/14/2j85)
+2025-10-26 17:10:49 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_top_hiring_companies - 2205 - Erreur top entreprises: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: SELECT offres_emploi_brutes.company_name AS company, count(offres_emploi_brutes.id) AS offers 
+FROM offres_emploi_brutes 
+WHERE offres_emploi_brutes.posted_date BETWEEN %(posted_date_1)s AND %(posted_date_2)s AND offres_emploi_brutes.company_name IS NOT NULL AND offres_emploi_brutes.company_name != %(company_name_1)s GROUP BY offres_emploi_brutes.company_name ORDER BY offers DESC 
+ LIMIT %(param_1)s]
+[parameters: {'posted_date_1': datetime.datetime(2025, 7, 28, 17, 10, 49, 563465), 'posted_date_2': datetime.datetime(2025, 10, 26, 17, 10, 49, 563465), 'company_name_1': '', 'param_1': 5}]
+(Background on this error at: https://sqlalche.me/e/14/2j85)
+2025-10-26 17:10:49 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_seasonal_trends - 838 - Erreur tendances saisonnières: (psycopg2.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block
+
+[SQL: SELECT EXTRACT(month FROM offres_emploi_brutes.posted_date) AS month, count(offres_emploi_brutes.id) AS avg_count 
+FROM offres_emploi_brutes 
+WHERE offres_emploi_brutes.posted_date >= %(posted_date_1)s GROUP BY EXTRACT(month FROM offres_emploi_brutes.posted_date) ORDER BY month]
+[parameters: {'posted_date_1': datetime.datetime(2023, 10, 27, 17, 10, 49, 622471)}]
+(Background on this error at: https://sqlalche.me/e/14/2j85)
+2025-10-26 17:20:39 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 17:20:39 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 17:20:39 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 17:20:39 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 17:20:42 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 17:20:42 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 17:24:53 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 17:24:53 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 17:51:11 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 17:51:11 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 17:52:15 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 17:52:16 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:08:01 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:08:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:08:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:08:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:08:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:08:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:08:51 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:08:51 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:10:19 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:10:19 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:11:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:11:02 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:11:11 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:11:11 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:14:29 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:14:29 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:14:29 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:14:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:15:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:15:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:19:05 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:19:05 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:23:45 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:23:45 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:24:54 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:24:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:26:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:26:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:30:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:30:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:33:11 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:33:11 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:35:48 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:35:48 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:36:38 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:36:38 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:42:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:42:55 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:43:44 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:43:44 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:59:41 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:59:41 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:59:49 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:59:49 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 18:59:54 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 18:59:54 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:00:15 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 19:00:15 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:00:18 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 19:00:18 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:04:30 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 19:04:31 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:05:45 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 19:05:45 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:11:25 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 19:11:25 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:33:07 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 19:33:07 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:37:08 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 19:37:08 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:45:49 - app.main - ERROR - main - get_emerging_skills - 722 - Erreur compétences émergentes: 'AdvancedAnalyticsService' object has no attribute 'get_emerging_skills'
+2025-10-26 19:45:50 - app.main - ERROR - main - get_emerging_skills - 722 - Erreur compétences émergentes: 'AdvancedAnalyticsService' object has no attribute 'get_emerging_skills'
+2025-10-26 19:45:51 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:51 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:51 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:52 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:52 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:52 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:54 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:54 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:54 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:58 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:58 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:45:58 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:46:20 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - _get_top_sectors_with_growth - 217 - Erreur évolution contrats: name 'month' is not defined
+2025-10-26 19:46:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2261 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2255, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+2025-10-26 19:57:16 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:16 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:16 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:17 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:17 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:17 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:20 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:20 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:20 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:24 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:24 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:57:24 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:58:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:21 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:22 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:22 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:22 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:24 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:24 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:24 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:56 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:56 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:58:56 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 118, in get_enhanced_dashboard
+    salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_safe_salary_stats'. Did you mean: 'get_safe_salary_stats'?
+2025-10-26 19:59:18 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:18 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:18 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:19 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:19 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:19 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:21 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:21 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:35 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_enhanced_dashboard - 150 - Erreur dashboard enrichi: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:35 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_complete_analytics - 86 - Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 19:59:35 - app.main - ERROR - main - get_complete_analytics - 479 - ❌ Erreur analyse complète: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/main.py", line 475, in get_complete_analytics
+    result = analytics_service.get_complete_analytics(db, period)
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 76, in get_complete_analytics
+    dashboard=self.get_enhanced_dashboard(db, start_date, end_date),
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 121, in get_enhanced_dashboard
+    top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+AttributeError: 'AdvancedAnalyticsService' object has no attribute '_get_top_sectors_with_growth'
+2025-10-26 20:14:03 - app.services.advanced_analytics_service - ERROR - advanced_analytics_service - get_contract_type_evolution - 2301 - Erreur évolution contrats: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
+Traceback (most recent call last):
+  File "/home/cardan/Téléchargements/Projet_webscraping_stage_Ansd_2024_2025/v3/backend/app/services/advanced_analytics_service.py", line 2295, in get_contract_type_evolution
+    result.append(ContractTypeEvolution(
+  File "pydantic/main.py", line 341, in pydantic.main.BaseModel.__init__
+pydantic.error_wrappers.ValidationError: 1 validation error for ContractTypeEvolution
+contracts
+  field required (type=value_error.missing)
