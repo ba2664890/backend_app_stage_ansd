@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir torch==2.9.0+cpu -f https://download.pytorch.org/
 # Installer le reste des dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Installer NLTK séparément pour pouvoir utiliser le downloader
+RUN pip install --no-cache-dir nltk==3.8.1
+
 # Télécharger les données NLTK
 RUN python -m nltk.downloader punkt stopwords wordnet averaged_perceptron_tagger
 
