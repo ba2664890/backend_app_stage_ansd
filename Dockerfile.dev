@@ -13,10 +13,13 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copier les fichiers de requirements
+# Copier le fichier requirements.txt
 COPY requirements.txt .
 
-# Installer les dépendances Python
+# Installer PyTorch CPU depuis l'index officiel
+RUN pip install --no-cache-dir torch==2.9.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
+# Installer le reste des dépendances Python
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Télécharger les données NLTK
