@@ -29,6 +29,9 @@ RUN python -m nltk.downloader punkt stopwords wordnet averaged_perceptron_tagger
 # Installer Pydantic avec le support email
 RUN pip install --no-cache-dir "pydantic[email]"
 
+RUN pip install --no-cache-dir python-magic
+
+
 # Installer python-magic
 RUN pip install --no-cache-dir python-magic
 
