@@ -9,7 +9,7 @@ class Settings:
     """Application settings."""
     
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://Cardan:Fatimata05?@localhost:5432/scrap_immo")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_dMZCO35gNoeP@ep-long-resonance-a4y4jpe4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
     
     # API Configuration
     API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "your-secret-key-here")
