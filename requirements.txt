@@ -53,3 +53,5 @@ PyYAML==6.0.2
 jsonschema==4.23.0
 cattrs==23.1.2
 attrs>=22.2.0,<24.2.0
+
+python-magic
