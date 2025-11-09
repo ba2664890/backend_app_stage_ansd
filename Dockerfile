@@ -1,4 +1,4 @@
-# Dockerfile pour le développement
+# Dockerfile pour le développement FastAPI
 FROM python:3.11-slim
 
 # Définir le répertoire de travail
@@ -16,17 +16,17 @@ RUN apt-get update && apt-get install -y \
 # Copier le fichier requirements.txt
 COPY requirements.txt .
 
-# Installer PyTorch CPU depuis l'index officiel
+# Installer PyTorch CPU
 RUN pip install --no-cache-dir torch==2.9.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
-# Installer le reste des dépendances Python
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Installer NLTK séparément pour pouvoir utiliser le downloader
+# Installer NLTK avant de télécharger ses ressources
 RUN pip install --no-cache-dir nltk==3.8.1
 
-# Télécharger les données NLTK
+# Télécharger les données NLTK nécessaires
 RUN python -m nltk.downloader punkt stopwords wordnet averaged_perceptron_tagger
+
+# Installer les autres dépendances Python
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copier le code de l'application
 COPY . .
@@ -39,8 +39,8 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_ENV=development
 
-# Exposer le port 8000 pour l'application
+# Exposer le port 8000
 EXPOSE 8000
 
-# Commande pour démarrer l'application en mode développement
+# Commande pour démarrer l'application FastAPI
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "debug"]
