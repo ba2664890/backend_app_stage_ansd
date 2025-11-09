@@ -55,3 +55,4 @@ cattrs==23.1.2
 attrs>=22.2.0,<24.2.0
 
 python-magic
+PyPDF2==3.2.0

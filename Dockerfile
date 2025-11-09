@@ -1,4 +1,3 @@
-# Dockerfile pour FastAPI Railway
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -6,22 +5,18 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    curl \
-    git \
     postgresql-client \
     libmagic1 \
     libmagic-dev \
+    curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
-# installer torch CPU compatible python 3.11
 RUN pip install --no-cache-dir torch==2.3.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
-
 RUN pip install --no-cache-dir nltk==3.8.1
-
 RUN python -m nltk.downloader punkt stopwords wordnet averaged_perceptron_tagger
-
 RUN pip install --no-cache-dir "pydantic[email]"
 RUN pip install --no-cache-dir -r requirements.txt
 
