@@ -180,6 +180,7 @@ class UserProfileBase(BaseModel):
     preferred_salary_min: Optional[int] = Field(None, ge=0, description="Salaire minimum préféré")
     preferred_salary_max: Optional[int] = Field(None, ge=0, description="Salaire maximum préféré")
     cv_url: Optional[str] = Field(None, description="URL du CV")
+    
 
 class UserProfileCreate(UserProfileBase):
     """Modèle pour créer un profil utilisateur."""

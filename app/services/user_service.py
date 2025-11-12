@@ -47,7 +47,6 @@ class UserService:
                 # Mettre à jour le profil existant
                 for key, value in profile_data.dict().items():
                     setattr(existing_profile, key, value)
-                existing_profile.updated_at = datetime.now()
                 db.commit()
                 db.refresh(existing_profile)
                 logger.info(f"Profil mis à jour pour l'utilisateur {user_id}")
@@ -153,7 +152,6 @@ class UserService:
                 if hasattr(profile, key):
                     setattr(profile, key, value)
             
-            profile.updated_at = datetime.now()
             db.commit()
             db.refresh(profile)
             

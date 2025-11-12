@@ -255,7 +255,7 @@ async def get_salary_trends(
 @app.post("/login")
 def login(username: str, password: str, db: Session = Depends(get_db)):
     user = db.query(UserProfile).filter(UserProfile.email == username).first()
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not verify_password(password, str(user.hashed_password)):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
 
     access_token = create_access_token(data={"sub": user.email})
