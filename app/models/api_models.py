@@ -165,18 +165,27 @@ class RecommendationResponse(BaseModel):
     average_match_score: float
     generated_at: datetime
 
+# ==================== Pydantic Models ====================
 class UserCreate(BaseModel):
     """Modèle pour créer un utilisateur."""
     email: EmailStr = Field(..., description="Email de l'utilisateur")
     password: str = Field(..., min_length=8, description="Mot de passe de l'utilisateur")
 
-class UserResponse(BaseModel):
-    id: int
-    email: EmailStr
-    profile_id: Optional[int]
 
-    class Config:
-        orm_mode = True
+class UserProfileResponses(BaseModel):
+    id: UUID
+    user_id: UUID
+
+    model_config = {"from_attributes": True}
+
+
+class UserResponse(BaseModel):
+    id: UUID
+    email: EmailStr
+    profile: Optional[UserProfileResponses] = None
+
+    model_config = {"from_attributes": True}
+
 
 
 # Modèles pour les utilisateurs

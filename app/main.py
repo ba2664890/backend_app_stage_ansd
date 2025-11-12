@@ -266,13 +266,14 @@ from .services.user_service import UserService
 
 user_service = UserService()
 
-# ==================== INSCRIPTION ====================
+# ==================== ENDPOINT /register ====================
 @app.post("/register", response_model=UserResponse)
 async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     """
     Inscription utilisateur.
     Crée un utilisateur et un profil vide.
     """
+    # Vérifie si l'email existe déjà
     existing_user = db.query(User).filter(User.email == user_in.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email déjà utilisé")
@@ -285,17 +286,19 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    
+
     # Création du profil associé
     profile = UserProfile(user_id=user.id)
     db.add(profile)
     db.commit()
     db.refresh(profile)
-    
+
     # Associe le profil à l'utilisateur pour la réponse
     user.profile = profile
-    
-    return user
+
+    # Retour via Pydantic
+    return UserResponse.from_attributes(user)
+
 
 
 # ==================== LOGIN ====================
