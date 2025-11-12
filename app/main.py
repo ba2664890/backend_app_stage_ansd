@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration de l'application
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI):   
     """Gestion du cycle de vie de l'application."""
     # Au démarrage
     logger.info("🚀 Démarrage de l'API Emploi Dakar...")

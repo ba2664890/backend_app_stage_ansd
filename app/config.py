@@ -5,6 +5,42 @@ Configuration settings for the Emploi Dakar backend.
 import os
 from typing import Optional
 
+# =======================
+# 🔐 Auth & Token Config
+# =======================
+from datetime import timedelta
+from jose import jwt, JWTError
+from pydantic import BaseModel
+import secrets
+
+class TokenSettings:
+    """JWT & Auth configuration"""
+    SECRET_KEY: str = os.getenv("API_SECRET_KEY", secrets.token_urlsafe(32))
+    ALGORITHM: str = os.getenv("API_ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("API_ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+
+    @property
+    def access_token_expires(self) -> timedelta:
+        """Durée de vie du token d'accès"""
+        return timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    def create_access_token(self, data: dict) -> str:
+        """Créer un JWT d'accès"""
+        to_encode = data.copy()
+        expire = timedelta(minutes=self.ACCESS_TOKEN_EXPIRE_MINUTES)
+        to_encode.update({"exp": expire})
+        encoded_jwt = jwt.encode(to_encode, self.SECRET_KEY, algorithm=self.ALGORITHM)
+        return encoded_jwt
+
+    def verify_token(self, token: str) -> Optional[dict]:
+        """Vérifier la validité du JWT"""
+        try:
+            payload = jwt.decode(token, self.SECRET_KEY, algorithms=[self.ALGORITHM])
+            return payload
+        except JWTError:
+            return None
+
+
 class Settings:
     """Application settings."""
     
@@ -12,9 +48,7 @@ class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_dMZCO35gNoeP@ep-long-resonance-a4y4jpe4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
     
     # API Configuration
-    API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "your-secret-key-here")
-    API_ALGORITHM: str = os.getenv("API_ALGORITHM", "HS256")
-    API_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("API_ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    token_settings = TokenSettings()
     
     # MLflow Configuration
     MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
