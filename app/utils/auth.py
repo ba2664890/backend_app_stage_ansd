@@ -17,19 +17,13 @@ from ..models.database_models import UserProfile
 # ⚙️ Schéma de sécurité HTTP Bearer
 security = HTTPBearer()
 
-# 🔐 Contexte de hachage des mots de passe
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# -------------------------------------------------------------
-# UTILITAIRES DE MOT DE PASSE
-# -------------------------------------------------------------
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Vérifie si le mot de passe en clair correspond au hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 def get_password_hash(password: str) -> str:
-    """Hash le mot de passe (bcrypt limite à 72 bytes)."""
-    return pwd_context.hash(password.encode("utf-8")[:72])
+    return pwd_context.hash(password)   # pas de troncature
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
 # -------------------------------------------------------------
 # GESTION DES TOKENS
