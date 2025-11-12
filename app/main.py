@@ -252,6 +252,44 @@ async def get_salary_trends(
         raise HTTPException(status_code=500, detail="Erreur lors de l'analyse salariale")
 
 
+
+
+
+
+
+
+
+
+@app.post("/register", response_model=UserProfileResponse)
+def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == user_in.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email déjà utilisé")
+    
+    user = User(
+        email=user_in.email,
+        hashed_password=hash_password(user_in.password)
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    # Créer le profil vide
+    profile = UserProfile(user_id=user.id)
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    
+    return profile
+
+
+
+
+
+
+
+
+
 @app.post("/login")
 def login(username: str, password: str, db: Session = Depends(get_db)):
     user = db.query(UserProfile).filter(UserProfile.email == username).first()

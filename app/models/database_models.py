@@ -90,6 +90,30 @@ class OffreEmploiEnrichie(Base):
         Index('idx_offres_enrichies_skills', 'extracted_skills', postgresql_using='gin'),
     )
 
+
+
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
+    verification_token = Column(String(255))
+    reset_password_token = Column(String(255))
+    reset_password_expires = Column(DateTime)
+    last_login = Column(DateTime)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    profile = relationship("UserProfile", back_populates="user", uselist=False)
+
+
+
+
+
 class UserProfile(Base):
     """Modèle pour les profils utilisateurs avec auth et préférences métier."""
 
@@ -97,8 +121,6 @@ class UserProfile(Base):
 
     # Identité
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(String(255), unique=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
 
     # Infos personnelles
     phone = Column(String(50))
@@ -138,6 +160,8 @@ class UserProfile(Base):
         Index('idx_user_profiles_reset_token', 'reset_password_token'),
         Index('idx_user_profiles_is_active', 'is_active'),
     )
+
+    user = relationship("User", back_populates="profile")
 
 class JobRecommendation(Base):
     """Modèle pour les recommandations d'emploi."""
