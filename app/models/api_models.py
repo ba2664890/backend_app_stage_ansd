@@ -165,6 +165,11 @@ class RecommendationResponse(BaseModel):
     average_match_score: float
     generated_at: datetime
 
+class UserCreate(BaseModel):
+    """Modèle pour créer un utilisateur."""
+    email: EmailStr = Field(..., description="Email de l'utilisateur")
+    password: str = Field(..., min_length=8, description="Mot de passe de l'utilisateur")
+
 # Modèles pour les utilisateurs
 class UserProfileBase(BaseModel):
     """Modèle de base pour le profil utilisateur."""
