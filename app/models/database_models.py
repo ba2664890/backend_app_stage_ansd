@@ -91,16 +91,22 @@ class OffreEmploiEnrichie(Base):
     )
 
 class UserProfile(Base):
-    """Modèle pour les profils utilisateurs."""
-    
+    """Modèle pour les profils utilisateurs avec auth et préférences métier."""
+
     __tablename__ = "user_profiles"
-    
+
+    # Identité
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+
+    # Infos personnelles
     phone = Column(String(50))
     first_name = Column(String(100))
     last_name = Column(String(100))
     location = Column(String(255))
+    
+    # Profil professionnel
     experience_years = Column(Integer)
     education_level = Column(String(100))
     skills = Column(ARRAY(String))
@@ -108,16 +114,29 @@ class UserProfile(Base):
     preferred_salary_min = Column(Integer)
     preferred_salary_max = Column(Integer)
     cv_url = Column(Text)
+
+    # Auth / sécurité
+    is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
+    verification_token = Column(String(255))
+    reset_password_token = Column(String(255))
+    reset_password_expires = Column(DateTime)
+    last_login = Column(DateTime)
+
+    # Métadonnées
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
+
     # Relations
     recommendations = relationship("JobRecommendation", back_populates="user")
-    
-    # Index
+
+    # Index pour performances
     __table_args__ = (
         Index('idx_user_profiles_email', 'email'),
         Index('idx_user_profiles_skills', 'skills', postgresql_using='gin'),
+        Index('idx_user_profiles_verification_token', 'verification_token'),
+        Index('idx_user_profiles_reset_token', 'reset_password_token'),
+        Index('idx_user_profiles_is_active', 'is_active'),
     )
 
 class JobRecommendation(Base):
