@@ -109,7 +109,7 @@ class User(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     profile = relationship("UserProfile", back_populates="user", uselist=False)
-
+    
 
 
 
@@ -154,7 +154,6 @@ class UserProfile(Base):
 
     # Index pour performances
     __table_args__ = (
-        Index('idx_user_profiles_email', 'email'),
         Index('idx_user_profiles_skills', 'skills', postgresql_using='gin'),
         Index('idx_user_profiles_verification_token', 'verification_token'),
         Index('idx_user_profiles_reset_token', 'reset_password_token'),

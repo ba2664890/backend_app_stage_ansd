@@ -256,10 +256,6 @@ async def get_salary_trends(
 
 
 
-
-
-
-
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from .database import get_db
