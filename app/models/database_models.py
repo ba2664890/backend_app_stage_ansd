@@ -95,7 +95,7 @@ class OffreEmploiEnrichie(Base):
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
@@ -108,27 +108,34 @@ class User(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    profile = relationship("UserProfile", back_populates="user", uselist=False)
-    
-
-
+    # 1-to-1 : un utilisateur a zéro ou un profil
+    profile = relationship(
+        "UserProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
 
 
 class UserProfile(Base):
-    """Modèle pour les profils utilisateurs avec auth et préférences métier."""
-
     __tablename__ = "user_profiles"
 
-    # Identité
+    # PK locale
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    # Infos personnelles
+    # FK vers users (obligatoire pour SQLAlchemy)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True          # <- garantit la cardinalité 1-to-1
+    )
+
+    # --- champs déjà présents ---
     phone = Column(String(50))
     first_name = Column(String(100))
     last_name = Column(String(100))
     location = Column(String(255))
-    
-    # Profil professionnel
     experience_years = Column(Integer)
     education_level = Column(String(100))
     skills = Column(ARRAY(String))
@@ -136,31 +143,27 @@ class UserProfile(Base):
     preferred_salary_min = Column(Integer)
     preferred_salary_max = Column(Integer)
     cv_url = Column(Text)
-
-    # Auth / sécurité
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     verification_token = Column(String(255))
     reset_password_token = Column(String(255))
     reset_password_expires = Column(DateTime)
     last_login = Column(DateTime)
-
-    # Métadonnées
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    # Relations
+    # relations
+    user = relationship("User", back_populates="profile")
     recommendations = relationship("JobRecommendation", back_populates="user")
 
-    # Index pour performances
     __table_args__ = (
         Index('idx_user_profiles_skills', 'skills', postgresql_using='gin'),
         Index('idx_user_profiles_verification_token', 'verification_token'),
         Index('idx_user_profiles_reset_token', 'reset_password_token'),
         Index('idx_user_profiles_is_active', 'is_active'),
+        Index('idx_user_profiles_user_id', 'user_id'),   # utile aussi
     )
 
-    user = relationship("User", back_populates="profile")
 
 class JobRecommendation(Base):
     """Modèle pour les recommandations d'emploi."""
