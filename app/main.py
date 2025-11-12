@@ -267,7 +267,7 @@ from .services.user_service import UserService
 user_service = UserService()
 
 # ==================== INSCRIPTION ====================
-@app.post("/register", response_model=UserProfileResponse)
+@app.post("/register", response_model=UserCreate)
 async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     """
     Inscription utilisateur.
