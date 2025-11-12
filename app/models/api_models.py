@@ -170,6 +170,15 @@ class UserCreate(BaseModel):
     email: EmailStr = Field(..., description="Email de l'utilisateur")
     password: str = Field(..., min_length=8, description="Mot de passe de l'utilisateur")
 
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    profile_id: Optional[int]
+
+    class Config:
+        orm_mode = True
+
+
 # Modèles pour les utilisateurs
 class UserProfileBase(BaseModel):
     """Modèle de base pour le profil utilisateur."""

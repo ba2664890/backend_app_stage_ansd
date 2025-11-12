@@ -25,7 +25,7 @@ from .models.database_models import (
 from .models.api_models import (
     CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, SalaryByExperience,
     UserProfileCreate, UserProfileResponse, JobSearchParams,
-    PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData
+    PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData, UserResponse
 )
 
 from .services.job_service import JobService
@@ -267,7 +267,7 @@ from .services.user_service import UserService
 user_service = UserService()
 
 # ==================== INSCRIPTION ====================
-@app.post("/register", response_model=UserCreate)
+@app.post("/register", response_model=UserResponse)
 async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     """
     Inscription utilisateur.
