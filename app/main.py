@@ -280,7 +280,7 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     # Création de l'utilisateur
     user = User(
         email=user_in.email,
-        hashed_password=get_password_hash(user_in.password)  # <-- ici le hash correct
+        hashed_password=get_password_hash(user_in.password)
     )
     db.add(user)
     db.commit()
@@ -292,7 +292,11 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(profile)
     
-    return profile
+    # Associe le profil à l'utilisateur pour la réponse
+    user.profile = profile
+    
+    return user
+
 
 # ==================== LOGIN ====================
 @app.post("/login")
