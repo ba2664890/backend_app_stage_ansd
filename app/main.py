@@ -19,7 +19,7 @@ from pathlib import Path
 # Import des modules internes
 from .database import engine, Base, get_db
 from .models.database_models import (
-    OffreEmploiBrute, OffreEmploiEnrichie, UserProfile, 
+    OffreEmploiBrute, OffreEmploiEnrichie, User, UserProfile, 
     JobRecommendation, JobStatistics 
 )
 from .models.api_models import (
@@ -260,21 +260,37 @@ async def get_salary_trends(
 
 
 
+from fastapi import Depends, HTTPException
+from sqlalchemy.orm import Session
+from .database import get_db
+from .models.database_models import User, UserProfile
+from .models.api_models import UserProfileCreate, UserProfileResponse, UserCreate
+from .utils.auth import create_access_token, verify_password, get_password_hash
+from .services.user_service import UserService
+
+user_service = UserService()
+
+# ==================== INSCRIPTION ====================
 @app.post("/register", response_model=UserProfileResponse)
-def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
+async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    """
+    Inscription utilisateur.
+    Crée un utilisateur et un profil vide.
+    """
     existing_user = db.query(User).filter(User.email == user_in.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email déjà utilisé")
     
+    # Création de l'utilisateur
     user = User(
         email=user_in.email,
-        hashed_password=hash_password(user_in.password)
+        hashed_password=get_password_hash(user_in.password)  # <-- ici le hash correct
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     
-    # Créer le profil vide
+    # Création du profil associé
     profile = UserProfile(user_id=user.id)
     db.add(profile)
     db.commit()
@@ -282,22 +298,46 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     
     return profile
 
-
-
-
-
-
-
-
-
+# ==================== LOGIN ====================
 @app.post("/login")
-def login(username: str, password: str, db: Session = Depends(get_db)):
-    user = db.query(UserProfile).filter(UserProfile.email == username).first()
+async def login(username: str, password: str, db: Session = Depends(get_db)):
+    """
+    Authentification utilisateur.
+    Renvoie un token JWT si les identifiants sont valides.
+    """
+    user = db.query(User).filter(User.email == username).first()
     if not user or not verify_password(password, str(user.hashed_password)):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
-
+    
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
+
+# ==================== PROFIL UTILISATEUR ====================
+@app.post("/api/v1/users/profile", response_model=UserProfileResponse)
+async def create_user_profile(
+    profile: UserProfileCreate,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Crée ou met à jour le profil utilisateur.
+    """
+    user_profile = user_service.create_or_update_profile(db, user.id, profile)
+    return user_profile
+
+@app.get("/api/v1/users/profile", response_model=UserProfileResponse)
+async def get_user_profile(
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Récupère le profil utilisateur.
+    """
+    profile = user_service.get_user_profile(db, user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profil utilisateur non trouvé")
+    return profile
+
 
 
 
@@ -352,42 +392,7 @@ async def match_cv_with_jobs(
         logger.error(f"Error matching CV: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors du matching du CV")
 
-# Routes pour les utilisateurs
-@app.post("/api/v1/users/profile", response_model=UserProfileResponse)
-async def create_user_profile(
-    profile: UserProfileCreate,
-    user=Depends(get_current_user),
-    db=Depends(get_db)
-):
-    """Crée ou met à jour le profil utilisateur."""
-    try:
-        user_profile = app.state.user_service.create_or_update_profile(
-            db, user.id, profile
-        )
-        return user_profile
-        
-    except Exception as e:
-        logger.error(f"Error creating user profile: {e}")
-        raise HTTPException(status_code=500, detail="Erreur lors de la création du profil")
-
-@app.get("/api/v1/users/profile", response_model=UserProfileResponse)
-async def get_user_profile(
-    user=Depends(get_current_user),
-    db=Depends(get_db)
-):
-    """Récupère le profil utilisateur."""
-    try:
-        profile = app.state.user_service.get_user_profile(db, user.id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="Profil utilisateur non trouvé")
-        return profile
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error fetching user profile: {e}")
-        raise HTTPException(status_code=500, detail="Erreur lors de la récupération du profil")
-
+#
 @app.get("/api/v1/users/job-alerts")
 async def get_job_alerts(
     user=Depends(get_current_user),
