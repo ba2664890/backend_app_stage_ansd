@@ -4,6 +4,7 @@ Provides REST API endpoints for job data, analytics, and recommendations.
 """
 
 from pydoc import text
+from django.db import router
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, Response
@@ -33,7 +34,7 @@ from .services.analytics_service import AnalyticsService
 from .services.recommendation_service import RecommendationService
 from .services.user_service import UserService
 from .services.file_service import FileService
-from .utils.auth import get_current_user
+from .utils.auth import create_access_token, get_current_user, verify_password
 from .utils.logger import setup_logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -47,7 +48,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):   
     """Gestion du cycle de vie de l'application."""
     # Au démarrage
-    logger.info("🚀 Démarrage de l'API Emploi Dakar...")
+    logger.info("🚀 Démarrage de l'API Emploi Senegal...")
     
     # Créer les tables si elles n'existent pas
     Base.metadata.create_all(bind=engine)
@@ -68,7 +69,7 @@ async def lifespan(app: FastAPI):
 
 # Création de l'application FastAPI
 app = FastAPI(
-    title="Emploi Dakar API",
+    title="Emploi Senegal API",
     description="API REST pour la plateforme d'emploi au Sénégal - Analyse, recommandations et visualisation",
     version="1.0.0",
     lifespan=lifespan,
@@ -251,6 +252,15 @@ async def get_salary_trends(
         logger.error(f"Error fetching salary trends: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de l'analyse salariale")
 
+
+@app.post("/login")
+def login(username: str, password: str, db: Session = Depends(get_db)):
+    user = db.query(UserProfile).filter(UserProfile.email == username).first()
+    if not user or not verify_password(password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Identifiants invalides")
+
+    access_token = create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 
