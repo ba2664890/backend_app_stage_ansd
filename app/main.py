@@ -4,7 +4,6 @@ Provides REST API endpoints for job data, analytics, and recommendations.
 """
 
 from pydoc import text
-from django.db import router
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, Response
