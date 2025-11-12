@@ -29,7 +29,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """Hash le mot de passe (bcrypt limite à 72 bytes)."""
-    return pwd_context.hash(password)
+    return pwd_context.hash(password.encode("utf-8")[:72])
+
 # -------------------------------------------------------------
 # GESTION DES TOKENS
 # -------------------------------------------------------------
