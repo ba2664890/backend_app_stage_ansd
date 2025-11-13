@@ -83,7 +83,6 @@ app.add_middleware(
     allow_origins=[
         "https://backendappstageansd-production.up.railway.app",
         "https://frontend-webscraping.vercel.app",
-        "*"  # Pour le développement - à restreindre en production
     ],
     allow_credentials=True,
     allow_methods=["*"],
