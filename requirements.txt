@@ -58,3 +58,6 @@ python-magic
 PyPDF2
 python-docx
 argon2-cffi
+
+
+geoalchemy2
