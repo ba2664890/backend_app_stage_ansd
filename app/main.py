@@ -85,9 +85,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://backendappstageansd-production.up.railway.app",
         "https://frontend-webscraping.vercel.app",
-        "https://frontend-webscraping-1ct918vde-cardans-projects-cb73ad15.vercel.app",  # ← nouvelle
+        "https://frontend-webscraping-hic69msbg-cardans-projects-cb73ad15.vercel.app",
+        "https://frontend-webscraping-*.vercel.app",   # ← wildcard partiel
     ],
     allow_credentials=True,
     allow_methods=["*"],
