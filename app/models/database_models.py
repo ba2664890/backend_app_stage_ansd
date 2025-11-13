@@ -87,6 +87,7 @@ class OffreEmploiEnrichie(Base):
     # Relations
     offre_brute = relationship("OffreEmploiBrute", back_populates="enrichie")
     recommendations = relationship("JobRecommendation", back_populates="job")
+    boundary = relationship("SenegalAdminBoundary", back_populates="offres")
     
     # Index
     __table_args__ = (
@@ -185,6 +186,13 @@ class SenegalAdminBoundary(Base):
 
     # Relation inverse (optionnelle)
     offres = relationship("OffreEmploiBrute", back_populates="admin_boundary")
+
+
+    # Ajoutez cette clé étrangère SI une colonne existe
+    offre_id = Column(Integer, ForeignKey("offres_emploi_brutes.id"))
+    
+
+
 
 class JobRecommendation(Base):
     """Modèle pour les recommandations d'emploi."""
