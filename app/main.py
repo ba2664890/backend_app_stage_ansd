@@ -19,7 +19,7 @@ from pydantic import EmailStr
 
 
 # Import des modules internes
-from .database import engine, Base, get_db
+from .database import SessionLocal, engine, Base, get_db
 from .models.database_models import (
     OffreEmploiBrute, OffreEmploiEnrichie, User, UserProfile, 
     JobRecommendation, JobStatistics 
