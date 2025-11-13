@@ -1402,11 +1402,10 @@ async def get_visualization_config(analysis_type: str):
 
 from app.core.exceptions import AppError, ValidationError
 
-router = APIRouter(prefix="/admin-boundaries", tags=["geo"])
 svc = AdminBoundaryService()
 
-@router.get(
-    "",
+@app.get(
+    "/boundaries",
     response_model=List[AdminBoundaryOut],
     summary="Récupère les limites administratives",
     description="Retourne les limites pour un niveau donné (quartier, commune, etc.)"
@@ -1427,7 +1426,7 @@ def read_boundaries(
         # Erreurs métier (500, 503, etc.)
         raise HTTPException(status_code=e.status_code, detail=e.message)
 
-@router.post(
+@app.post(
     "/refresh",
     summary="Recalcule les compteurs d'offres",
     description="Opération longue, peut prendre plusieurs minutes"
