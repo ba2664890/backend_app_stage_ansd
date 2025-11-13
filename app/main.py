@@ -83,8 +83,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
-        "https://emploi-dakar-dashboard.vercel.app",
-        "https://dashboard.emploi-dakar.com",
+        "https://backendappstageansd-production.up.railway.app",
         "*"  # Pour le développement - à restreindre en production
     ],
     allow_credentials=True,
