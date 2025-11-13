@@ -4,7 +4,7 @@ Provides REST API endpoints for job data, analytics, and recommendations.
 """
 
 from pydoc import text
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, Response
 from contextlib import asynccontextmanager
@@ -34,7 +34,10 @@ from .services.job_service import JobService
 from .services.analytics_service import AnalyticsService
 from .services.recommendation_service import RecommendationService
 from .services.user_service import UserService
+from .services.admin_boundary import AdminBoundaryService
+from .models.api_models import AdminBoundaryOut
 from .services.file_service import FileService
+
 from .utils.auth import create_access_token, get_current_user, verify_password
 from .utils.logger import setup_logging
 from sqlalchemy.orm import Session
@@ -1264,3 +1267,34 @@ async def get_visualization_config(analysis_type: str):
     except Exception as e:
         logger.error(f"Erreur config visualisation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
+
+
+router = APIRouter(prefix="/admin-boundaries", tags=["geo"])
+svc = AdminBoundaryService()
+
+@router.get("", response_model=List[AdminBoundaryOut])
+def read_boundaries(
+    level: str = Query(..., regex="^(region|departement|commune|arrondissement|quartier)$"),
+    db: Session = Depends(get_db),
+):
+    """
+    Retourne les limites administratives d'un niveau donné.
+    """
+    return svc.get_boundaries(db, level)
+
+@router.post("/refresh-counts")
+def refresh_counts(
+    background_tasks: BackgroundTasks,
+    level: str = Query(..., regex="^(region|departement|commune|arrondissement|quartier)$"),
+    db: Session = Depends(get_db),
+):
+    """
+    Recalcule les compteurs d'offres en arrière-plan (évite timeout).
+    """
+    background_tasks.add_task(svc.refresh_offer_counts, db, level)
+    return {"msg": "Rafraîchissement lancé en arrière-plan"}

@@ -8,6 +8,10 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 from datetime import datetime
+from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, func, event
+from sqlalchemy.dialects.postgresql import UUID
+from geoalchemy2 import Geography
+
 
 from ..database import Base
 
@@ -164,6 +168,23 @@ class UserProfile(Base):
         Index('idx_user_profiles_user_id', 'user_id'),   # utile aussi
     )
 
+
+
+
+class SenegalAdminBoundary(Base):
+    __tablename__ = "senegal_admin_boundaries"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    name        = Column(String, nullable=False, index=True)
+    level       = Column(String, nullable=False, index=True)
+    parent_name = Column(String, nullable=True)
+    geojson     = Column(JSON, nullable=False)
+    centroid    = Column(Geography("POINT", srid=4326), nullable=True)
+    offer_count = Column(Integer, default=0)
+    updated_at  = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relation inverse (optionnelle)
+    offres = relationship("OffreEmploiBrute", back_populates="admin_boundary")
 
 class JobRecommendation(Base):
     """Modèle pour les recommandations d'emploi."""

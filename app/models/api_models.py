@@ -219,6 +219,20 @@ class UserProfileResponse(UserProfileBase):
     class Config:
         from_attributes = True
 
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field
+
+class AdminBoundaryOut(BaseModel):
+    name: str
+    level: str
+    parent_name: Optional[str] = None
+    geojson: Dict[str, Any]
+    centroid: Optional[Dict[str, float]] = None
+    offer_count: int = 0
+
+    class Config:
+        orm_mode = True
+
 # Modèles pour les statistiques
 class DashboardStats(BaseModel):
     """Statistiques pour le tableau de bord."""
