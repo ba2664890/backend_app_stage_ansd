@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db
-from ..models.database_models import UserProfile
+from ..models.database_models import User, UserProfile
 
 # ⚙️ Schéma de sécurité HTTP Bearer
 security = HTTPBearer()
@@ -50,30 +50,40 @@ def verify_token(token: str) -> Dict[str, Any]:
 # -------------------------------------------------------------
 # AUTHENTIFICATION UTILISATEUR
 # -------------------------------------------------------------
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> UserProfile:
-    """Retourne l’utilisateur courant à partir du token Bearer."""
+    """Retourne le profil utilisateur à partir du token Bearer."""
     token = credentials.credentials
     payload = verify_token(token)
 
-    user_id: str = str(payload.get("sub"))
-    if not user_id:
+    email: Optional[str] = payload.get("sub")
+    if not email:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token invalide : identifiant manquant.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+    # ✅ 1. Chercher l'utilisateur par email
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Utilisateur non trouvé ou accès interdit.",
+            detail="Utilisateur non trouvé.",
         )
 
-    return user
+    # ✅ 2. Chercher le profil via user.id (UUID)
+    user_profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+    if not user_profile:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Profil non trouvé.",
+        )
+
+    return user_profile
 
 def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
