@@ -1,123 +1,195 @@
-import json
+# backend/app/services/admin_boundary.py
+
 import logging
+import time
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, text
-from ..models.database_models import SenegalAdminBoundary, OffreEmploiBrute
-from ..models.api_models import AdminBoundaryOut
-from app.core.exceptions import AppError 
+from sqlalchemy import text, func
+from sqlalchemy.exc import OperationalError, DBAPIError
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
+
+from app.models.database_models import SenegalAdminBoundary
+from app.models.api_models import AdminBoundaryOut
+from app.core.exceptions import AppError, NotFoundError
 
 logger = logging.getLogger(__name__)
 
+
 class AdminBoundaryService:
     """
-    Service dédié à la gestion des limites administratives.
-    Toutes les exceptions sont transformées en `AppError` pour le contrôleur.
+    Service pour gérer les limites administratives avec :
+    - Retry automatique sur erreurs réseau
+    - Timeout sur les requêtes longues
+    - Gestion fine des erreurs PostGIS
     """
-
-    # ------------------------------------------------------------------
-    # 1. Récupération des limites + stats
-    # ------------------------------------------------------------------
+    
+    def __init__(self):
+        self.postgis_manager = PostGISManager()
+    
+    # ============================================================
+    # DECORATOR : Retry sur erreurs réseau (Neon)
+    # ============================================================
+    @staticmethod
+    def with_network_retry(func):
+        """Décorateur pour retry sur OperationalError (problèmes réseau)."""
+        return retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+            retry=retry_if_exception_type(OperationalError),
+            before_sleep=before_sleep_log(logger, logging.WARNING),
+            reraise=True,
+        )(func)
+    
+    # ============================================================
+    # METHODES PRINCIPALES
+    # ============================================================
+    
+    @with_network_retry
     def get_boundaries(self, db: Session, level: str) -> List[AdminBoundaryOut]:
         """
-        Retourne les limites administratives d'un niveau donné
-        avec le nombre d'offres intersectées (mise à jour possible via refresh).
+        Récupère les limites administratives avec vérification PostGIS.
+        
+        Args:
+            db: Session SQLAlchemy
+            level: Niveau admin ('quartier', 'commune', etc.)
+        
+        Returns:
+            Liste des limites avec leurs métadonnées
+        
+        Raises:
+            AppError: Si PostGIS manque ou erreur réseau persistante
+            ValidationError: Si level invalide
         """
-        try:
-            boundaries = (
-                db.query(SenegalAdminBoundary)
-                .filter(SenegalAdminBoundary.level == level)
-                .order_by(SenegalAdminBoundary.name)
-                .all()
+        # Validation du level
+        valid_levels = {"region", "departement", "commune", "arrondissement", "quartier"}
+        if level not in valid_levels:
+            raise ValidationError(
+                field="level",
+                reason=f"Valeur '{level}' non autorisée",
+                context={"valid_values": list(valid_levels)},
             )
-            return [AdminBoundaryOut.from_orm(b) for b in boundaries]
-        except Exception as exc:
-            logger.exception("Erreur lors de la récupération des limites")
-            raise AppError("Impossible de charger les limites administratives") from exc
-
-    # ------------------------------------------------------------------
-    # 2. Rafraîchissement des compteurs d'offres (intersection PostGIS)
-    # ------------------------------------------------------------------
-    def refresh_offer_counts(self, db: Session, level: str) -> None:
+        
+        # Vérifie PostGIS (une fois par session)
+        self.postgis_manager.ensure_postgis(db)
+        
+        try:
+            # Requête principale avec timeout
+            query = db.query(SenegalAdminBoundary).filter_by(level=level)
+            
+            # Timeout de 30s pour éviter blocages (Neon peut être lent)
+            boundaries = query.execution_options(timeout=30).all()
+            
+            if not boundaries:
+                logger.warning(f"Aucune limite trouvée pour level='{level}'")
+            
+            return [AdminBoundaryOut.model_validate(b) for b in boundaries]
+            
+        except OperationalError as e:
+            # Erreur réseau même après retry
+            logger.error(f"❌ Erreur réseau persistante : {e}")
+            raise AppError(
+                message="Impossible de se connecter à la base de données",
+                context={"network_error": True, "level": level},
+                status_code=503,
+            ) from e
+            
+        except DBAPIError as e:
+            # Erreur SQL (ex: PostGIS mal installé)
+            logger.exception("❌ Erreur SQL lors de la récupération des limites")
+            raise AppError(
+                message="Erreur de requête géospatiale",
+                context={"postgis_error": True, "sql_message": str(e.orig)},
+                status_code=500,
+            ) from e
+    
+    @with_network_retry
+    def refresh_offer_counts(self, db: Session, level: str) -> Dict[str, Any]:
         """
-        Met à jour la colonne `offer_count` en intersectant les offres
-        (lng,lat) avec les polygones PostGIS.
-        Exécuté périodiquement ou via endpoint admin.
+        Recalcule les compteurs d'offres par intersection géospatiale.
+        Opération longue => timeout élevé.
+        
+        Returns:
+            dict avec statut et nb de lignes mises à jour
         """
-        sql = """
-        WITH counts AS (
-            SELECT ab.id, COUNT(o.id) AS nb
-            FROM senegal_admin_boundaries ab
-            JOIN offre_emploi_brute o ON ST_Contains(
-                ST_SetSRID(ST_GeomFromGeoJSON(ab.geojson->>'geometry'), 4326),
-                ST_SetSRID(ST_MakePoint(o.lng, o.lat), 4326)
+        self.postgis_manager.ensure_postgis(db)
+        
+        try:
+            # Transaction avec lock progressif
+            with db.begin():
+                # Désactive les indexes temporairement pour perf
+                db.execute(text("UPDATE senegal_admin_boundaries SET offer_count = 0 WHERE level = :level"), {"level": level})
+                
+                # Requête d'intersection (peut être très lente)
+                sql = """
+                WITH counts AS (
+                    SELECT 
+                        ab.id,
+                        COUNT(o.id) AS nb_offres
+                    FROM senegal_admin_boundaries ab
+                    JOIN offre_emploi_brute o ON ST_Contains(
+                        ST_SetSRID(ST_GeomFromGeoJSON(ab.geojson->>'geometry'), 4326),
+                        ST_SetSRID(ST_MakePoint(o.lng, o.lat), 4326)
+                    )
+                    WHERE ab.level = :level
+                    GROUP BY ab.id
+                )
+                UPDATE senegal_admin_boundaries ab
+                SET 
+                    offer_count = COALESCE(c.nb_offres, 0),
+                    updated_at = NOW()
+                FROM counts c
+                WHERE c.id = ab.id;
+                """
+                
+                result = db.execute(text(sql), {"level": level})
+                db.commit()
+                
+                updated = result.rowcount
+                logger.info(f"✅ {updated} limites mises à jour pour level='{level}'")
+                
+                return {"status": "success", "updated_rows": updated, "level": level}
+                
+        except OperationalError as e:
+            db.rollback()
+            logger.error(f"❌ Timeout ou erreur réseau lors du refresh : {e}")
+            raise AppError(
+                message="Le recalcul a échoué (timeout réseau)",
+                context={"operation": "refresh_offer_counts", "network_error": True},
+                status_code=503,
+            ) from e
+        
+        except Exception as e:
+            db.rollback()
+            logger.exception("❌ Erreur inattendue lors du refresh")
+            raise AppError(
+                message="Échec du recalcul des compteurs",
+                context={"error_type": type(e).__name__, "level": level},
+                status_code=500,
+            ) from e
+    
+    def get_boundary_by_name(self, db: Session, name: str, level: str) -> AdminBoundaryOut:
+        """
+        Récupère une limite spécifique par son nom.
+        Utile pour les tests et le débugging.
+        """
+        self.postgis_manager.ensure_postgis(db)
+        
+        boundary = db.query(SenegalAdminBoundary).filter_by(
+            name=name,
+            level=level
+        ).first()
+        
+        if not boundary:
+            raise NotFoundError(
+                resource="AdminBoundary",
+                identifier=f"{level}/{name}",
+                context={"search_params": {"name": name, "level": level}},
             )
-            WHERE ab.level = :level
-            GROUP BY ab.id
-        )
-        UPDATE senegal_admin_boundaries ab
-        SET offer_count = COALESCE(c.nb, 0),
-            updated_at = NOW()
-        FROM counts c
-        WHERE c.id = ab.id;
-        """
-        try:
-            db.execute(text(sql), {"level": level})
-            db.commit()
-            logger.info("Compteurs d'offres rafraîchis pour level=%s", level)
-        except Exception as exc:
-            db.rollback()
-            logger.exception("Erreur lors du rafraîchissement des compteurs")
-            raise AppError("Mise à jour des compteurs échouée") from exc
-
-    # ------------------------------------------------------------------
-    # 3. Injection bulk de GeoJSON (admin uniquement)
-    # ------------------------------------------------------------------
-    def bulk_insert_geojson(self, db: Session, geojson_file: str, level: str) -> int:
-        """
-        Charge un fichier GeoJSON (FeatureCollection) dans la table.
-        Retourne le nombre d'enregistrements créés.
-        """
-        try:
-            with open(geojson_file, encoding="utf-8") as f:
-                collection = json.load(f)
-
-            features = collection.get("features", [])
-            if not features:
-                raise AppError("Aucune entité trouvée dans le fichier")
-
-            inserted = 0
-            for feat in features:
-                geom = feat.get("geometry")
-                props = feat.get("properties", {})
-                name = props.get("name") or props.get("nom") or props.get("NAME")
-                if not name:
-                    logger.warning("Entité sans nom ignorée")
-                    continue
-
-                # Calcul du centroïd (PostGIS)
-                centroid = db.scalar(
-                    text(
-                        "SELECT ST_AsGeoJSON(ST_Centroid(ST_SetSRID(ST_GeomFromGeoJSON(:geom), 4326)))"
-                    ),
-                    {"geom": json.dumps(geom)},
-                )
-                lon_lat = json.loads(centroid)["coordinates"] if centroid else None
-
-                boundary = SenegalAdminBoundary(
-                    name=name,
-                    level=level,
-                    parent_name=props.get("parent"),
-                    geojson={"type": "Feature", "geometry": geom, "properties": props},
-                    centroid=f"POINT({lon_lat[0]} {lon_lat[1]})" if lon_lat else None,
-                )
-                db.add(boundary)
-                inserted += 1
-
-            db.commit()
-            logger.info("%d limites insérées (level=%s)", inserted, level)
-            return inserted
-        except Exception as exc:
-            db.rollback()
-            logger.exception("Erreur lors du chargement du GeoJSON")
-            raise AppError("Chargement du GeoJSON échoué") from exc
+        
+        return AdminBoundaryOut.model_validate(boundary)

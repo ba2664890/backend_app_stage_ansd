@@ -2,7 +2,7 @@
 Modèles Pydantic pour l'API REST.
 """
 
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, ConfigDict, Field, EmailStr, validator
 from typing import List, Optional, Dict, Any, Generic, TypeVar
 from datetime import date, datetime
 from uuid import UUID
@@ -230,8 +230,7 @@ class AdminBoundaryOut(BaseModel):
     centroid: Optional[Dict[str, float]] = None
     offer_count: int = 0
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True) # type: ignore
 
 # Modèles pour les statistiques
 class DashboardStats(BaseModel):

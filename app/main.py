@@ -48,29 +48,155 @@ from uuid import UUID
 setup_logging()
 logger = logging.getLogger(__name__)
 
-# Configuration de l'application
+"""
+Application FastAPI avec lifespan robuste.
+Gère PostGIS, création tables, et init services avec retry.
+"""
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException
+from sqlalchemy.orm import Session
+
+
+from .db.init_postgis import PostGISManager
+from .core.exceptions import AppError, setup_exception_handlers
+from .services.job_service import JobService
+from .services.analytics_service import AnalyticsService
+from .services.recommendation_service import RecommendationService
+from .services.user_service import UserService
+from .services.file_service import FileService
+
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):   
-    """Gestion du cycle de vie de l'application."""
-    # Au démarrage
-    logger.info("🚀 Démarrage de l'API Emploi Senegal...")
+async def lifespan(app: FastAPI):
+    """
+    Gestionnaire de cycle de vie amélioré avec :
+    - Vérification PostGIS avec retry
+    - Création tables conditionnelle
+    - Initialisation services avec gestion d'erreurs
+    - Arrêt propre
+    """
     
-    # Créer les tables si elles n'existent pas
-    Base.metadata.create_all(bind=engine)
+    logger.info("=" * 60)
+    logger.info("🚀 DÉMARRAGE DE L'API EMPLOI SENEGAL")
+    logger.info("=" * 60)
     
-    # Initialiser les services
-    app.state.job_service = JobService()
-    app.state.analytics_service = AnalyticsService()
-    app.state.recommendation_service = RecommendationService()
-    app.state.user_service = UserService()
-    app.state.file_service = FileService()
+    db: Optional[Session] = None
     
-    logger.info("✅ API Emploi Dakar démarrée avec succès!")
+    try:
+        # Ouvre une session temporaire
+        db = SessionLocal()
+        
+        # ÉTAPE 1 : Vérifie et installe PostGIS
+        logger.info("Étape 1/3 : Vérification PostGIS...")
+        postgis_manager = PostGISManager(max_retries=3, retry_delay=2.0)
+        
+        try:
+            postgis_manager.ensure_postgis(db)
+        except AppError as e:
+            logger.error(f"❌ ERREUR POSTGIS CRITIQUE : {e.message}")
+            logger.error("💡 L'application va démarrer SANS fonctionnalités géospatiales")
+            
+            # Mode dégradé : on continue mais on désactive les features geo
+            app.state.geo_enabled = False
+        else:
+            app.state.geo_enabled = True
+            logger.info("✅ PostGIS prêt")
+        
+        # ÉTAPE 2 : Création des tables
+        logger.info("Étape 2/3 : Création des tables...")
+        try:
+            Base.metadata.create_all(bind=engine)
+            logger.info("✅ Tables créées/mises à jour avec succès")
+        except Exception as e:
+            logger.exception("❌ Erreur lors de la création des tables")
+            raise AppError(
+                message="Échec de création des tables",
+                context={"error": str(e)},
+                status_code=500,
+            ) from e
+        
+        # ÉTAPE 3 : Initialisation des services
+        logger.info("Étape 3/3 : Initialisation des services...")
+        try:
+            app.state.job_service = JobService()
+            app.state.analytics_service = AnalyticsService()
+            app.state.recommendation_service = RecommendationService()
+            app.state.user_service = UserService()
+            app.state.file_service = FileService()
+            
+            # Tu peux ajouter ici des vérifications de santé des services
+            # ex: await app.state.job_service.health_check()
+            
+            logger.info("✅ Services initialisés")
+            
+        except Exception as e:
+            logger.exception("❌ Erreur lors de l'init des services")
+            raise AppError(
+                message="Échec d'initialisation des services",
+                context={"service_error": str(e)},
+                status_code=500,
+            ) from e
+        
+        # Statut final
+        geo_status = "🗺️ Géospatial ACTIVÉ" if app.state.geo_enabled else "⚠️ Géospatial DÉSACTIVÉ"
+        logger.info("=" * 60)
+        logger.info(f"✅ API DÉMARRÉE AVEC SUCCÈS - {geo_status}")
+        logger.info("=" * 60)
+        
+        yield  # 🎯 APPLICATION EN COURS D'EXÉCUTION
+        
+    except AppError as e:
+        # Erreur critique : on loggue et on laisse l'application planter
+        # (pour éviter de démarrer dans un état incohérent)
+        logger.critical(f"💥 ERREUR FATALE AU DÉMARRAGE : {e.message}")
+        logger.critical(f"Contexte : {e.context}")
+        raise
+        
+    except Exception as e:
+        # Erreur inattendue
+        logger.critical("💥 ERREUR INATTENDUE AU DÉMARRAGE", exc_info=True)
+        raise AppError(
+            message="Erreur fatale inconnue au démarrage",
+            context={"error_type": type(e).__name__},
+            status_code=500,
+        ) from e
     
-    yield
+    finally:
+        # S'assure que la session est toujours fermée
+        if db:
+            try:
+                db.close()
+                logger.info("📡 Session DB fermée")
+            except Exception as e:
+                logger.warning(f"⚠️ Erreur lors de la fermeture de la session : {e}")
     
-    # À l'arrêt
-    logger.info("🛑 Arrêt de l'API Emploi Dakar...")
+    # ========== PHASE D'ARRÊT ==========
+    logger.info("=" * 60)
+    logger.info("🛑 ARRÊT DE L'API EMPLOI SENEGAL")
+    logger.info("=" * 60)
+    
+    try:
+        # Nettoyage des ressources
+        if hasattr(app.state, "job_service"):
+            # app.state.job_service.cleanup()  # si tu as une méthode cleanup
+            logger.info("🧹 Nettoyage JobService")
+        
+        # Ferme le pool de connexions
+        await engine.dispose()
+        logger.info("📡 Pool de connexions DB fermé")
+        
+    except Exception as e:
+        logger.error("❌ Erreur lors de l'arrêt", exc_info=True)
+    
+    logger.info("✅ API arrêtée avec succès")
+
+
+
 
 # Création de l'application FastAPI
 app = FastAPI(
@@ -1274,27 +1400,48 @@ async def get_visualization_config(analysis_type: str):
 
 
 
+from app.core.exceptions import AppError, ValidationError
+
 router = APIRouter(prefix="/admin-boundaries", tags=["geo"])
 svc = AdminBoundaryService()
 
-@router.get("", response_model=List[AdminBoundaryOut])
+@router.get(
+    "",
+    response_model=List[AdminBoundaryOut],
+    summary="Récupère les limites administratives",
+    description="Retourne les limites pour un niveau donné (quartier, commune, etc.)"
+)
 def read_boundaries(
-    level: str = Query(..., regex="^(region|departement|commune|arrondissement|quartier)$"),
+    level: str = Query(..., description="Niveau administratif"),
     db: Session = Depends(get_db),
 ):
     """
-    Retourne les limites administratives d'un niveau donné.
+    Endpoint principal avec gestion d'erreurs centralisée.
     """
-    return svc.get_boundaries(db, level)
+    try:
+        return svc.get_boundaries(db, level)
+    except ValidationError as e:
+        # 400 Bad Request
+        raise HTTPException(status_code=400, detail=e.message)
+    except AppError as e:
+        # Erreurs métier (500, 503, etc.)
+        raise HTTPException(status_code=e.status_code, detail=e.message)
 
-@router.post("/refresh-counts")
+@router.post(
+    "/refresh",
+    summary="Recalcule les compteurs d'offres",
+    description="Opération longue, peut prendre plusieurs minutes"
+)
 def refresh_counts(
-    background_tasks: BackgroundTasks,
-    level: str = Query(..., regex="^(region|departement|commune|arrondissement|quartier)$"),
+    level: str = Query(...),
     db: Session = Depends(get_db),
+    user = Depends(get_current_admin_user),  # Sécurité : admin only
 ):
     """
-    Recalcule les compteurs d'offres en arrière-plan (évite timeout).
+    Endpoint pour recalculer les compteurs (nécessite droits admin).
     """
-    background_tasks.add_task(svc.refresh_offer_counts, db, level)
-    return {"msg": "Rafraîchissement lancé en arrière-plan"}
+    try:
+        result = svc.refresh_offer_counts(db, level)
+        return {"status": "success", "detail": result}
+    except AppError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
