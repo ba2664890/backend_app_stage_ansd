@@ -14,6 +14,7 @@ from tenacity import (
     before_sleep_log,
 )
 
+from app.db.init_postgis import PostGISManager
 from app.models.database_models import SenegalAdminBoundary
 from app.models.api_models import AdminBoundaryOut
 from app.core.exceptions import AppError, NotFoundError
