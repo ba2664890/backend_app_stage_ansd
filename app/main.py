@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse, FileResponse, Response
 from contextlib import asynccontextmanager
 import logging
 import os
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, cast
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -39,6 +39,7 @@ from .utils.auth import create_access_token, get_current_user, verify_password
 from .utils.logger import setup_logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from uuid import UUID
 
 # Configuration du logging
 setup_logging()
@@ -340,33 +341,38 @@ async def create_user_profile(
 
 @app.get("/api/v1/users/profile", response_model=UserProfileResponse)
 async def get_user_profile(
-    user: User = Depends(get_current_user),
+    user: UserProfile = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Récupère le profil utilisateur.
     """
-    profile = user.profile  # relation 1-to-1
-    if not profile:
+    # ✅ user est déjà le UserProfile
+    if not user:
         raise HTTPException(status_code=404, detail="Profil utilisateur non trouvé")
 
+    # Récupérer l'email via la relation user
+    user_account = db.query(User).filter(User.id == user.user_id).first()
+    if not user_account:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+
     return UserProfileResponse(
-        id=profile.id,
-        user_id=profile.user_id,
-        email=EmailStr(user.email),
-        first_name=profile.first_name,
-        last_name=profile.last_name,
-        phone=profile.phone,
-        location=profile.location,
-        experience_years=profile.experience_years,
-        education_level=profile.education_level,
-        skills=profile.skills,
-        preferred_contract_type=profile.preferred_contract_type,
-        preferred_salary_min=profile.preferred_salary_min,
-        preferred_salary_max=profile.preferred_salary_max,
-        cv_url=profile.cv_url,
-        created_at=profile.created_at,
-        updated_at=profile.updated_at,
+        id=UUID(str(user.id)),
+        user_id=UUID(str(user.user_id)),
+        email=EmailStr(user_account.email),
+        first_name=cast(Optional[str], user.first_name),
+        last_name=cast(Optional[str], user.last_name),
+        phone=cast(Optional[str], user.phone),
+        location=cast(Optional[str], user.location),
+        experience_years=cast(Optional[int], user.experience_years),
+        education_level=cast(Optional[str], user.education_level),
+        skills=cast(Optional[List[str]], user.skills),
+        preferred_contract_type=cast(Optional[List[str]], user.preferred_contract_type),
+        preferred_salary_min=cast(Optional[int], user.preferred_salary_min),
+        preferred_salary_max=cast(Optional[int], user.preferred_salary_max),
+        cv_url=cast(Optional[str], user.cv_url),
+        created_at=cast(datetime, user.created_at),
+        updated_at=cast(datetime, user.updated_at),
     )
 
 
