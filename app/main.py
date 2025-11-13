@@ -1434,8 +1434,7 @@ def read_boundaries(
 )
 def refresh_counts(
     level: str = Query(...),
-    db: Session = Depends(get_db),
-    user = Depends(get_current_admin_user),  # Sécurité : admin only
+    db: Session = Depends(get_db),  
 ):
     """
     Endpoint pour recalculer les compteurs (nécessite droits admin).
