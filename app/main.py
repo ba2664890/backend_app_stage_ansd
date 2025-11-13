@@ -330,7 +330,7 @@ async def create_user_profile(
     """
     Crée ou met à jour le profil utilisateur.
     """
-    user_profile = user_service.create_or_update_profile(db, user.id, profile)
+    user_profile = user_service.create_or_update_profile(db, user.user_id, profile)
     return user_profile
 
 @app.get("/api/v1/users/profile", response_model=UserProfileResponse)
