@@ -359,7 +359,7 @@ async def get_user_profile(
     return UserProfileResponse(
         id=UUID(str(user.id)),
         user_id=UUID(str(user.user_id)),
-        email=EmailStr(user_account.email),
+        email=user_account.email, # type: ignore
         first_name=cast(Optional[str], user.first_name),
         last_name=cast(Optional[str], user.last_name),
         phone=cast(Optional[str], user.phone),
