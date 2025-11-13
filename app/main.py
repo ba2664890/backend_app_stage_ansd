@@ -14,6 +14,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import pydantic
+from pydantic import EmailStr
 
 
 # Import des modules internes
@@ -333,18 +335,39 @@ async def create_user_profile(
     user_profile = user_service.create_or_update_profile(db, user.user_id, profile)
     return user_profile
 
+
+
+
 @app.get("/api/v1/users/profile", response_model=UserProfileResponse)
 async def get_user_profile(
-    user=Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Récupère le profil utilisateur.
     """
-    profile = user_service.get_user_profile(db, user.id)
+    profile = user.profile  # relation 1-to-1
     if not profile:
         raise HTTPException(status_code=404, detail="Profil utilisateur non trouvé")
-    return profile
+
+    return UserProfileResponse(
+        id=profile.id,
+        user_id=profile.user_id,
+        email=EmailStr(user.email),
+        first_name=profile.first_name,
+        last_name=profile.last_name,
+        phone=profile.phone,
+        location=profile.location,
+        experience_years=profile.experience_years,
+        education_level=profile.education_level,
+        skills=profile.skills,
+        preferred_contract_type=profile.preferred_contract_type,
+        preferred_salary_min=profile.preferred_salary_min,
+        preferred_salary_max=profile.preferred_salary_max,
+        cv_url=profile.cv_url,
+        created_at=profile.created_at,
+        updated_at=profile.updated_at,
+    )
 
 
 
