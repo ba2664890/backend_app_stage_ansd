@@ -43,6 +43,10 @@ class OffreEmploiBrute(Base):
     
     # Relations
     enrichie = relationship("OffreEmploiEnrichie", back_populates="offre_brute", uselist=False)
+    admin_boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"))
+
+    admin_boundary = relationship("SenegalAdminBoundary", back_populates="offres")
+
     
     # Contraintes
     __table_args__ = (
