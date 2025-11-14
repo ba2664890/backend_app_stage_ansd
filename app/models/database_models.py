@@ -15,13 +15,13 @@ from geoalchemy2 import Geography
 
 from ..database import Base
 
+# COPIEZ-COLLEZ CES CLASSES CORRIGÉES :
+
 class OffreEmploiBrute(Base):
-    """Modèle pour les offres d'emploi brutes consolidées des spiders."""
-    
     __tablename__ = "offres_emploi_brutes"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    spider_source = Column(String(50), nullable=False)  # 'emploi', 'senjob', 'emploi_expatDakar'
+    spider_source = Column(String(50), nullable=False)
     original_id = Column(String(255), nullable=False)
     title = Column(Text, nullable=False)
     url = Column(Text)
@@ -41,25 +41,16 @@ class OffreEmploiBrute(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # Relations
+    # Relations CORRIGÉES
     enrichie = relationship("OffreEmploiEnrichie", back_populates="offre_brute", uselist=False)
     admin_boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"))
-
-    admin_boundary = relationship("SenegalAdminBoundary", back_populates="offres")
-
-    
-    # Contraintes
-    __table_args__ = (
-        UniqueConstraint('spider_source', 'original_id', name='uq_spider_original_id'),
-        Index('idx_offres_brutes_source', 'spider_source'),
-        Index('idx_offres_brutes_date', 'posted_date'),
-        Index('idx_offres_brutes_location', 'location'),
-        Index('idx_offres_brutes_contract', 'contract_type'),
+    admin_boundary = relationship(
+        "SenegalAdminBoundary", 
+        back_populates="offres_brutes",
+        foreign_keys=[admin_boundary_id]
     )
 
 class OffreEmploiEnrichie(Base):
-    """Modèle pour les offres d'emploi enrichies par NLP."""
-    
     __tablename__ = "offres_emploi_enrichies"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -80,29 +71,39 @@ class OffreEmploiEnrichie(Base):
     key_phrases = Column(ARRAY(String))
     
     # Classification
-    job_level = Column(String(50))  # 'Junior', 'Senior', 'Lead', etc.
-    job_type = Column(String(50))  # 'Full-time', 'Part-time', 'Remote', etc.
+    job_level = Column(String(50))
+    job_type = Column(String(50))
     
     # Métadonnées
     processing_version = Column(String(20))
     processed_at = Column(DateTime, default=func.now())
     confidence_score = Column(Float)
     
-    # Relations
+    # Relations CORRIGÉES
     offre_brute = relationship("OffreEmploiBrute", back_populates="enrichie")
     recommendations = relationship("JobRecommendation", back_populates="job")
-    boundary = relationship("SenegalAdminBoundary", back_populates="offres")
-    boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"), index=True)
     
-    # Index
-    __table_args__ = (
-        Index('idx_offres_enrichies_salary', 'extracted_salary_min', 'extracted_salary_max'),
-        Index('idx_offres_enrichies_skills', 'extracted_skills', postgresql_using='gin'),
-        Index('idx_offres_enrichies_job_level', 'job_level'),
+    # ✅ Colonne sans relation pour éviter l'ambigüité
+    boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"), index=True)
+
+class SenegalAdminBoundary(Base):
+    __tablename__ = "senegal_admin_boundaries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+    level = Column(String, nullable=False, index=True)
+    parent_name = Column(String, nullable=True)
+    geojson = Column(JSON, nullable=False)
+    centroid = Column(Geography("POINT", srid=4326), nullable=True)
+    offer_count = Column(Integer, default=0)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # ✅ Relation UNIQUE et CLAIRE
+    offres_brutes = relationship(
+        "OffreEmploiBrute", 
+        back_populates="admin_boundary",
+        foreign_keys="OffreEmploiBrute.admin_boundary_id"
     )
-
-
-
 
 class User(Base):
     __tablename__ = "users"
@@ -177,26 +178,6 @@ class UserProfile(Base):
 
 
 
-
-class SenegalAdminBoundary(Base):
-    __tablename__ = "senegal_admin_boundaries"
-
-    id          = Column(Integer, primary_key=True, index=True)
-    name        = Column(String, nullable=False, index=True)
-    level       = Column(String, nullable=False, index=True)
-    parent_name = Column(String, nullable=True)
-    geojson     = Column(JSON, nullable=False)
-    centroid    = Column(Geography("POINT", srid=4326), nullable=True)
-    offer_count = Column(Integer, default=0)
-    updated_at  = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-    # Relation inverse (optionnelle)
-    offres = relationship("OffreEmploiBrute", back_populates="admin_boundary")
-
-
-    # Ajoutez cette clé étrangère SI une colonne existe
-    offre_id = Column(UUID(as_uuid=True), ForeignKey("offres_emploi_brutes.id"), index=True)
-    
 
 
 
