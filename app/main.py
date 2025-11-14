@@ -214,6 +214,7 @@ ALLOWED_ORIGINS = [
     "https://frontend-webscraping.vercel.app",
     "https://frontend-webscraping-hic69msbg-cardans-projects-cb73ad15.vercel.app",
     "https://frontend-webscraping-5r404pe1o-cardans-projects-cb73ad15.vercel.app",
+    '*',
 ]
 
 app.add_middleware(
