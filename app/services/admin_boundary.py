@@ -15,7 +15,7 @@ from tenacity import (
 )
 
 from app.db.init_postgis import PostGISManager
-from app.models.database_models import SenegalAdminBoundary
+from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute
 from app.models.api_models import AdminBoundaryOut
 from app.core.exceptions import AppError, NotFoundError, ValidationError
 
@@ -89,7 +89,7 @@ class AdminBoundaryService:
             if not boundaries:
                 logger.warning(f"Aucune limite trouvée pour level='{level}'")
             
-            return [AdminBoundaryOut.model_config(b) for b in boundaries]
+            return [AdminBoundaryOut.from_orm(b) for b in boundaries]
             
         except OperationalError as e:
             # Erreur réseau même après retry
@@ -121,42 +121,44 @@ class AdminBoundaryService:
         self.postgis_manager.ensure_postgis(db)
         
         try:
-            # Transaction avec lock progressif
-            with db.begin():
-                # Désactive les indexes temporairement pour perf
-                db.execute(text("UPDATE senegal_admin_boundaries SET offer_count = 0 WHERE level = :level"), {"level": level})
+            # ✅ PAS de db.begin() - utilise la session existante
+            logger.info(f"🔄 Refresh des compteurs pour level={level}")
+            
+            # Récupérer les limites
+            boundaries = db.query(SenegalAdminBoundary).filter_by(level=level).all()
+            
+            if not boundaries:
+                logger.warning(f"Aucune limite trouvée pour level='{level}'")
+                return {"status": "success", "updated_rows": 0, "level": level}
+            
+            total_updated = 0
+            for boundary in boundaries:
+                # Compter les offres pour cette limite
+                count = db.query(OffreEmploiBrute).filter(
+                    OffreEmploiBrute.admin_boundary_id == boundary.id
+                ).count()
                 
-                # Requête d'intersection (peut être très lente)
-                sql = """
-                WITH counts AS (
-                    SELECT 
-                        ab.id,
-                        COUNT(o.id) AS nb_offres
-                    FROM senegal_admin_boundaries ab
-                    JOIN offre_emploi_brute o ON ST_Contains(
-                        ST_SetSRID(ST_GeomFromGeoJSON(ab.geojson->>'geometry'), 4326),
-                        ST_SetSRID(ST_MakePoint(o.lng, o.lat), 4326)
-                    )
-                    WHERE ab.level = :level
-                    GROUP BY ab.id
-                )
-                UPDATE senegal_admin_boundaries ab
-                SET 
-                    offer_count = COALESCE(c.nb_offres, 0),
-                    updated_at = NOW()
-                FROM counts c
-                WHERE c.id = ab.id;
-                """
-                
-                result = db.execute(text(sql), {"level": level})
+                # Mettre à jour si nécessaire
+                if boundary.offer_count != count:
+                    boundary.offer_count = count
+                    total_updated += 1
+            
+            # ✅ Commit explicite seulement si des changements ont été faits
+            if total_updated > 0:
                 db.commit()
+                logger.info(f"✅ {total_updated} compteurs mis à jour pour level={level}")
+            else:
+                logger.info(f"ℹ️ Aucune mise à jour nécessaire pour level={level}")
                 
-                updated = result.rowcount
-                logger.info(f"✅ {updated} limites mises à jour pour level='{level}'")
-                
-                return {"status": "success", "updated_rows": updated, "level": level}
+            return {
+                "status": "success", 
+                "updated_rows": total_updated, 
+                "level": level,
+                "total_boundaries": len(boundaries)
+            }
                 
         except OperationalError as e:
+            # ✅ Rollback en cas d'erreur
             db.rollback()
             logger.error(f"❌ Timeout ou erreur réseau lors du refresh : {e}")
             raise AppError(
@@ -166,6 +168,7 @@ class AdminBoundaryService:
             ) from e
         
         except Exception as e:
+            # ✅ Rollback en cas d'erreur
             db.rollback()
             logger.exception("❌ Erreur inattendue lors du refresh")
             raise AppError(
@@ -174,6 +177,7 @@ class AdminBoundaryService:
                 status_code=500,
             ) from e
     
+    @with_network_retry
     def get_boundary_by_name(self, db: Session, name: str, level: str) -> AdminBoundaryOut:
         """
         Récupère une limite spécifique par son nom.
@@ -193,4 +197,4 @@ class AdminBoundaryService:
                 context={"search_params": {"name": name, "level": level}},
             )
         
-        return AdminBoundaryOut.model_config(boundary)
+        return AdminBoundaryOut.from_orm(boundary)
