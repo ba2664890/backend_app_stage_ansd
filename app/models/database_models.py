@@ -88,11 +88,13 @@ class OffreEmploiEnrichie(Base):
     offre_brute = relationship("OffreEmploiBrute", back_populates="enrichie")
     recommendations = relationship("JobRecommendation", back_populates="job")
     boundary = relationship("SenegalAdminBoundary", back_populates="offres")
+    boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"), index=True)
     
     # Index
     __table_args__ = (
         Index('idx_offres_enrichies_salary', 'extracted_salary_min', 'extracted_salary_max'),
         Index('idx_offres_enrichies_skills', 'extracted_skills', postgresql_using='gin'),
+        Index('idx_offres_enrichies_job_level', 'job_level'),
     )
 
 
