@@ -189,7 +189,7 @@ class SenegalAdminBoundary(Base):
 
 
     # Ajoutez cette clé étrangère SI une colonne existe
-    offre_id = Column(Integer, ForeignKey("offres_emploi_brutes.id"))
+    offre_id = Column(UUID(as_uuid=True), ForeignKey("offres_emploi_brutes.id"), index=True)
     
 
 
