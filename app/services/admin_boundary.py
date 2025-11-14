@@ -17,7 +17,7 @@ from tenacity import (
 from app.db.init_postgis import PostGISManager
 from app.models.database_models import SenegalAdminBoundary
 from app.models.api_models import AdminBoundaryOut
-from app.core.exceptions import AppError, NotFoundError
+from app.core.exceptions import AppError, NotFoundError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ class AdminBoundaryService:
             if not boundaries:
                 logger.warning(f"Aucune limite trouvée pour level='{level}'")
             
-            return [AdminBoundaryOut.model_validate(b) for b in boundaries]
+            return [AdminBoundaryOut.model_config(b) for b in boundaries]
             
         except OperationalError as e:
             # Erreur réseau même après retry
@@ -193,4 +193,4 @@ class AdminBoundaryService:
                 context={"search_params": {"name": name, "level": level}},
             )
         
-        return AdminBoundaryOut.model_validate(boundary)
+        return AdminBoundaryOut.model_config(boundary)
