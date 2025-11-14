@@ -214,9 +214,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://frontend-webscraping.vercel.app",
+        "https://frontend-webscraping.vercel.app",          # ← sans espace
         "https://frontend-webscraping-hic69msbg-cardans-projects-cb73ad15.vercel.app",
-        "https://frontend-webscraping-*.vercel.app",   # ← wildcard partiel
+        # wildcard partiel NON supporté par Starlette / FastAPI
+        # "https://frontend-webscraping-*.vercel.app",      ❌ supprime cette ligne
     ],
     allow_credentials=True,
     allow_methods=["*"],
