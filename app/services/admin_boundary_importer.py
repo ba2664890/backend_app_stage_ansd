@@ -60,6 +60,7 @@ class AdminBoundaryImporterService:
             # Calcul du centroid (format WKT pour Geography)
             centroid_wkt = row.geometry.centroid.wkt
             
+            print(row)
             # Nom de la zone (plusieurs conventions possibles)
             name = (
                 row.get("NAME_1") or 
@@ -212,17 +213,31 @@ class AdminBoundaryImporterService:
         }
     
     def _normalize_name(self, name: str) -> str:
-        """Normalise un nom pour matching (minuscule, sans accents)."""
+        """Normalise un nom pour matching."""
         import unicodedata
+        
+        if not name:
+            return ""
+
+        # Garder uniquement la partie avant la virgule
+        if "," in name:
+            name = name.split(",")[0]
+
+        # Minuscule + trim
         name = name.lower().strip()
-        # Supprimer accents
+
+        # Supprimer les accents
         name = ''.join(
             c for c in unicodedata.normalize('NFD', name)
             if unicodedata.category(c) != 'Mn'
         )
-        # Supprimer ponctuation
+
+        # Supprimer certaines ponctuations
         name = name.replace('-', ' ').replace('_', ' ')
-        return ' '.join(name.split())  # Espaces multiples → un seul
+
+        # Condenser les espaces multiples
+        return ' '.join(name.split())
+
     
     def _find_best_match(
         self, 
