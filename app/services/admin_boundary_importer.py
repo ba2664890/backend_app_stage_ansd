@@ -115,7 +115,6 @@ class AdminBoundaryImporterService:
             "departement": ["adm2", "departement"],
             "commune": ["adm3", "commune"],
             "arrondissement": ["adm4", "arrondissement"],
-            "quartier": ["adm5", "quartier"]
         }
 
         total_imported = 0
