@@ -62,10 +62,10 @@ class AdminBoundaryImporterService:
             
             # Nom de la zone (plusieurs conventions possibles)
             name = (
-                row.get("NAME") or 
-                row.get("name") or 
-                row.get("NOM") or 
-                row.get("nom") or 
+                row.get("NAME_1") or 
+                row.get("NAME_2") or 
+                row.get("NAME_3") or 
+                row.get("NAME_4") or 
                 "Inconnu"
             )
             
