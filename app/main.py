@@ -326,7 +326,7 @@ def match_offers_to_boundaries(
     - Premier import : `POST /admin/match-offers?threshold=80`
     - Affiner manuellement les non-matchés
     """
-    service = AdminBoundaryService()
+    service = AdminBoundaryImporterService()
     
     try:
         result = service.match_offers_to_boundaries(db, level=level, similarity_threshold=threshold)
