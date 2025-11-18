@@ -1,7 +1,7 @@
 import os
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 import geopandas as gpd
 from sqlalchemy.orm import Session
 from sqlalchemy import delete, func
@@ -111,11 +111,11 @@ class AdminBoundaryImporterService:
         # - Clé : level dans la DB
         # - Valeurs : patterns possibles dans le nom de fichier
         file_mapping = {
-            "region": ["adm0", "region"],
-            "departement": ["adm1", "departement"],
-            "commune": ["adm2", "commune"],
-            "arrondissement": ["adm3", "arrondissement"],
-            "quartier": ["adm4", "quartier"]
+            "region": ["adm1", "region"],
+            "departement": ["adm2", "departement"],
+            "commune": ["adm3", "commune"],
+            "arrondissement": ["adm4", "arrondissement"],
+            "quartier": ["adm5", "quartier"]
         }
 
         total_imported = 0
