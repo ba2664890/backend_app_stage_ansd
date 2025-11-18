@@ -36,7 +36,7 @@ from .services.job_service import JobService
 from .services.analytics_service import AnalyticsService
 from .services.recommendation_service import RecommendationService
 from .services.user_service import UserService
-from .services.admin_boundary import AdminBoundaryService
+from .services.admin_boundary import AdminBoundaryService, CarteService
 from .models.api_models import AdminBoundaryOut
 from .services.file_service import FileService
 
@@ -338,6 +338,11 @@ def match_offers_to_boundaries(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/senegal/{level}")
+def get_geojson_senegal(level: str, db: Session = Depends(get_db)):
+    """Retourne les limites admin et offres au format GeoJSON."""
+    service = CarteService(db)
+    return service.get_choropleth_data(level)
 
 @app.get("/offres")
 def get_offres_geomap(

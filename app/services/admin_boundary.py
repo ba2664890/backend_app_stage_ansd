@@ -198,3 +198,55 @@ class AdminBoundaryService:
             )
         
         return AdminBoundaryOut.from_orm(boundary)
+    
+class CarteService:
+    def __init__(self, db: Session):
+        self.db = db
+    
+    def get_choropleth_data(self, level: str):
+        # Récupérer les limites avec le nombre d'offres
+        boundaries = self.db.query(
+            SenegalAdminBoundary.name,
+            SenegalAdminBoundary.level,
+            SenegalAdminBoundary.geojson,
+            SenegalAdminBoundary.offer_count
+        ).filter(
+            SenegalAdminBoundary.level == level,
+            SenegalAdminBoundary.offer_count > 0
+        ).all()
+        
+        # Récupérer les offres pour ce niveau
+        offres = self.db.query(
+            OffreEmploiBrute.id,
+            OffreEmploiBrute.title,
+            OffreEmploiBrute.location,
+            OffreEmploiBrute.contract_type,
+            SenegalAdminBoundary.name.label("boundary_name")
+        ).join(SenegalAdminBoundary).filter(
+            SenegalAdminBoundary.level == level
+        ).all()
+        
+        return {
+            "boundaries": [
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "name": b.name,
+                        "level": b.level,
+                        "offer_count": b.offer_count
+                    },
+                    "geometry": b.geojson
+                }
+                for b in boundaries
+            ],
+            "offres": [
+                {
+                    "id": str(o.id),
+                    "title": o.title,
+                    "location": o.location,
+                    "contract": o.contract_type,
+                    "boundary": o.boundary_name
+                }
+                for o in offres
+            ]
+        }
