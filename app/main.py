@@ -17,6 +17,8 @@ from pathlib import Path
 import pydantic
 from pydantic import EmailStr
 
+from app.services.admin_boundary_importer import AdminBoundaryImporterService
+
 
 # Import des modules internes
 from .database import SessionLocal, engine, Base, get_db
@@ -224,6 +226,87 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.post("/import", status_code=201)
+def import_admin_boundaries(
+    clean: bool = Query(True, description="Vide la table avant import"),
+    db: Session = Depends(get_db)
+):
+    """
+    Importe les limites administratives depuis le dossier local `docs/SEN_adm/`.
+    
+    **Processus** :
+    - Lit les fichiers `.shp` du dossier local
+    - Importe les niveaux : region, departement, commune, arrondissement, quartier
+    - Génère automatiquement le centroid et le geojson
+    - Projection systématique en EPSG:4326 (WGS84)
+    
+    **Notes** :
+    - Les fichiers doivent être dans `docs/SEN_adm/` à côté du dossier `service/`
+    - Attend des fichiers nommés selon le pattern : `SEN_adm{0-4}.shp`
+    - Nettoie la table par défaut (paramètre `clean=true`)
+    """
+    try:
+        importer = AdminBoundaryImporterService()
+        result = importer.import_all(db, clean=clean)
+        stats = importer.verify_import(db)
+        
+        return {
+            "status": "success",
+            "message": f"{result['total_imported']} limites importées",
+            "details": {
+                "total_imported": result['total_imported'],
+                "source_dir": result['source_dir'],
+                "stats_by_level": stats,
+                "clean_mode": clean
+            }
+        }
+        
+    except FileNotFoundError as e:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "status": "error",
+                "message": "Dossier 'docs/SEN_adm/' introuvable",
+                "help": "Créez le dossier et placez les shapefiles dedans",
+                "expected_path": str(e).split("'")[1] if "'" in str(e) else str(e)
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": "Erreur inattendue lors de l'import",
+                "details": str(e)
+            }
+        )
+
+@app.get("/import/verify")
+def verify_import(db: Session = Depends(get_db)):
+    """
+    Retourne le nombre de limites administratives importées par niveau.
+    **Exemple de sortie** :
+    ```json
+    {
+        "region": 14,
+        "departement": 46,
+        "commune": 557,
+        "quartier": 808
+    }
+    ```
+    """
+    importer = AdminBoundaryImporterService()
+    stats = importer.verify_import(db)
+    
+    return {
+        "status": "success",
+        "stats": stats,
+        "total": sum(stats.values())
+    }
+
 
 
 # Routes de base
