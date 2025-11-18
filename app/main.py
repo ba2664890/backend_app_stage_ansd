@@ -23,7 +23,7 @@ from app.services.admin_boundary_importer import AdminBoundaryImporterService
 # Import des modules internes
 from .database import SessionLocal, engine, Base, get_db
 from .models.database_models import (
-    OffreEmploiBrute, OffreEmploiEnrichie, User, UserProfile, 
+    OffreEmploiBrute, OffreEmploiEnrichie, SenegalAdminBoundary, User, UserProfile, 
     JobRecommendation, JobStatistics 
 )
 from .models.api_models import (
@@ -307,6 +307,126 @@ def verify_import(db: Session = Depends(get_db)):
         "total": sum(stats.values())
     }
 
+
+@App.post("/match-offers")
+def match_offers_to_boundaries(
+    level: str = Query(None, description="Limiter à un niveau (ex: 'quartier')"),
+    threshold: int = Query(85, ge=50, le=100, description="Seuil de similarité (50-100)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Mappe les offres d'emploi aux limites administratives par matching texte.
+    
+    **Exemple** :
+    - Offre.location = "Dakar Plateau" → Quartier "Plateau" (score 100%)
+    - Offre.location = "Dakar-Ponty" → Quartier "Dakar-Ponty" (score 95%)
+    - Offre.location = "Poste à Dakar" → Région "Dakar" (score 85%)
+    
+    **Usage** :
+    - Premier import : `POST /admin/match-offers?threshold=80`
+    - Affiner manuellement les non-matchés
+    """
+    service = AdminBoundaryService()
+    
+    try:
+        result = service.match_offers_to_boundaries(db, level=level, similarity_threshold=threshold)
+        return {
+            "status": "success",
+            "message": f"{result['matched']} offres matchées",
+            "details": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/offres")
+def get_offres_geomap(
+    level: str = None,  # Filtrer par niveau admin # type: ignore
+    db: Session = Depends(get_db)
+):
+    """
+    Retourne les offres avec leur limite administrative (pour choropleth).
+    
+    **Format** :
+    ```json
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": { "type": "Polygon", "coordinates": [...] },
+          "properties": {
+            "name": "Dakar Plateau",
+            "level": "quartier",
+            "offer_count": 45,
+            "offres": [...]  // Liste des offres dans cette zone
+          }
+        }
+      ]
+    }
+    """
+    query = db.query(SenegalAdminBoundary).filter(
+        SenegalAdminBoundary.offer_count > 0
+    )
+    
+    if level:
+        query = query.filter_by(level=level)
+    
+    boundaries = query.all()
+    
+    features = []
+    for boundary in boundaries:
+        if boundary.geojson:
+            # Récupérer les offres de cette limite
+            offres = db.query(OffreEmploiBrute).filter_by(
+                admin_boundary_id=boundary.id
+            ).limit(10).all()
+            
+            features.append({
+                "type": "Feature",
+                "geometry": boundary.geojson,
+                "properties": {
+                    "id": boundary.id,
+                    "name": boundary.name,
+                    "level": boundary.level,
+                    "offer_count": boundary.offer_count,
+                    "offres": [
+                        {
+                            "id": str(o.id),
+                            "title": o.title,
+                            "company": o.company_name,
+                            "contract": o.contract_type
+                        }
+                        for o in offres
+                    ]
+                }
+            })
+    
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "total_boundaries": len(features)
+    }
+
+
+@app.get("/unmatched-offers")
+def get_unmatched_offers(
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Retourne les offres qui n'ont pas pu être matchées.
+    Utile pour affiner le threshold ou corriger les noms.
+    """
+    offers = db.query(OffreEmploiBrute).filter(
+        OffreEmploiBrute.admin_boundary_id.is_(None),
+        OffreEmploiBrute.location.isnot(None)
+    ).limit(limit).all()
+    
+    return {
+        "total": len(offers),
+        "locations": [o.location for o in offers]
+    }
 
 
 # Routes de base

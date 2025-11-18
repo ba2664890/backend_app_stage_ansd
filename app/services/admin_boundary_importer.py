@@ -7,8 +7,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import delete, func
 from geoalchemy2.shape import from_shape
 from shapely.geometry import shape
+from difflib import get_close_matches
+from sqlalchemy import or_, func
 
-from app.models.database_models import SenegalAdminBoundary
+from app.models.database_models import OffreEmploiBrute, SenegalAdminBoundary
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +147,124 @@ class AdminBoundaryImporterService:
             "source_dir": str(self.data_dir)
         }
 
+
+    def match_offers_to_boundaries(
+        self, 
+        db: Session, 
+        level: str = None,
+        similarity_threshold: int = 85
+    ) -> Dict[str, Any]:
+        """
+        Mappe les offres aux limites administratives par matching texte.
+        
+        Args:
+            level: Si spécifié, ne traite que ce niveau (ex: 'quartier')
+            similarity_threshold: Score minimal (0-100) pour fuzzy matching
+        """
+        logger.info("🔄 Matching offres ↔ limites administratives (texte)")
+        
+        # 1. Récupérer toutes les limites
+        boundaries = db.query(SenegalAdminBoundary).all()
+        if not boundaries:
+            logger.warning("Aucune limite administrative en DB")
+            return {"status": "success", "matched": 0, "threshold": similarity_threshold}
+        
+        # 2. Construire un dictionnaire {nom: boundary_id}
+        # Normaliser les noms (minuscules, sans accents)
+        boundary_map = {
+            self._normalize_name(b.name): b.id 
+            for b in boundaries
+        }
+        
+        # 3. Récupérer les offres sans admin_boundary_id
+        query = db.query(OffreEmploiBrute).filter(
+            OffreEmploiBrute.admin_boundary_id.is_(None),
+            OffreEmploiBrute.location.isnot(None)
+        )
+        if level:
+            query = query.join(SenegalAdminBoundary).filter(
+                SenegalAdminBoundary.level == level
+            )
+        
+        pending_offers = query.all()
+        logger.info(f"📋 {len(pending_offers)} offres à matcher")
+        
+        # 4. Matcher chaque offre
+        matched = 0
+        for offer in pending_offers:
+            matched_boundary = self._find_best_match(
+                offer.location, 
+                boundary_map, 
+                similarity_threshold
+            )
+            
+            if matched_boundary:
+                offer.admin_boundary_id = matched_boundary
+                matched += 1
+        
+        db.commit()
+        logger.info(f"✅ {matched} offres matchées")
+        
+        return {
+            "status": "success",
+            "total_processed": len(pending_offers),
+            "matched": matched,
+            "threshold": similarity_threshold
+        }
+    
+    def _normalize_name(self, name: str) -> str:
+        """Normalise un nom pour matching (minuscule, sans accents)."""
+        import unicodedata
+        name = name.lower().strip()
+        # Supprimer accents
+        name = ''.join(
+            c for c in unicodedata.normalize('NFD', name)
+            if unicodedata.category(c) != 'Mn'
+        )
+        # Supprimer ponctuation
+        name = name.replace('-', ' ').replace('_', ' ')
+        return ' '.join(name.split())  # Espaces multiples → un seul
+    
+    def _find_best_match(
+        self, 
+        location: str, 
+        boundary_map: dict, 
+        threshold: int
+    ) -> Optional[int]:
+        """
+        Trouve la meilleure correspondance entre location et noms de limites.
+        """
+        if not location:
+            return None
+        
+        # Normaliser la location
+        norm_location = self._normalize_name(location)
+        
+        # 1. Essai exact (contient)
+        for boundary_name, boundary_id in boundary_map.items():
+            if boundary_name in norm_location or norm_location in boundary_name:
+                return boundary_id
+        
+        # 2. Fuzzy matching sur les mots clés
+        location_words = norm_location.split()
+        boundary_names = list(boundary_map.keys())
+        
+        # Chercher le meilleur match pour chaque mot
+        for word in location_words:
+            if len(word) < 3:  # Ignorer les mots courts (le, la, de...)
+                continue
+            
+            matches = get_close_matches(
+                word, 
+                boundary_names, 
+                n=1, 
+                cutoff=threshold / 100
+            )
+            
+            if matches:
+                return boundary_map[matches[0]]
+        
+        return None
     # ------------------------------------------------------------
     # Vérification rapide
     # ------------------------------------------------------------
