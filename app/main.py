@@ -308,7 +308,7 @@ def verify_import(db: Session = Depends(get_db)):
     }
 
 
-@App.post("/match-offers")
+@app.post("/match-offers")
 def match_offers_to_boundaries(
     level: str = Query(None, description="Limiter à un niveau (ex: 'quartier')"),
     threshold: int = Query(85, ge=50, le=100, description="Seuil de similarité (50-100)"),
