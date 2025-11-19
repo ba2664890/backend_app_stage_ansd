@@ -470,6 +470,31 @@ def get_carte_choropleth(
     service = CarteService(AdminBoundaryService())
     return service.get_choropleth_data(db, level, min_offers)
 
+@app.post("/refresh-offer-counts")
+def refresh_all_levels(db: Session = Depends(get_db)):
+    """
+    Recalcule les compteurs d'offres pour tous les niveaux (1 → 4).
+    """
+    levels = ["region", "departement", "arrondissement", "commune"]
+    results = []
+
+    try:
+        for lvl in levels:
+            res = AdminBoundaryService.refresh_offer_counts(db, lvl)
+            results.append(res)
+
+        return {
+            "status": "success",
+            "levels_processed": len(levels),
+            "results": results
+        }
+
+    except Exception as e:
+        raise AppError(
+            message="Erreur durant le recalcul global des compteurs.",
+            context={"error": str(e)},
+            status_code=500
+        )
 
 
 
