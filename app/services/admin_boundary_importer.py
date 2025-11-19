@@ -239,16 +239,20 @@ class AdminBoundaryImporterService:
 
 
     # Fin du fichier - ajoutez :
-    def match_and_refresh(self, db: Session, level: Optional[str] = None):
-        """Orchestre le matching puis le refresh atomiquement."""
+    # Dans admin_boundary_importer.py
+    def match_and_refresh(self, db: Session, level: str = None):
+        """Matching + refresh atomique pour éviter incohérence."""
         try:
-            result = self.match_offers_to_boundaries(db, level=level)
-            if result["matched"] > 0:
+            # 1. Match les offres
+            match_result = self.match_offers_to_boundaries(db, level)
+            
+            # 2. Si des offres ont été matchées, refresh immédiatement
+            if match_result["matched"] > 0:
                 service = AdminBoundaryService()
-                refresh = service.refresh_offer_counts(db, level=level)
-                result["offer_counts_updated"] = refresh["updated_rows"]
-            return result
-        except Exception as e:
+                refresh = service.refresh_offer_counts(db, level)
+                match_result["offer_counts_updated"] = refresh["updated_rows"]
+            
+            return match_result
+        except Exception:
             db.rollback()
-            logger.exception("❌ Erreur matching+refresh")
             raise
