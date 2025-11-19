@@ -42,17 +42,36 @@ class AdminBoundaryImporterService:
             logger.warning(f"⚠️  Shapefile vide : {shp_path}")
             return 0
 
+        # ------------------------------------------------------------
+        # Mapping entre niveau et colonne NAME_X
+        # ------------------------------------------------------------
+        level_map = {
+            "region": 1,
+            "departement": 2,
+            "arrondissement": 3,
+        }
+
+        if level not in level_map:
+            raise ValueError(f"❌ Niveau inconnu : {level}")
+
+        name_col = f"NAME_{level_map[level]}"
+        parent_col = f"PARENT_{level_map[level]}"  # si existe
+
+        if name_col not in gdf.columns:
+            raise ValueError(f"❌ Colonne {name_col} introuvable dans {shp_path.name}")
+
         records = []
         for _, row in gdf.iterrows():
             geojson = row.geometry.__geo_interface__
             centroid_wkt = row.geometry.centroid.wkt
 
-            name = row.get("NAME_")
+            name = row.get(name_col)
+            parent_name = row.get(parent_col) if parent_col in gdf.columns else None
 
             records.append({
                 "name": str(name)[:255],
                 "level": level,
-                "parent_name": row.get("PARENT", "")[:255] if "PARENT" in row else None,
+                "parent_name": str(parent_name)[:255] if parent_name else None,
                 "geojson": geojson,
                 "centroid": centroid_wkt,
                 "offer_count": 0,
@@ -63,6 +82,7 @@ class AdminBoundaryImporterService:
 
         logger.info(f"✅ {len(records)} limites importées ({level})")
         return len(records)
+
 
     # ------------------------------------------------------------
     # Import complet
