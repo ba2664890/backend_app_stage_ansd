@@ -118,7 +118,7 @@ class AdminBoundaryImporterService:
         boundaries = db.query(SenegalAdminBoundary).all()
         if not boundaries:
             return {"status": "success", "matched": 0}
-
+        print(boundaries)
         # 🔥 Cast pour éviter Column[str] → str
         boundary_map = {
             self._normalize_name(str(b.name)): b.id
