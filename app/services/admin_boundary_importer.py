@@ -49,6 +49,7 @@ class AdminBoundaryImporterService:
             "region": 1,
             "departement": 2,
             "arrondissement": 3,
+            "commune":4
         }
 
         if level not in level_map:
@@ -98,8 +99,8 @@ class AdminBoundaryImporterService:
         file_mapping = {
             "region": ["adm1", "region"],
             "departement": ["adm2", "departement"],
-            "commune": ["adm3", "commune"],
-            "arrondissement": ["adm4", "arrondissement"],
+            "arrondissement": ["adm3", "arrondissement"],
+            "commune": ["adm4", "commune"],
         }
 
         total_imported = 0
