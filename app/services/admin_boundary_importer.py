@@ -57,7 +57,7 @@ class AdminBoundaryImporterService:
                 "centroid": centroid_wkt,
                 "offer_count": 0,
             })
-        print(records)
+
         db.execute(SenegalAdminBoundary.__table__.insert(), records)
         db.commit()
 
