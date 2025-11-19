@@ -118,7 +118,7 @@ class AdminBoundaryImporterService:
         boundaries = db.query(SenegalAdminBoundary).all()
         if not boundaries:
             return {"status": "success", "matched": 0}
-        print(boundaries)
+
         # 🔥 Cast pour éviter Column[str] → str
         boundary_map = {
             self._normalize_name(str(b.name)): b.id
@@ -134,6 +134,7 @@ class AdminBoundaryImporterService:
             query = query.join(SenegalAdminBoundary).filter(
                 SenegalAdminBoundary.level == level
             )
+            print(query)
 
         pending_offers = query.all()
         logger.info(f"📋 {len(pending_offers)} offres à matcher")
