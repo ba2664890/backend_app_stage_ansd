@@ -14,6 +14,7 @@ from tenacity import (
     before_sleep_log,
 )
 
+from app.core.constants import AdminLevel
 from app.db.init_postgis import PostGISManager
 from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute
 from app.models.api_models import AdminBoundaryOut
@@ -199,54 +200,109 @@ class AdminBoundaryService:
         
         return AdminBoundaryOut.from_orm(boundary)
     
+# backend/app/services/admin_boundary.py
+
+
+from app.models.api_models import ChoroplethResponse, OfferGeoJSON
+
 class CarteService:
-    def __init__(self, db: Session):
-        self.db = db
+    """Service dédié à la génération de données cartographiques."""
     
-    def get_choropleth_data(self, level: str):
-        # Récupérer les limites avec le nombre d'offres
-        boundaries = self.db.query(
-            SenegalAdminBoundary.name,
-            SenegalAdminBoundary.level,
-            SenegalAdminBoundary.geojson,
-            SenegalAdminBoundary.offer_count
-        ).filter(
-            SenegalAdminBoundary.level == level,
-            SenegalAdminBoundary.offer_count > 0
-        ).all()
+    def __init__(self, admin_service: AdminBoundaryService):
+        self.admin_service = admin_service
+    
+    @AdminBoundaryService.with_network_retry
+    def get_choropleth_data(
+        self, 
+        db: Session, 
+        level: AdminLevel,
+        min_offers: int = 1
+    ) -> ChoroplethResponse:
+        """
+        Récupère les données formatées pour une carte choroplèthe.
         
-        # Récupérer les offres pour ce niveau
-        offres = self.db.query(
-            OffreEmploiBrute.id,
-            OffreEmploiBrute.title,
-            OffreEmploiBrute.location,
-            OffreEmploiBrute.contract_type,
-            SenegalAdminBoundary.name.label("boundary_name")
-        ).join(SenegalAdminBoundary).filter(
-            SenegalAdminBoundary.level == level
-        ).all()
+        Args:
+            db: Session SQLAlchemy
+            level: Niveau administratif (enum)
+            min_offers: Filtrer les entités avec moins de X offres
         
-        return {
-            "boundaries": [
-                {
+        Returns:
+            FeatureCollection GeoJSON + métadonnées
+        """
+        # ✅ Validation stricte
+        if not isinstance(level, AdminLevel):
+            raise ValidationError(
+                field="level",
+                reason="Doit être une valeur AdminLevel enum",
+                context={"valid_values": [l.value for l in AdminLevel]},
+            )
+        
+        # ✅ Vérifie PostGIS
+        self.admin_service.postgis_manager.ensure_postgis(db)
+        
+        try:
+            # Récupère les limites avec compteurs à jour
+            boundaries = db.query(SenegalAdminBoundary).filter_by(
+                level=level.value
+            ).filter(
+                SenegalAdminBoundary.offer_count >= min_offers
+            ).all()
+            
+            if not boundaries:
+                logger.warning(f"Aucune limite avec {min_offers}+ offres pour {level.value}")
+            
+            # Construction du FeatureCollection
+            features = []
+            for b in boundaries:
+                # geojson est stocké comme dict dans PostgreSQL (JSONB)
+                geometry = b.geojson if isinstance(b.geojson, dict) else {}
+                
+                features.append({
                     "type": "Feature",
                     "properties": {
                         "name": b.name,
                         "level": b.level,
-                        "offer_count": b.offer_count
+                        "offer_count": b.offer_count,
+                        "centroid": b.centroid,  # Pour centroid clustering
                     },
-                    "geometry": b.geojson
-                }
-                for b in boundaries
-            ],
-            "offres": [
-                {
-                    "id": str(o.id),
-                    "title": o.title,
-                    "location": o.location,
-                    "contract": o.contract_type,
-                    "boundary": o.boundary_name
-                }
-                for o in offres
-            ]
-        }
+                    "geometry": geometry,
+                })
+            
+            # Récupère les offres (limité pour performance)
+            offres = db.query(
+                OffreEmploiBrute.id,
+                OffreEmploiBrute.title,
+                OffreEmploiBrute.location,
+                OffreEmploiBrute.contract_type,
+                SenegalAdminBoundary.name.label("boundary_name")
+            ).join(
+                SenegalAdminBoundary,
+                OffreEmploiBrute.admin_boundary_id == SenegalAdminBoundary.id
+            ).filter(
+                SenegalAdminBoundary.level == level.value,
+                SenegalAdminBoundary.offer_count >= min_offers
+            ).limit(500).all()  # ⚠️ Limite pour éviter timeout
+            
+            return ChoroplethResponse(
+                type="FeatureCollection",
+                features=features,
+                offers=[
+                    OfferGeoJSON(
+                        id=str(o.id),
+                        title=o.title,
+                        location=o.location,
+                        contract=o.contract_type,
+                        boundary=o.boundary_name,
+                    ) for o in offres
+                ],
+                total_boundaries=len(boundaries),
+                total_offers=sum(b.offer_count for b in boundaries),
+            )
+            
+        except Exception as e:
+            logger.exception(f"❌ Erreur génération carte {level.value}")
+            raise AppError(
+                message="Erreur de génération de la carte",
+                context={"level": level.value, "error": str(e)},
+                status_code=500,
+            )

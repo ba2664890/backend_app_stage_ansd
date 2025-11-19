@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 import geopandas as gpd
 from sqlalchemy.orm import Session
 from sqlalchemy import delete, func
+from app.services.admin_boundary import AdminBoundaryService
 from geoalchemy2.shape import from_shape
 from shapely.geometry import shape
 from difflib import get_close_matches
@@ -234,3 +235,19 @@ class AdminBoundaryImporterService:
         result = {level: count for level, count in stats}
         logger.info(f"📊 Stats import : {result}")
         return result
+
+
+    # Fin du fichier - ajoutez :
+    def match_and_refresh(self, db: Session, level: Optional[str] = None):
+        """Orchestre le matching puis le refresh atomiquement."""
+        try:
+            result = self.match_offers_to_boundaries(db, level=level)
+            if result["matched"] > 0:
+                service = AdminBoundaryService()
+                refresh = service.refresh_offer_counts(db, level=level)
+                result["offer_counts_updated"] = refresh["updated_rows"]
+            return result
+        except Exception as e:
+            db.rollback()
+            logger.exception("❌ Erreur matching+refresh")
+            raise

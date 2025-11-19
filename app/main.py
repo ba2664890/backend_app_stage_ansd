@@ -17,6 +17,7 @@ from pathlib import Path
 import pydantic
 from pydantic import EmailStr
 
+from app.core.constants import AdminLevel
 from app.services.admin_boundary_importer import AdminBoundaryImporterService
 
 
@@ -27,7 +28,7 @@ from .models.database_models import (
     JobRecommendation, JobStatistics 
 )
 from .models.api_models import (
-    CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, SalaryByExperience,
+    ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, SalaryByExperience,
     UserProfileCreate, UserProfileResponse, JobSearchParams,
     PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData, UserResponse
 )
@@ -446,6 +447,31 @@ async def root():
         "health": "/health",
         "timestamp": datetime.now().isoformat()
     }
+
+
+
+
+# Exemple d'endpoint FastAPI
+from fastapi import Depends, HTTPException
+from sqlalchemy.orm import Session
+
+@app.get("/api/v1/carte/{level}", response_model=ChoroplethResponse)
+def get_carte_choropleth(
+    level: AdminLevel,
+    db: Session = Depends(get_db),
+    min_offers: int = 1,
+):
+    """
+    1. Valide le level
+    2. Vérifie PostGIS
+    3. Récupère les données avec retry automatique
+    4. Retourne FeatureCollection GeoJSON
+    """
+    service = CarteService(AdminBoundaryService())
+    return service.get_choropleth_data(db, level, min_offers)
+
+
+
 
 @app.get("/health", response_model=Dict[str, Any])
 async def health_check():

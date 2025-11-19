@@ -304,3 +304,20 @@ class FullAnalyticsResponse(BaseModel):
     contract_evolution: List[ContractTypeEvolution]
     evolution_rates: Dict[str, Any]
     generated_at: datetime
+
+
+
+
+class OfferGeoJSON(BaseModel):
+    id: str
+    title: str
+    location: Optional[str]
+    contract: Optional[str]
+    boundary: str
+
+class ChoroplethResponse(BaseModel):
+    type: str = "FeatureCollection"
+    features: List[Dict[str, Any]] = Field(description="GeoJSON Features")
+    offers: List[OfferGeoJSON]
+    total_boundaries: int
+    total_offers: int
