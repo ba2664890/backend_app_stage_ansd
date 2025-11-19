@@ -39,35 +39,38 @@ class AdminBoundaryImporterService:
         gdf = gpd.read_file(shp_path).to_crs(4326)
 
         if gdf.empty:
-            logger.warning(f"⚠️  Shapefile vide : {shp_path}")
+            logger.warning(f"⚠️ Shapefile vide : {shp_path}")
             return 0
 
-        # ------------------------------------------------------------
-        # Mapping entre niveau et colonne NAME_X
-        # ------------------------------------------------------------
-        level_map = {
-            "region": 1,
-            "departement": 2,
-            "arrondissement": 3,
-            "commune":4
+        # Mapping hiérarchique basé sur ton CSV
+        name_map = {
+            "region": "NAME_1",
+            "departement": "NAME_2",
+            "arrondissement": "NAME_3",
+            "commune": "NAME_4",
         }
 
-        if level not in level_map:
-            raise ValueError(f"❌ Niveau inconnu : {level}")
+        parent_map = {
+            "region": "NAME_0",
+            "departement": "NAME_1",
+            "arrondissement": "NAME_2",
+            "commune": "NAME_3",
+        }
 
-        name_col = f"NAME_{level_map[level]}"
-        parent_col = f"PARENT_{level_map[level]}"  # si existe
+        if level not in name_map:
+            raise ValueError(f"Niveau inconnu : {level}")
 
-        if name_col not in gdf.columns:
-            raise ValueError(f"❌ Colonne {name_col} introuvable dans {shp_path.name}")
+        name_col = name_map[level]
+        parent_col = parent_map[level]
 
         records = []
         for _, row in gdf.iterrows():
+
             geojson = row.geometry.__geo_interface__
             centroid_wkt = row.geometry.centroid.wkt
 
             name = row.get(name_col)
-            parent_name = row.get(parent_col) if parent_col in gdf.columns else None
+            parent_name = row.get(parent_col)
 
             records.append({
                 "name": str(name)[:255],
@@ -83,6 +86,7 @@ class AdminBoundaryImporterService:
 
         logger.info(f"✅ {len(records)} limites importées ({level})")
         return len(records)
+
 
 
     # ------------------------------------------------------------
