@@ -450,25 +450,30 @@ async def root():
 
 
 
-
-# Exemple d'endpoint FastAPI
-from fastapi import Depends, HTTPException
-from sqlalchemy.orm import Session
-
 @app.get("/api/v1/carte/{level}", response_model=ChoroplethResponse)
-def get_carte_choropleth(
+def get_choropleth_map(
     level: AdminLevel,
+    min_offers: int = Query(1, ge=0, description="Nombre minimum d'offres"),
+    parent_name: Optional[str] = Query(None, description="Filtrer par parent (ex: 'Dakar')"),
     db: Session = Depends(get_db),
-    min_offers: int = 1,
 ):
     """
-    1. Valide le level
-    2. Vérifie PostGIS
-    3. Récupère les données avec retry automatique
-    4. Retourne FeatureCollection GeoJSON
+    Récupère les données choroplèthe pour un niveau administratif avec navigation hiérarchique.
+    
+    - **level**: Niveau administratif (region, departement, commune, etc.)
+    - **min_offers**: Nombre minimum d'offres pour afficher une zone
+    - **parent_name**: Optionnel, filtre par parent pour navigation hiérarchique
     """
-    service = CarteService(AdminBoundaryService())
-    return service.get_choropleth_data(db, level, min_offers)
+    try:
+        service = CarteService(AdminBoundaryService())
+        return service.get_choropleth_data(
+            db=db,
+            level=level,
+            min_offers=min_offers,
+            parent_name=parent_name
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/refresh-offer-counts")
 def refresh_all_levels(db: Session = Depends(get_db)):

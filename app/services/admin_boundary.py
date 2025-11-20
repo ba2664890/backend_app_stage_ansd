@@ -262,29 +262,63 @@ class AdminBoundaryService:
 # backend/app/services/admin_boundary.py
 
 
-from app.models.api_models import ChoroplethResponse, OfferGeoJSON
+# backend/app/services/carte_service.py
+
+import logging
+import json
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-import json
-from shapely.geometry import mapping, shape
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+from app.core.constants import AdminLevel
+from app.db.init_postgis import PostGISManager
+from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute
+from app.models.api_models import ChoroplethResponse, OfferGeoJSON
+from app.core.exceptions import AppError, ValidationError
+from app.services.admin_boundary import AdminBoundaryService
+
+logger = logging.getLogger(__name__)
 
 class CarteService:
-
+    """
+    Service optimisé pour générer la carte choroplèthe avec navigation hiérarchique.
+    Utilise les compteurs pré-calculés (offer_count) au lieu de recalculer à chaque fois.
+    """
+    
     def __init__(self, admin_service: AdminBoundaryService):
         self.admin_service = admin_service
 
-    @AdminBoundaryService.with_network_retry
+    @staticmethod
+    def with_network_retry(func):
+        """Décorateur pour retry sur erreurs réseau."""
+        return retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+            retry=retry_if_exception_type(Exception),
+            reraise=True,
+        )(func)
+
+    @with_network_retry
     def get_choropleth_data(
         self,
         db: Session,
         level: AdminLevel,
-        min_offers: int = 1
+        min_offers: int = 1,
+        parent_name: Optional[str] = None
     ) -> ChoroplethResponse:
-
-        # -----------------------
-        # 1. Validation
-        # -----------------------
+        """
+        Récupère les données choroplèthe avec filtrage par parent.
+        Utilise les compteurs pré-calculés pour les performances.
+        
+        Args:
+            db: Session SQLAlchemy
+            level: Niveau administratif (AdminLevel)
+            min_offers: Nombre minimum d'offres pour afficher la zone
+            parent_name: Nom du parent pour filtrage hiérarchique (ex: "Dakar")
+        """
+        
+        # Validation
         if not isinstance(level, AdminLevel):
             raise ValidationError(
                 field="level",
@@ -295,16 +329,22 @@ class CarteService:
         # Vérifie PostGIS
         self.admin_service.postgis_manager.ensure_postgis(db)
 
-        # -----------------------
-        # 2. Get boundaries
-        # -----------------------
-        boundaries = (
-            db.query(SenegalAdminBoundary)
-            .filter(SenegalAdminBoundary.level == level.value)
-            .all()
+        # Construction de la query avec filtre
+        query = db.query(SenegalAdminBoundary).filter(
+            SenegalAdminBoundary.level == level.value,
+            SenegalAdminBoundary.offer_count >= min_offers
         )
+        
+        # Filtrage par parent si spécifié
+        if parent_name:
+            query = query.filter(
+                func.lower(SenegalAdminBoundary.parent_name) == func.lower(parent_name)
+            )
+
+        boundaries = query.all()
 
         if not boundaries:
+            logger.warning(f"Aucune limite trouvée pour level='{level.value}', parent='{parent_name}'")
             return ChoroplethResponse(
                 type="FeatureCollection",
                 features=[],
@@ -316,48 +356,11 @@ class CarteService:
         features = []
         total_offers = 0
 
-        # -----------------------------------------
-        # Prépare la normalisation SQL pour location
-        # -----------------------------------------
-        sql_location_normalized = func.lower(
-            func.unaccent(
-                func.split_part(OffreEmploiBrute.location, ",", 1)  # -> avant virgule
-                )
-            )
-
-        sql_location_normalized = func.replace(sql_location_normalized, "-", " ")
-        sql_location_normalized = func.replace(sql_location_normalized, "_", " ")
-
-                # Nettoyage espaces multiples
-        sql_location_normalized = func.regexp_replace(
-            sql_location_normalized, r"\s+", " ", "g"
-        )
-
-                # Trim
-        sql_location_normalized = func.trim(sql_location_normalized)
-
-        # -------------------------------------------------
-        # 3. Construire GeoJSON pour chaque boundarie
-        # -------------------------------------------------
+        # Construction des features GeoJSON
         for b in boundaries:
+            total_offers += b.offer_count
 
-            boundary_normalized = self.admin_service._normalize_name(b.name)
-
-            # -----------------------------
-            # ➤ Count des offres (MATCH PAR NOM NORMALISÉ)
-            # -----------------------------
-            offer_count = (
-                db.query(OffreEmploiBrute)
-                .filter(sql_location_normalized == boundary_normalized)
-                .count()
-            )
-
-            if offer_count < min_offers:
-                continue
-
-            total_offers += offer_count
-
-            # Convert geometry
+            # Convertit geometry
             geometry = b.geojson if isinstance(b.geojson, dict) else {}
             if isinstance(b.geojson, str):
                 try:
@@ -365,10 +368,11 @@ class CarteService:
                 except:
                     geometry = {}
 
-            # Centroid (WKT → GeoJSON)
+            # Convertit centroid
             centroid_value = b.centroid
             if hasattr(centroid_value, "desc"):
                 try:
+                    from shapely.geometry import mapping, shape
                     centroid_value = mapping(shape(centroid_value))
                 except:
                     centroid_value = None
@@ -379,30 +383,31 @@ class CarteService:
                     "id": b.id,
                     "name": b.name,
                     "level": b.level,
-                    "offer_count": offer_count,
-                    "centroid": centroid_value
+                    "offer_count": b.offer_count,  # ✅ Utilise le compteur pré-calculé
+                    "centroid": centroid_value,
+                    "parent_name": b.parent_name  # ✅ IMPORTANT pour la navigation
                 },
                 "geometry": geometry
             })
 
-        # -------------------------------------------------
-        # 4. Récupération des offres GEOJSON (match par nom)
-        # -------------------------------------------------
-        offres = (
-            db.query(
-                OffreEmploiBrute.id,
-                OffreEmploiBrute.title,
-                OffreEmploiBrute.location,
-                OffreEmploiBrute.contract_type,
-            )
-            .filter(
-                sql_location_normalized.in_(
-                    [self.admin_service._normalize_name(b.name) for b in boundaries]
+        # Récupération des offres liées (optionnel, pour debug)
+        offres = []
+        if hasattr(OffreEmploiBrute, 'admin_boundary_id'):
+            offres = (
+                db.query(
+                    OffreEmploiBrute.id,
+                    OffreEmploiBrute.title,
+                    OffreEmploiBrute.location,
+                    OffreEmploiBrute.contract_type,
                 )
+                .join(SenegalAdminBoundary, OffreEmploiBrute.admin_boundary_id == SenegalAdminBoundary.id)
+                .filter(
+                    SenegalAdminBoundary.level == level.value,
+                    SenegalAdminBoundary.offer_count >= min_offers
+                )
+                .limit(500)
+                .all()
             )
-            .limit(500)
-            .all()
-        )
 
         return ChoroplethResponse(
             type="FeatureCollection",
