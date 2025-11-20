@@ -337,7 +337,7 @@ class CarteService:
         sql_location_normalized = func.trim(sql_location_normalized)
 
         # -------------------------------------------------
-        # 3. Construire GeoJSON pour chaque boundary
+        # 3. Construire GeoJSON pour chaque boundarie
         # -------------------------------------------------
         for b in boundaries:
 
