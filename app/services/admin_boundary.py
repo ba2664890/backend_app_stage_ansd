@@ -113,71 +113,98 @@ class AdminBoundaryService:
     @with_network_retry
     def refresh_offer_counts(self, db: Session, level: str) -> Dict[str, Any]:
         """
-        Recalcule les compteurs d'offres par intersection géospatiale.
-        Opération longue => timeout élevé.
-        
+        Recalcule les compteurs d'offres d'emploi pour un niveau administratif donné.
+        Utilise la session fournie par FastAPI (pas de db.begin()).
+
+        Args:
+            db (Session): Session SQLAlchemy en cours
+            level (str): Niveau administratif ("region", "departement", "arrondissement", "commune")
+
         Returns:
-            dict avec statut et nb de lignes mises à jour
+            Dict: Résultat du recalcul
         """
+        # Vérifier PostGIS
         self.postgis_manager.ensure_postgis(db)
-        
+
         try:
-            # ✅ PAS de db.begin() - utilise la session existante
-            logger.info(f"🔄 Refresh des compteurs pour level={level}")
-            
-            # Récupérer les limites
-            boundaries = db.query(SenegalAdminBoundary).filter_by(level=level).all()
-            
+            logger.info(f"🔄 Début du refresh des compteurs pour level={level}")
+
+            # Récupération des limites administratives
+            boundaries = (
+                db.query(SenegalAdminBoundary)
+                .filter(SenegalAdminBoundary.level == level)
+                .all()
+            )
+
+            # Aucun boundary trouvé
             if not boundaries:
-                logger.warning(f"Aucune limite trouvée pour level='{level}'")
-                return {"status": "success", "updated_rows": 0, "level": level}
-            
+                logger.warning(f"⚠️ Aucun boundary trouvé pour level='{level}'")
+                return {
+                    "status": "success",
+                    "updated_rows": 0,
+                    "level": level,
+                    "total_boundaries": 0
+                }
+
             total_updated = 0
+
+            # Boucle de recalcul
             for boundary in boundaries:
-                # Compter les offres pour cette limite
-                count = db.query(OffreEmploiBrute).filter(
-                    OffreEmploiBrute.admin_boundary_id == boundary.id
-                ).count()
-                
-                # Mettre à jour si nécessaire
+                count = (
+                    db.query(OffreEmploiBrute)
+                    .filter(OffreEmploiBrute.admin_boundary_id == boundary.id)
+                    .count()
+                )
+
                 if boundary.offer_count != count:
                     boundary.offer_count = count
                     total_updated += 1
-            
-            # ✅ Commit explicite seulement si des changements ont été faits
+
+            # Commit uniquement si nécessaire
             if total_updated > 0:
                 db.commit()
-                logger.info(f"✅ {total_updated} compteurs mis à jour pour level={level}")
+                logger.info(
+                    f"✅ {total_updated} compteurs mis à jour pour level={level} "
+                    f"sur {len(boundaries)} boundaries"
+                )
             else:
-                logger.info(f"ℹ️ Aucune mise à jour nécessaire pour level={level}")
-                
+                logger.info(
+                    f"ℹ️ Aucun changement pour level={level} (tous les compteurs sont déjà à jour)"
+                )
+
             return {
-                "status": "success", 
-                "updated_rows": total_updated, 
+                "status": "success",
+                "updated_rows": total_updated,
                 "level": level,
-                "total_boundaries": len(boundaries)
+                "total_boundaries": len(boundaries),
             }
-                
+
         except OperationalError as e:
-            # ✅ Rollback en cas d'erreur
+            # Rollback obligatoire
             db.rollback()
-            logger.error(f"❌ Timeout ou erreur réseau lors du refresh : {e}")
+            logger.error(f"❌ Erreur réseau / timeout lors du refresh : {e}")
+
             raise AppError(
-                message="Le recalcul a échoué (timeout réseau)",
-                context={"operation": "refresh_offer_counts", "network_error": True},
+                message="Le recalcul a échoué (timeout ou problème réseau).",
+                context={"operation": "refresh_offer_counts", "level": level},
                 status_code=503,
             ) from e
-        
+
         except Exception as e:
-            # ✅ Rollback en cas d'erreur
             db.rollback()
-            logger.exception("❌ Erreur inattendue lors du refresh")
+            logger.exception("❌ Erreur inattendue lors du refresh des compteurs")
+
             raise AppError(
-                message="Échec du recalcul des compteurs",
-                context={"error_type": type(e).__name__, "level": level},
+                message="Échec du recalcul des compteurs.",
+                context={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "level": level
+                },
                 status_code=500,
             ) from e
-    
+
+        
     @with_network_retry
     def get_boundary_by_name(self, db: Session, name: str, level: str) -> AdminBoundaryOut:
         """
