@@ -110,7 +110,31 @@ class AdminBoundaryService:
                 context={"postgis_error": True, "sql_message": str(e.orig)},
                 status_code=500,
             ) from e
-    
+
+    # ------------------------------------------------------------
+    # Normalisation des noms
+    # ------------------------------------------------------------
+    def _normalize_name(self, name: Optional[str]) -> str:
+        import unicodedata
+
+        if not isinstance(name, str):
+            return ""
+
+        if "," in name:
+            name = name.split(",")[0]
+
+        name = name.lower().strip()
+
+        name = "".join(
+            c for c in unicodedata.normalize("NFD", name)
+            if unicodedata.category(c) != "Mn"
+        )
+
+        name = name.replace("-", " ").replace("_", " ")
+
+        return " ".join(name.split())
+
+
     from sqlalchemy import func
     from sqlalchemy.sql import expression
     from typing import Optional
