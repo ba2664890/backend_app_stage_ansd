@@ -310,7 +310,7 @@ class FullAnalyticsResponse(BaseModel):
 
 class OfferGeoJSON(BaseModel):
     id: str
-    title: str
+    title: Optional[str] = None
     location: Optional[str]
     contract: Optional[str]
     boundary: str
