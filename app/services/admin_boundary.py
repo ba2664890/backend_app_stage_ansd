@@ -263,105 +263,156 @@ class AdminBoundaryService:
 
 
 from app.models.api_models import ChoroplethResponse, OfferGeoJSON
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+import json
+from shapely.geometry import mapping, shape
+
 
 class CarteService:
-    """Service dédié à la génération de données cartographiques."""
-    
+
     def __init__(self, admin_service: AdminBoundaryService):
         self.admin_service = admin_service
-    
+
     @AdminBoundaryService.with_network_retry
     def get_choropleth_data(
-        self, 
-        db: Session, 
+        self,
+        db: Session,
         level: AdminLevel,
         min_offers: int = 1
     ) -> ChoroplethResponse:
-        """
-        Récupère les données formatées pour une carte choroplèthe.
-        
-        Args:
-            db: Session SQLAlchemy
-            level: Niveau administratif (enum)
-            min_offers: Filtrer les entités avec moins de X offres
-        
-        Returns:
-            FeatureCollection GeoJSON + métadonnées
-        """
-        # ✅ Validation stricte
+
+        # -----------------------
+        # 1. Validation
+        # -----------------------
         if not isinstance(level, AdminLevel):
             raise ValidationError(
                 field="level",
-                reason="Doit être une valeur AdminLevel enum",
-                context={"valid_values": [l.value for l in AdminLevel]},
+                reason="Doit être une valeur AdminLevel",
+                context={"valid_values": [x.value for x in AdminLevel]}
             )
-        
-        # ✅ Vérifie PostGIS
+
+        # Vérifie PostGIS
         self.admin_service.postgis_manager.ensure_postgis(db)
-        
-        try:
-            # Récupère les limites avec compteurs à jour
-            boundaries = db.query(SenegalAdminBoundary).filter_by(
-                level=level.value
-            ).filter(
-                SenegalAdminBoundary.offer_count >= min_offers
-            ).all()
-            
-            if not boundaries:
-                logger.warning(f"Aucune limite avec {min_offers}+ offres pour {level.value}")
-            
-            # Construction du FeatureCollection
-            features = []
-            for b in boundaries:
-                # geojson est stocké comme dict dans PostgreSQL (JSONB)
-                geometry = b.geojson if isinstance(b.geojson, dict) else {}
-                
-                features.append({
-                    "type": "Feature",
-                    "properties": {
-                        "name": b.name,
-                        "level": b.level,
-                        "offer_count": b.offer_count,
-                        "centroid": b.centroid,  # Pour centroid clustering
-                    },
-                    "geometry": geometry,
-                })
-            
-            # Récupère les offres (limité pour performance)
-            offres = db.query(
+
+        # -----------------------
+        # 2. Get boundaries
+        # -----------------------
+        boundaries = (
+            db.query(SenegalAdminBoundary)
+            .filter(SenegalAdminBoundary.level == level.value)
+            .all()
+        )
+
+        if not boundaries:
+            return ChoroplethResponse(
+                type="FeatureCollection",
+                features=[],
+                offers=[],
+                total_boundaries=0,
+                total_offers=0
+            )
+
+        features = []
+        total_offers = 0
+
+        # -----------------------------------------
+        # Prépare la normalisation SQL pour location
+        # -----------------------------------------
+        sql_location_normalized = func.replace(
+            func.replace(
+                func.replace(
+                    func.lower(func.unaccent(OffreEmploiBrute.location)),
+                    "-"," "
+                ),
+                "_"," "
+            ),
+            ","," "
+        )
+
+        sql_location_normalized = func.regexp_replace(sql_location_normalized, r"\s+", " ", "g")
+
+        # -------------------------------------------------
+        # 3. Construire GeoJSON pour chaque boundary
+        # -------------------------------------------------
+        for b in boundaries:
+
+            boundary_normalized = self.admin_service._normalize_name(b.name)
+
+            # -----------------------------
+            # ➤ Count des offres (MATCH PAR NOM NORMALISÉ)
+            # -----------------------------
+            offer_count = (
+                db.query(OffreEmploiBrute)
+                .filter(sql_location_normalized == boundary_normalized)
+                .count()
+            )
+
+            if offer_count < min_offers:
+                continue
+
+            total_offers += offer_count
+
+            # Convert geometry
+            geometry = b.geojson if isinstance(b.geojson, dict) else {}
+            if isinstance(b.geojson, str):
+                try:
+                    geometry = json.loads(b.geojson)
+                except:
+                    geometry = {}
+
+            # Centroid (WKT → GeoJSON)
+            centroid_value = b.centroid
+            if hasattr(centroid_value, "desc"):
+                try:
+                    centroid_value = mapping(shape(centroid_value))
+                except:
+                    centroid_value = None
+
+            features.append({
+                "type": "Feature",
+                "properties": {
+                    "id": b.id,
+                    "name": b.name,
+                    "level": b.level,
+                    "offer_count": offer_count,
+                    "centroid": centroid_value
+                },
+                "geometry": geometry
+            })
+
+        # -------------------------------------------------
+        # 4. Récupération des offres GEOJSON (match par nom)
+        # -------------------------------------------------
+        offres = (
+            db.query(
                 OffreEmploiBrute.id,
                 OffreEmploiBrute.title,
                 OffreEmploiBrute.location,
                 OffreEmploiBrute.contract_type,
-                SenegalAdminBoundary.name.label("boundary_name")
-            ).join(
-                SenegalAdminBoundary,
-                OffreEmploiBrute.admin_boundary_id == SenegalAdminBoundary.id
-            ).filter(
-                SenegalAdminBoundary.level == level.value,
-                SenegalAdminBoundary.offer_count >= min_offers
-            ).limit(500).all()  # ⚠️ Limite pour éviter timeout
-            
-            return ChoroplethResponse(
-                type="FeatureCollection",
-                features=features,
-                offers=[
-                    OfferGeoJSON(
-                        id=str(o.id),
-                        title=o.title,
-                        location=o.location,
-                        contract=o.contract_type,
-                        boundary=o.boundary_name,
-                    ) for o in offres
-                ],
-                total_boundaries=len(boundaries),
-                total_offers=sum(b.offer_count for b in boundaries),
             )
-            
-        except Exception as e:
-            logger.exception(f"❌ Erreur génération carte {level.value}")
-            raise AppError(
-                message="Erreur de génération de la carte",
-                context={"level": level.value, "error": str(e)},
-                status_code=500,
+            .filter(
+                sql_location_normalized.in_(
+                    [self.admin_service._normalize_name(b.name) for b in boundaries]
+                )
             )
+            .limit(500)
+            .all()
+        )
+
+        return ChoroplethResponse(
+            type="FeatureCollection",
+            features=features,
+            offers=[
+                OfferGeoJSON(
+                    id=str(o.id),
+                    title=o.title,
+                    location=o.location,
+                    contract=o.contract_type,
+                    boundary=self.admin_service._normalize_name(o.location)
+                )
+                for o in offres
+            ],
+            total_boundaries=len(features),
+            total_offers=total_offers,
+        )
