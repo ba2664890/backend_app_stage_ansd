@@ -477,10 +477,10 @@ def refresh_all_levels(db: Session = Depends(get_db)):
     """
     levels = ["region", "departement", "arrondissement", "commune"]
     results = []
-
+    admin_service = AdminBoundaryService()
     try:
         for lvl in levels:
-            res = AdminBoundaryService.refresh_offer_counts(db, lvl)
+            res = admin_service.refresh_offer_counts(db, lvl)
             results.append(res)
 
         return {
