@@ -319,18 +319,22 @@ class CarteService:
         # -----------------------------------------
         # Prépare la normalisation SQL pour location
         # -----------------------------------------
-        sql_location_normalized = func.replace(
-            func.replace(
-                func.replace(
-                    func.lower(func.unaccent(OffreEmploiBrute.location)),
-                    "-"," "
-                ),
-                "_"," "
-            ),
-            ","," "
+        sql_location_normalized = func.lower(
+            func.unaccent(
+                func.split_part(OffreEmploiBrute.location, ",", 1)  # -> avant virgule
+                )
+            )
+
+        sql_location_normalized = func.replace(sql_location_normalized, "-", " ")
+        sql_location_normalized = func.replace(sql_location_normalized, "_", " ")
+
+                # Nettoyage espaces multiples
+        sql_location_normalized = func.regexp_replace(
+            sql_location_normalized, r"\s+", " ", "g"
         )
 
-        sql_location_normalized = func.regexp_replace(sql_location_normalized, r"\s+", " ", "g")
+                # Trim
+        sql_location_normalized = func.trim(sql_location_normalized)
 
         # -------------------------------------------------
         # 3. Construire GeoJSON pour chaque boundary
