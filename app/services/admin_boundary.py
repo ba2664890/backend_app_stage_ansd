@@ -152,7 +152,7 @@ class AdminBoundaryService:
             for boundary in boundaries:
                 count = (
                     db.query(OffreEmploiBrute)
-                    .filter(OffreEmploiBrute.admin_boundary_id == boundary.id)
+                    .filter(OffreEmploiBrute.location == boundary.name)
                     .count()
                 )
 
