@@ -453,7 +453,7 @@ async def root():
 @app.get("/api/v1/carte/{level}", response_model=ChoroplethResponse)
 def get_choropleth_map(
     level: AdminLevel,
-    min_offers: int = Query(1, ge=0, description="Nombre minimum d'offres"),
+    min_offers: int = Query(0, ge=0, description="Nombre minimum d'offres"),
     parent_name: Optional[str] = Query(None, description="Filtrer par parent (ex: 'Dakar')"),
     db: Session = Depends(get_db),
 ):
@@ -474,6 +474,7 @@ def get_choropleth_map(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/refresh-offer-counts")
 def refresh_all_levels(db: Session = Depends(get_db)):

@@ -304,7 +304,7 @@ class CarteService:
         self,
         db: Session,
         level: AdminLevel,
-        min_offers: int = 1,
+        min_offers: int = 0,
         parent_name: Optional[str] = None
     ) -> ChoroplethResponse:
         """
