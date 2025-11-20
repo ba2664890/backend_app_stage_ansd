@@ -151,7 +151,6 @@ class AdminBoundaryImporterService:
         }
 
         query = db.query(OffreEmploiBrute).filter(
-            OffreEmploiBrute.admin_boundary_id.is_(None),
             OffreEmploiBrute.location.isnot(None),
         )
 
