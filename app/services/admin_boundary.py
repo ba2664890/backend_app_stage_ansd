@@ -19,7 +19,6 @@ from app.db.init_postgis import PostGISManager
 from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute
 from app.models.api_models import AdminBoundaryOut
 from app.core.exceptions import AppError, NotFoundError, ValidationError
-from app.services.admin_boundary_importer import AdminBoundaryImporterService
 
 logger = logging.getLogger(__name__)
 
