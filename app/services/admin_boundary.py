@@ -119,18 +119,22 @@ class AdminBoundaryService:
         if not isinstance(name, str):
             return ""
 
+        # Garder seulement avant la virgule → "Dakar, Sénégal" → "Dakar"
         if "," in name:
             name = name.split(",")[0]
 
         name = name.lower().strip()
 
+        # Supprimer accents
         name = "".join(
             c for c in unicodedata.normalize("NFD", name)
             if unicodedata.category(c) != "Mn"
         )
 
+        # Remplacer séparateurs
         name = name.replace("-", " ").replace("_", " ")
 
+        # Compacter espaces
         return " ".join(name.split())
 
 
@@ -169,36 +173,35 @@ class AdminBoundaryService:
 
             for boundary in boundaries:
 
-                # --- 🔥 Normalisation Python (via ta fonction) ---
-                normalized_boundary_name = self._normalize_name(boundary.name)
+                # --- 🔥 Normalisation Python ---
+                normalized_boundary_name = self._normalize_name(str(boundary.name))
 
-                # --- 🔥 Normalisation SQL équivalente ---
-                sql_location_normalized = func.replace(
-                    func.replace(
-                        func.replace(
-                            func.lower(func.unaccent(OffreEmploiBrute.location)),
-                            "-",
-                            " "
-                        ),
-                        "_",
-                        " "
-                    ),
-                    ",",
-                    " "
+                # --- 🔥 Normalisation SQL ÉQUIVALENTE ---
+                sql_location_normalized = func.lower(
+                    func.unaccent(
+                        func.split_part(OffreEmploiBrute.location, ",", 1)  # -> avant virgule
+                    )
                 )
 
-                # Supprime espaces multiples (via regexp si PostgreSQL ≥ 10)
+                sql_location_normalized = func.replace(sql_location_normalized, "-", " ")
+                sql_location_normalized = func.replace(sql_location_normalized, "_", " ")
+
+                # Nettoyage espaces multiples
                 sql_location_normalized = func.regexp_replace(
                     sql_location_normalized, r"\s+", " ", "g"
                 )
 
+                # Trim
+                sql_location_normalized = func.trim(sql_location_normalized)
+
+                # ---- Calcul du count ----
                 count = (
                     db.query(OffreEmploiBrute)
                     .filter(sql_location_normalized == normalized_boundary_name)
                     .count()
                 )
 
-                # Mise à jour
+                # ---- Mise à jour si différent ----
                 if boundary.offer_count != count:
                     boundary.offer_count = count
                     total_updated += 1
