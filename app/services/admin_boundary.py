@@ -174,7 +174,7 @@ class AdminBoundaryService:
             for boundary in boundaries:
 
                 # --- 🔥 Normalisation Python ---
-                normalized_boundary_name = self._normalize_name(str(boundary.name))
+                normalized_boundary_name = str(boundary.name)
 
                 # --- 🔥 Normalisation SQL ÉQUIVALENTE ---
                 sql_location_normalized = func.lower(
