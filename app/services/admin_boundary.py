@@ -19,6 +19,7 @@ from app.db.init_postgis import PostGISManager
 from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute
 from app.models.api_models import AdminBoundaryOut
 from app.core.exceptions import AppError, NotFoundError, ValidationError
+from app.services.admin_boundary_importer import AdminBoundaryImporterService
 
 logger = logging.getLogger(__name__)
 
@@ -110,67 +111,80 @@ class AdminBoundaryService:
                 status_code=500,
             ) from e
     
+    from sqlalchemy import func
+    from sqlalchemy.sql import expression
+    from typing import Optional
+
     @with_network_retry
     def refresh_offer_counts(self, db: Session, level: str) -> Dict[str, Any]:
         """
         Recalcule les compteurs d'offres d'emploi pour un niveau administratif donné.
         Utilise la session fournie par FastAPI (pas de db.begin()).
-
-        Args:
-            db (Session): Session SQLAlchemy en cours
-            level (str): Niveau administratif ("region", "departement", "arrondissement", "commune")
-
-        Returns:
-            Dict: Résultat du recalcul
         """
-        # Vérifier PostGIS
+
         self.postgis_manager.ensure_postgis(db)
 
         try:
             logger.info(f"🔄 Début du refresh des compteurs pour level={level}")
 
-            # Récupération des limites administratives
             boundaries = (
                 db.query(SenegalAdminBoundary)
                 .filter(SenegalAdminBoundary.level == level)
                 .all()
             )
 
-            # Aucun boundary trouvé
             if not boundaries:
                 logger.warning(f"⚠️ Aucun boundary trouvé pour level='{level}'")
                 return {
                     "status": "success",
                     "updated_rows": 0,
                     "level": level,
-                    "total_boundaries": 0
+                    "total_boundaries": 0,
                 }
 
             total_updated = 0
 
-            # Boucle de recalcul
             for boundary in boundaries:
+
+                # --- 🔥 Normalisation Python (via ta fonction) ---
+                normalized_boundary_name = self._normalize_name(boundary.name)
+
+                # --- 🔥 Normalisation SQL équivalente ---
+                sql_location_normalized = func.replace(
+                    func.replace(
+                        func.replace(
+                            func.lower(func.unaccent(OffreEmploiBrute.location)),
+                            "-",
+                            " "
+                        ),
+                        "_",
+                        " "
+                    ),
+                    ",",
+                    " "
+                )
+
+                # Supprime espaces multiples (via regexp si PostgreSQL ≥ 10)
+                sql_location_normalized = func.regexp_replace(
+                    sql_location_normalized, r"\s+", " ", "g"
+                )
+
                 count = (
                     db.query(OffreEmploiBrute)
-                    .filter(OffreEmploiBrute.location == boundary.name)
+                    .filter(sql_location_normalized == normalized_boundary_name)
                     .count()
                 )
 
+                # Mise à jour
                 if boundary.offer_count != count:
                     boundary.offer_count = count
                     total_updated += 1
 
-            # Commit uniquement si nécessaire
             if total_updated > 0:
                 db.commit()
-                logger.info(
-                    f"✅ {total_updated} compteurs mis à jour pour level={level} "
-                    f"sur {len(boundaries)} boundaries"
-                )
+                logger.info(f"✅ {total_updated} compteurs mis à jour pour level={level}")
             else:
-                logger.info(
-                    f"ℹ️ Aucun changement pour level={level} (tous les compteurs sont déjà à jour)"
-                )
+                logger.info("ℹ️ Aucun changement")
 
             return {
                 "status": "success",
@@ -180,29 +194,21 @@ class AdminBoundaryService:
             }
 
         except OperationalError as e:
-            # Rollback obligatoire
             db.rollback()
-            logger.error(f"❌ Erreur réseau / timeout lors du refresh : {e}")
-
             raise AppError(
-                message="Le recalcul a échoué (timeout ou problème réseau).",
-                context={"operation": "refresh_offer_counts", "level": level},
+                message="Timeout ou problème réseau.",
+                context={"level": level},
                 status_code=503,
             ) from e
 
         except Exception as e:
             db.rollback()
-            logger.exception("❌ Erreur inattendue lors du refresh des compteurs")
-
             raise AppError(
-                message="Échec du recalcul des compteurs.",
-                context={
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                    "level": level
-                },
+                message="Erreur inattendue.",
+                context={"error": str(e), "level": level},
                 status_code=500,
             ) from e
+
 
         
     @with_network_retry
