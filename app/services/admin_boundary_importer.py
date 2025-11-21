@@ -1,7 +1,7 @@
 import os
 import logging
 from pathlib import Path
-from turtle import pd
+import pandas as pd
 from typing import Any, Dict, Optional
 import geopandas as gpd
 from sqlalchemy.orm import Session
