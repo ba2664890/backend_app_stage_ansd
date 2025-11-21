@@ -52,7 +52,6 @@ class JobOfferResponse(JobOfferBase):
     
     # Métadonnées
     confidence_score: Optional[float] = Field(None, description="Score de confiance NLP")
-    from typing import Optional
     created_at: Optional[datetime] = None
     processed_at: Optional[datetime] = Field(None, description="Date de traitement NLP")
     @validator("posted_date", pre=True, always=True)
