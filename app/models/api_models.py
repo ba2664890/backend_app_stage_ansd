@@ -143,23 +143,22 @@ class RecommendationRequest(BaseModel):
     max_salary: Optional[int] = Field(None, ge=0, description="Salaire maximum souhaité")
     location_radius: Optional[int] = Field(None, description="Rayon de recherche géographique (km)")
 
+
 class JobRecommendationResponse(BaseModel):
-    """Réponse pour une recommandation d'emploi."""
-    job_id: UUID
+    job_id: str
     title: str
-    company_name: Optional[str]
-    location: Optional[str]
+    company_name: str
+    location: str
     match_score: float
     match_reasons: List[str]
-    salary_range: Optional[str]
+    salary_range: Optional[str] = None
     skills_match: List[str]
     sector_match: bool
     contract_type_match: bool
     location_match: bool
 
 class RecommendationResponse(BaseModel):
-    """Réponse pour les recommandations."""
-    user_id: UUID
+    user_id: str  # Important : str, pas UUID
     recommendations: List[JobRecommendationResponse]
     total_recommendations: int
     average_match_score: float
