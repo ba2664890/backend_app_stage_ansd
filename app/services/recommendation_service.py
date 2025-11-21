@@ -113,22 +113,22 @@ class RecommendationService:
                     user_id=self._get_valid_uuid(user_id),
                     job_id=enrichie.id,
                     match_score=rec["score"],
-                    match_reasons=rec["reasons"]
+                    match_reasons=json.dumps(rec["reasons"])  # Sérialiser les raisons
                 )
                 db.add(recommendation)
                 
-                # Créer la réponse API
+                # Créer la réponse API - Gérer les valeurs NULL
                 job_recommendation = JobRecommendationResponse(
-                    job_id=brute.id,
-                    title=brute.title,
-                    company_name=brute.company_name,
-                    location=brute.location,
+                    job_id=str(brute.id) if brute.id else "",
+                    title=brute.title or "Titre non spécifié",
+                    company_name=brute.company_name or "Entreprise non spécifiée",
+                    location=brute.location or "Localisation non spécifiée",
                     match_score=rec["score"],
                     match_reasons=rec["reasons"],
                     salary_range=self._format_salary_range(enrichie),
-                    skills_match=self._find_skill_matches(list(user_profile.skills) if isinstance(user_profile.skills, (list, tuple)) else (user_profile.skills.split(",") if user_profile.skills else []), enrichie.extracted_skills),
-                    sector_match=enrichie.extracted_sector in (user_profile.skills or []),
-                    contract_type_match=enrichie.extracted_contract_type in (user_profile.preferred_contract_type or []),
+                    skills_match=self._find_skill_matches(list(user_profile.skills) if isinstance(user_profile.skills, (list, tuple)) else (user_profile.skills.split(",") if user_profile.skills else []), enrichie.extracted_skills or []),
+                    sector_match=enrichie.extracted_sector in (user_profile.skills or []) if enrichie.extracted_sector else False,
+                    contract_type_match=enrichie.extracted_contract_type in (user_profile.preferred_contract_type or []) if enrichie.extracted_contract_type else False,
                     location_match=self._is_location_match(getattr(user_profile, "location", None), brute.location)
                 )
                 recommendations.append(job_recommendation)
@@ -140,7 +140,7 @@ class RecommendationService:
             average_match_score = float(np.mean([r.match_score for r in recommendations])) if recommendations else 0.0
             
             return RecommendationResponse(
-                user_id=self._get_valid_uuid(user_id),
+                user_id=str(self._get_valid_uuid(user_id)),
                 recommendations=recommendations,
                 total_recommendations=total_recommendations,
                 average_match_score=average_match_score,
@@ -185,7 +185,7 @@ class RecommendationService:
             job_data = []
             
             for brute, enrichie in recent_jobs:
-                job_text = f"{brute.title} {brute.description or ''} {' '.join(enrichie.extracted_skills or [])}"
+                job_text = f"{brute.title or ''} {brute.description or ''} {' '.join(enrichie.extracted_skills or [])}"
                 job_texts.append(job_text)
                 job_data.append((brute, enrichie))
             
@@ -208,7 +208,7 @@ class RecommendationService:
                 
                 if similarity_score >= 0.1:  # Seuil minimum
                     # Calculer un score composite
-                    skill_match_score = self._calculate_skill_match(cv_skills, enrichie.extracted_skills)
+                    skill_match_score = self._calculate_skill_match(cv_skills, enrichie.extracted_skills or [])
                     experience_match_score = self._calculate_experience_match(cv_experience, enrichie.extracted_experience_years)
                     
                     final_score = (similarity_score * 0.5 + skill_match_score * 0.3 + experience_match_score * 0.2)
@@ -221,15 +221,15 @@ class RecommendationService:
                         ]
                         
                         job_recommendation = JobRecommendationResponse(
-                            job_id=brute.id,
-                            title=brute.title,
-                            company_name=brute.company_name,
-                            location=brute.location,
+                            job_id=str(brute.id) if brute.id else "",
+                            title=brute.title or "Titre non spécifié",
+                            company_name=brute.company_name or "Entreprise non spécifiée",
+                            location=brute.location or "Localisation non spécifiée",
                             match_score=final_score,
                             match_reasons=reasons,
                             salary_range=self._format_salary_range(enrichie),
-                            skills_match=self._find_skill_matches(cv_skills, enrichie.extracted_skills),
-                            sector_match=enrichie.extracted_sector in cv_sectors,
+                            skills_match=self._find_skill_matches(cv_skills, enrichie.extracted_skills or []),
+                            sector_match=enrichie.extracted_sector in cv_sectors if enrichie.extracted_sector else False,
                             contract_type_match=True,  # À déterminer selon le contexte
                             location_match=True  # À déterminer selon le contexte
                         )
@@ -244,7 +244,7 @@ class RecommendationService:
             average_match_score = float(np.mean([r.match_score for r in recommendations])) if recommendations else 0.0
 
             return RecommendationResponse(
-                user_id=self._get_valid_uuid(user_id),
+                user_id=str(self._get_valid_uuid(user_id)),
                 recommendations=recommendations,
                 total_recommendations=total_recommendations,
                 average_match_score=average_match_score,
@@ -323,8 +323,8 @@ class RecommendationService:
             return []
         
         matches = []
-        user_skills_lower = [skill.lower() for skill in user_skills]
-        job_skills_lower = [skill.lower() for skill in job_skills]
+        user_skills_lower = [skill.lower().strip() for skill in user_skills]
+        job_skills_lower = [skill.lower().strip() for skill in job_skills]
         
         for i, user_skill in enumerate(user_skills_lower):
             for j, job_skill in enumerate(job_skills_lower):
@@ -337,7 +337,10 @@ class RecommendationService:
     def _format_salary_range(self, enrichie: OffreEmploiEnrichie) -> Optional[str]:
         """Formate la fourchette salariale."""
         if enrichie.extracted_salary_min and enrichie.extracted_salary_max:
-            return f"{enrichie.extracted_salary_min:,} - {enrichie.extracted_salary_max:,} {enrichie.extracted_salary_currency or 'XOF'}"
+            try:
+                return f"{float(enrichie.extracted_salary_min):,.0f} - {float(enrichie.extracted_salary_max):,.0f} {enrichie.extracted_salary_currency or 'XOF'}"
+            except (TypeError, ValueError):
+                return None
         return None
     
     def _is_location_match(self, user_location: Optional[str], job_location: Optional[str]) -> bool:
@@ -363,6 +366,7 @@ class RecommendationService:
         
         matches = len(set(cv_skills) & set(job_skills))
         return matches / max(len(cv_skills), len(job_skills))
+    
     def _calculate_experience_match(self, cv_experience: int, job_experience: Optional[int]) -> float:
         """Calcule le score de matching de l'expérience."""
         if not job_experience:
@@ -383,4 +387,3 @@ class RecommendationService:
             return uuid.UUID(str(user_id))
         except Exception:
             return uuid.uuid4()
-            return cv_experience / job_experience
