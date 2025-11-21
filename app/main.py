@@ -773,7 +773,7 @@ async def get_user_profile(
 
 
 
-@app.post("/recommendations", response_model=RecommendationResponse)
+@app.post("/api/v1/recommendations", response_model=RecommendationResponse)
 async def get_job_recommendations(
     request: RecommendationRequest,
     user=Depends(get_current_user),
@@ -787,7 +787,7 @@ async def get_job_recommendations(
         logger.error(f"Error fetching recommendations: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la génération des recommandations")
 
-@app.post("/recommendations/cv-match", response_model=RecommendationResponse)
+@app.post("/api/v1/recommendations/cv-match", response_model=RecommendationResponse)
 async def match_cv_with_jobs(
     file: UploadFile = File(...),
     user=Depends(get_current_user),
