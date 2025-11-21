@@ -1,6 +1,7 @@
 import os
 import logging
 from pathlib import Path
+from turtle import pd
 from typing import Any, Dict, Optional
 import geopandas as gpd
 from sqlalchemy.orm import Session
@@ -29,10 +30,25 @@ class AdminBoundaryImporterService:
 
         if not self.data_dir.exists():
             raise FileNotFoundError(f"Dossier non trouvé : {self.data_dir}")
+        
+        # Chargement du CSV pour le mapping département -> région
+        csv_path = self.data_dir / "SEN_adm2.csv"
+        self.dept_to_region: Dict[str, str] = {}
+        
+        if csv_path.exists():
+            try:
+                df = pd.read_csv(csv_path)
+                for _, row in df.iterrows():
+                    dept_name = str(row["NAME_2"]).strip()
+                    region_name = str(row["NAME_1"]).strip()
+                    if dept_name and region_name:
+                        self.dept_to_region[dept_name] = region_name
+                logger.info(f"📊 CSV chargé : {len(self.dept_to_region)} départements mappés")
+            except Exception as e:
+                logger.error(f"❌ Erreur lecture CSV : {e}")
+        else:
+            logger.warning(f"⚠️ CSV non trouvé : {csv_path}")
 
-    # ------------------------------------------------------------
-    # Import d’un shapefile
-    # ------------------------------------------------------------
     def import_one_shapefile(self, db: Session, shp_path: Path, level: str):
         logger.info(f"📍 Import {level} : {shp_path.name}")
 
@@ -42,7 +58,7 @@ class AdminBoundaryImporterService:
             logger.warning(f"⚠️ Shapefile vide : {shp_path}")
             return 0
 
-        # Mapping hiérarchique basé sur ton CSV
+        # Mapping des colonnes de nom
         name_map = {
             "region": "NAME_1",
             "departement": "NAME_2",
@@ -50,9 +66,8 @@ class AdminBoundaryImporterService:
             "commune": "NAME_4",
         }
 
+        # Mapping parent UNIQUEMENT pour les niveaux non couverts par CSV
         parent_map = {
-            "region": "NAME_0",
-            "departement": "NAME_1",
             "arrondissement": "NAME_2",
             "commune": "NAME_3",
         }
@@ -61,16 +76,33 @@ class AdminBoundaryImporterService:
             raise ValueError(f"Niveau inconnu : {level}")
 
         name_col = name_map[level]
-        parent_col = parent_map[level]
 
         records = []
         for _, row in gdf.iterrows():
-
             geojson = row.geometry.__geo_interface__
             centroid_wkt = row.geometry.centroid.wkt
-
             name = row.get(name_col)
-            parent_name = row.get(parent_col)
+
+            # Détermination du parent selon le niveau (UNIQUEMENT pour region/departement)
+            if level == "region":
+                # Le parent d'une région est le Sénégal
+                parent_name = "Senegal"
+            elif level == "departement":
+                # Utilisation du CSV pour mapper département -> région
+                parent_name = self.dept_to_region.get(name)
+                if not parent_name:
+                    logger.warning(f"⚠️ Département '{name}' non trouvé dans le CSV")
+                    # Fallback sur les données du shapefile si disponible
+                    parent_name = row.get("NAME_1")
+            else:
+                # Conservation de la logique originale pour les autres niveaux
+                parent_col = parent_map.get(level)
+                parent_name = row.get(parent_col) if parent_col else None
+
+            # Validation du nom
+            if not name:
+                logger.warning(f"⚠️ Nom manquant pour une entité {level} dans {shp_path}")
+                continue
 
             records.append({
                 "name": str(name)[:255],
@@ -86,7 +118,6 @@ class AdminBoundaryImporterService:
 
         logger.info(f"✅ {len(records)} limites importées ({level})")
         return len(records)
-
 
 
     # ------------------------------------------------------------
