@@ -28,7 +28,7 @@ from .models.database_models import (
     JobRecommendation, JobStatistics 
 )
 from .models.api_models import (
-    ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, SalaryByExperience,
+    ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, RecommendationResponse, SalaryByExperience,
     UserProfileCreate, UserProfileResponse, JobSearchParams,
     PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData, UserResponse
 )
@@ -773,8 +773,7 @@ async def get_user_profile(
 
 
 
-# Routes pour les recommandations
-@app.post("/api/v1/recommendations", response_model=List[RecommendationRequest])
+@app.post("/recommendations", response_model=RecommendationResponse)
 async def get_job_recommendations(
     request: RecommendationRequest,
     user=Depends(get_current_user),
@@ -782,16 +781,13 @@ async def get_job_recommendations(
 ):
     """Obtient des recommandations d'emploi personnalisées."""
     try:
-        recommendations = app.state.recommendation_service.get_recommendations(
-            db, user.id, request
-        )
-        return recommendations
-        
+        # Retournez l'objet Pydantic DIRECTEMENT, sans .dict(), sans tuple()
+        return app.state.recommendation_service.get_recommendations(db, str(user.id), request)
     except Exception as e:
         logger.error(f"Error fetching recommendations: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la génération des recommandations")
 
-@app.post("/api/v1/recommendations/cv-match")
+@app.post("/recommendations/cv-match", response_model=RecommendationResponse)
 async def match_cv_with_jobs(
     file: UploadFile = File(...),
     user=Depends(get_current_user),
@@ -800,22 +796,14 @@ async def match_cv_with_jobs(
     """Match un CV avec les offres d'emploi disponibles."""
     try:
         if not file.content_type or file.content_type not in ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
-            raise HTTPException(status_code=400, detail="Format de fichier non supporté. Utilisez PDF, DOC ou DOCX.")
+            raise HTTPException(status_code=400, detail="Format de fichier non supporté")
         
-        # Sauvegarder le fichier temporairement
         file_path = await app.state.file_service.save_upload_file(file)
-        
-        # Extraire le texte du CV
         cv_text = await app.state.file_service.extract_text_from_file(file_path)
-        
-        # Générer les recommandations basées sur le CV
-        recommendations = app.state.recommendation_service.match_cv_with_jobs(
-            db, cv_text, user.id
-        )
-        
-        # Nettoyer le fichier temporaire
+        recommendations = app.state.recommendation_service.match_cv_with_jobs(db, cv_text, str(user.id))
         await app.state.file_service.cleanup_file(file_path)
         
+        # Retournez l'objet Pydantic DIRECTEMENT
         return recommendations
         
     except HTTPException:
@@ -824,7 +812,8 @@ async def match_cv_with_jobs(
         logger.error(f"Error matching CV: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors du matching du CV")
 
-#
+
+
 @app.get("/api/v1/users/job-alerts")
 async def get_job_alerts(
     user=Depends(get_current_user),
