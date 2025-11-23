@@ -722,13 +722,14 @@ async def login(username: str, password: str, db: Session = Depends(get_db)):
 @app.post("/api/v1/users/profile", response_model=UserProfileResponse)
 async def create_user_profile(
     profile: UserProfileCreate,
-    user=Depends(get_current_user),
+    user=Depends(get_current_user),  # user est un UserProfile depuis get_current_user
     db: Session = Depends(get_db)
 ):
     """
     Crée ou met à jour le profil utilisateur.
     """
-    user_profile = user_service.create_or_update_profile(db, user.user_id, profile)
+    # Utilisez user.id (UUID) correctement
+    user_profile = app.state.user_service.create_or_update_profile(db, str(user.id), profile)
     return user_profile
 
 
