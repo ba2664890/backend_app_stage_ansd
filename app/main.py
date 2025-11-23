@@ -213,22 +213,20 @@ app = FastAPI(
 )
 
 # Configuration CORS
-from fastapi.middleware.cors import CORSMiddleware
-
 ALLOWED_ORIGINS = [
     "https://frontend-webscraping.vercel.app",
     "https://frontend-webscraping-hic69msbg-cardans-projects-cb73ad15.vercel.app",
     "https://frontend-webscraping-5r404pe1o-cardans-projects-cb73ad15.vercel.app",
+    '*',
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,  # Pas de '*'
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 
 @app.post("/import", status_code=201)
