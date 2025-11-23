@@ -86,6 +86,13 @@ class OffreEmploiEnrichie(Base):
     # ✅ Colonne sans relation pour éviter l'ambigüité
     boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"), index=True)
 
+    saved_by_users = relationship(
+        "UserSavedJob",
+        back_populates="job",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
 class SenegalAdminBoundary(Base):
     __tablename__ = "senegal_admin_boundaries"
 
@@ -126,6 +133,13 @@ class User(Base):
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan"
+    )
+
+    saved_jobs = relationship(
+        "UserSavedJob",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="dynamic"  # Pour de meilleures performances avec de grands ensembles
     )
 
 
