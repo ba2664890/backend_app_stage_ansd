@@ -190,7 +190,7 @@ class UserResponse(BaseModel):
 # Modèles pour les utilisateurs
 class UserProfileBase(BaseModel):
     """Modèle de base pour le profil utilisateur."""
-    email: EmailStr = Field(..., description="Email de l'utilisateur")
+    
     phone: Optional[str] = Field(None, description="Numéro de téléphone")
     first_name: Optional[str] = Field(None, description="Prénom")
     last_name: Optional[str] = Field(None, description="Nom")
