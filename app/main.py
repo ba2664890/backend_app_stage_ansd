@@ -734,7 +734,7 @@ async def create_user_profile(
 
 
 
-@app.get("/api/v1/users/profiles", response_model=UserProfileResponse)
+@app.get("/api/v1/users/profile/recu", response_model=UserProfileResponse)
 async def get_user_profile(
     user: UserProfile = Depends(get_current_user),
     db: Session = Depends(get_db)
