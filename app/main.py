@@ -47,6 +47,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from uuid import UUID
 
+from app.services import job_service
+
 # Configuration du logging
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -562,6 +564,15 @@ async def get_jobs(
     except Exception as e:
         logger.error(f"Error fetching jobs: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la récupération des offres")
+
+
+job_servic = JobService()
+@app.get("/api/v1/jobs/saved")
+async def get_saved_jobs(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return job_servic.get_saved_jobs(db, user["user_id"])
 
 @app.get("/api/v1/jobs/{job_id}", response_model=JobOfferResponse)
 async def get_job(job_id: str, db=Depends(get_db)):

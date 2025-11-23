@@ -144,6 +144,7 @@ class UserProfile(Base):
     )
 
     # --- champs déjà présents ---
+    
     phone = Column(String(50))
     first_name = Column(String(100))
     last_name = Column(String(100))
@@ -246,3 +247,31 @@ class CompetenceReferentiel(Base):
 
 # Vue pour les analyses rapides (à créer via migration)
 # Cette vue est déjà définie dans le script SQL d'initialisation
+
+class UserSavedJob(Base):
+    """Modèle pour les offres d'emploi sauvegardées par les utilisateurs."""
+    
+    __tablename__ = "user_saved_jobs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
+    job_id = Column(UUID(as_uuid=True), ForeignKey('offres_emploi_brutes.id', ondelete="CASCADE"), nullable=False)
+    
+    # Optionnel : note personnelle de l'utilisateur
+    note = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relations
+    user = relationship("User", back_populates="saved_jobs")
+    job = relationship("OffreEmploiBrute", back_populates="saved_by_users")
+    
+    # Contraintes et index
+    __table_args__ = (
+        UniqueConstraint('user_id', 'job_id', name='uq_user_saved_job'),
+        Index('idx_user_saved_jobs_user', 'user_id'),
+        Index('idx_user_saved_jobs_job', 'job_id'),
+        Index('idx_user_saved_jobs_created', 'created_at'),
+        Index('idx_user_saved_jobs_user_job', 'user_id', 'job_id'),  # Composite index pour les recherches rapides
+    )
