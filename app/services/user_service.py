@@ -10,6 +10,8 @@ from datetime import datetime
 
 from ..models.database_models import UserProfile
 from ..models.api_models import UserProfileCreate, UserProfileResponse
+from sqlalchemy.orm import Session, joinedload
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +22,7 @@ class UserService:
         """Initialise le service utilisateur."""
         pass
     
+
     def create_or_update_profile(
         self, 
         db: Session, 
@@ -27,21 +30,12 @@ class UserService:
         profile_data: UserProfileCreate
     ) -> UserProfile:
         """
-        Crée ou met à jour le profil utilisateur.
-        
-        Args:
-            db: Session de base de données
-            user_id: ID de l'utilisateur
-            profile_data: Données du profil
-            
-        Returns:
-            Le profil utilisateur créé ou mis à jour
+        Crée ou met à jour le profil utilisateur et charge la relation 'user' pour accéder à l'email.
         """
         try:
-            # Vérifier si le profil existe déjà
-            existing_profile = db.query(UserProfile).filter(
-                UserProfile.id == user_id
-            ).first()
+            # Vérifier si le profil existe déjà et charger 'user' en même temps
+            existing_profile = db.query(UserProfile).options(joinedload(UserProfile.user)) \
+                                .filter(UserProfile.id == user_id).first()
             
             if existing_profile:
                 # Mettre à jour le profil existant
@@ -59,7 +53,9 @@ class UserService:
                 )
                 db.add(new_profile)
                 db.commit()
+                # Recharger le profil avec la relation user
                 db.refresh(new_profile)
+                db.refresh(new_profile.user)
                 logger.info(f"Profil créé pour l'utilisateur {user_id}")
                 return new_profile
                 
@@ -67,6 +63,7 @@ class UserService:
             logger.error(f"Erreur lors de la création/mise à jour du profil: {e}")
             db.rollback()
             raise
+
     
     def get_user_profile(self, db: Session, user_id: str) -> Optional[UserProfile]:
         """
@@ -202,7 +199,7 @@ class UserService:
             Pourcentage de complétion (0-100)
         """
         required_fields = [
-            'first_name', 'last_name', 'email', 'skills',
+            'first_name', 'last_name',  'skills',
             'experience_years', 'education_level'
         ]
         
