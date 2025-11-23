@@ -185,18 +185,15 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 ARRÊT DE L'API EMPLOI SENEGAL")
     logger.info("=" * 60)
     
+# Ferme le pool de connexions proprement
     try:
-        # Nettoyage des ressources
-        if hasattr(app.state, "job_service"):
-            # app.state.job_service.cleanup()  # si tu as une méthode cleanup
-            logger.info("🧹 Nettoyage JobService")
-        
-        # Ferme le pool de connexions
-        await engine.dispose()
-        logger.info("📡 Pool de connexions DB fermé")
-        
+        if engine is not None:
+            engine.dispose()   # ❗ NE PAS utiliser await
+            logger.info("✔️ Engine SQLAlchemy correctement fermé.")
+        else:
+            logger.warning("⚠️ Engine SQLAlchemy est None, rien à fermer.")
     except Exception as e:
-        logger.error("❌ Erreur lors de l'arrêt", exc_info=True)
+        logger.warning(f"Erreur lors du dispose() de l'engine : {e}")
     
     logger.info("✅ API arrêtée avec succès")
 
@@ -569,10 +566,11 @@ async def get_jobs(
 job_servic = JobService()
 @app.get("/api/v1/jobs/saved")
 async def get_saved_jobs(
-    user: dict = Depends(get_current_user),
+    user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return job_servic.get_saved_jobs(db, user["user_id"])
+    user_id = user.user_id  # ⬅️ correction
+    return job_servic.get_saved_jobs(db, user_id)
 
 @app.get("/api/v1/jobs/{job_id}", response_model=JobOfferResponse)
 async def get_job(job_id: str, db=Depends(get_db)):
