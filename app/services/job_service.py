@@ -5,6 +5,7 @@ Service pour la gestion des offres d'emploi.
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
+from uuid import UUID  # ➕ AJOUTE pour validation
 import logging
 from datetime import datetime, timedelta
 
@@ -108,15 +109,22 @@ class JobService:
         
         Args:
             db: Session de base de données
-            job_id: ID de l'offre
+            job_id: ID de l'offre (UUID string)
             
         Returns:
-            L'offre d'emploi ou None
+            L'offre d'emploi ou None si non trouvée
         """
         try:
+            # ➕ VALIDATION UUID pour éviter l'erreur PostgreSQL
+            try:
+                uuid_obj = UUID(job_id)
+            except ValueError:
+                logger.warning(f"Invalid UUID format received: {job_id}")
+                return None
+            
             result = db.query(OffreEmploiBrute, OffreEmploiEnrichie).join(
                 OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id, isouter=True
-            ).filter(OffreEmploiBrute.id == job_id).first()
+            ).filter(OffreEmploiBrute.id == uuid_obj).first()  # ➕ Utiliser l'objet UUID
             
             if not result:
                 return None
@@ -183,6 +191,40 @@ class JobService:
             logger.error(f"Error fetching jobs by sector {sector}: {e}")
             raise
     
+    def get_saved_jobs(self, db: Session, user_id: UUID) -> List[JobOfferResponse]:
+        """
+        ➕ NOUVELLE MÉTHODE : Récupère les offres sauvegardées par un utilisateur
+        
+        Args:
+            db: Session de base de données
+            user_id: UUID de l'utilisateur
+            
+        Returns:
+            Liste des offres sauvegardées
+        """
+        try:
+            # NOTE: Cette méthode nécessite une table user_saved_jobs dans votre DB
+            # Exemple de requête avec jointure
+            results = db.query(OffreEmploiBrute, OffreEmploiEnrichie).join(
+                OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id, isouter=True
+            ).join(
+                # Remplacer par votre vraie table de sauvegarde
+                # UserSavedJob, UserSavedJob.job_id == OffreEmploiBrute.id
+            ).filter(
+                # UserSavedJob.user_id == user_id
+            ).order_by(desc(OffreEmploiBrute.posted_date)).all()
+            
+            jobs = []
+            for brute, enrichie in results:
+                job_response = self._create_job_response(brute, enrichie)
+                jobs.append(job_response)
+            
+            return jobs
+            
+        except Exception as e:
+            logger.error(f"Error fetching saved jobs for user {user_id}: {e}")
+            raise
+    
     def _create_job_response(self, brute: OffreEmploiBrute, enrichie: OffreEmploiEnrichie) -> JobOfferResponse:
         """
         Crée une réponse JobOfferResponse à partir des modèles de base de données.
@@ -195,7 +237,7 @@ class JobService:
             Réponse API
         """
         job_data = {
-            "id": brute.id,
+            "id": str(brute.id),  # ➕ Convertir UUID en string
             "spider_source": brute.spider_source,
             "original_id": brute.original_id,
             "title": brute.title,
@@ -217,11 +259,11 @@ class JobService:
                 "extracted_salary_currency": enrichie.extracted_salary_currency,
                 "extracted_contract_type": enrichie.extracted_contract_type,
                 "extracted_experience_years": enrichie.extracted_experience_years,
-                "extracted_skills": enrichie.extracted_skills,
+                "extracted_skills": enrichie.extracted_skills or [],  # ➕ Gérer NULL
                 "extracted_sector": enrichie.extracted_sector,
                 "extracted_job_category": enrichie.extracted_job_category,
                 "sentiment_score": enrichie.sentiment_score,
-                "key_phrases": enrichie.key_phrases,
+                "key_phrases": enrichie.key_phrases or [],  # ➕ Gérer NULL
                 "job_level": enrichie.job_level,
                 "job_type": enrichie.job_type,
                 "confidence_score": enrichie.confidence_score,
