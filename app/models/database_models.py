@@ -276,6 +276,7 @@ class UserSavedJob(Base):
     
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    job_id = Column(Integer, ForeignKey("offres_emploi_enrichies.id"))
     
     # Relations
     user = relationship("User", back_populates="saved_jobs")
