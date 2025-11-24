@@ -8,7 +8,7 @@ from sqlalchemy import or_
 import logging
 from datetime import datetime
 
-from ..models.database_models import UserProfile
+from ..models.database_models import User, UserProfile
 from ..models.api_models import UserProfileCreate, UserProfileResponse
 from sqlalchemy.orm import Session, joinedload
 
@@ -23,20 +23,15 @@ class UserService:
         pass
     
 
-    def create_or_update_profile(
-        self, 
-        db: Session, 
-        user_id: str, 
-        profile_data: UserProfileCreate
-    ) -> UserProfile:
+    def create_or_update_profile(self, db: Session, user_id: str, profile_data: UserProfileCreate) -> UserProfile:
         """
-        Crée ou met à jour le profil utilisateur et charge la relation 'user' pour accéder à l'email.
+        Crée ou met à jour le profil utilisateur et charge la relation 'user'.
         """
         try:
-            # Vérifier si le profil existe déjà et charger 'user' en même temps
+            # Chercher le profil existant par user_id
             existing_profile = db.query(UserProfile).options(joinedload(UserProfile.user)) \
-                                .filter(UserProfile.id == user_id).first()
-            
+                                .filter(UserProfile.user_id == user_id).first()
+            print(existing_profile)
             if existing_profile:
                 # Mettre à jour le profil existant
                 for key, value in profile_data.dict().items():
@@ -46,23 +41,27 @@ class UserService:
                 logger.info(f"Profil mis à jour pour l'utilisateur {user_id}")
                 return existing_profile
             else:
+                # Récupérer l'utilisateur pour la relation FK
+                user = db.query(User).filter(User.id == user_id).first()
+                if not user:
+                    raise ValueError(f"Utilisateur {user_id} introuvable")
+                
                 # Créer un nouveau profil
                 new_profile = UserProfile(
-                    id=user_id,
+                    user_id=user_id,
                     **profile_data.dict()
                 )
                 db.add(new_profile)
                 db.commit()
-                # Recharger le profil avec la relation user
                 db.refresh(new_profile)
-                db.refresh(new_profile.user)
                 logger.info(f"Profil créé pour l'utilisateur {user_id}")
                 return new_profile
-                
+
         except Exception as e:
             logger.error(f"Erreur lors de la création/mise à jour du profil: {e}")
             db.rollback()
             raise
+
 
     
     def get_user_profile(self, db: Session, user_id: str) -> Optional[UserProfile]:

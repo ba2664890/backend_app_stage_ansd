@@ -213,7 +213,7 @@ app = FastAPI(
 
 ALLOWED_ORIGINS = [
     "https://frontend-webscraping-pvfqjzk4q-cardans-projects-cb73ad15.vercel.app",
-    "http://localhost:3000"  # pour dev
+    "https://frontend-webscraping.vercel.app"  
 ]
 
 app.add_middleware(
