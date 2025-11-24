@@ -211,18 +211,15 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
-# Configuration CORS
 ALLOWED_ORIGINS = [
-    "https://frontend-webscraping.vercel.app",
-    "https://frontend-webscraping-hic69msbg-cardans-projects-cb73ad15.vercel.app",
-    "https://frontend-webscraping-5r404pe1o-cardans-projects-cb73ad15.vercel.app",
-    '*',
+    "https://frontend-webscraping-pvfqjzk4q-cardans-projects-cb73ad15.vercel.app",
+    "http://localhost:3000"  # pour dev
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
