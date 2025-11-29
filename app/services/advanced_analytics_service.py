@@ -54,6 +54,7 @@ class AdvancedAnalyticsService:
         """Convertit une période en dates de début/fin."""
         end_date = datetime.now()
         period_map = {
+            "1d": 1, "3d": 3,
             "7d": 7, "30d": 30, "90d": 90, "180d": 180,
             "6m": 180, "1y": 365, "2y": 730
         }
