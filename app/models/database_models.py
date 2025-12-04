@@ -277,9 +277,10 @@ class UserSavedJob(Base):
     # Relation vers l'offre enrichie (UNIQUE, NORMALISÉE, COHÉRENTE)
     job_id = Column(
         UUID(as_uuid=True),
-        ForeignKey('offres_emploi_brutes.id', ondelete="CASCADE"),
+        ForeignKey('offres_emploi_enrichies.id', ondelete="CASCADE"),
         nullable=False
     )
+
 
 
     note = Column(Text)
