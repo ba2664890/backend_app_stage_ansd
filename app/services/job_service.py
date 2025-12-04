@@ -345,37 +345,16 @@ class JobService:
             raise
 
 
-    def save_job(self, db, user_id: UUID, job_id: str):
-        """
-        Sauvegarde une offre d'emploi pour un utilisateur.
-        """
-        try:
-            job_uuid = UUID(job_id)
-
-            # Vérifier que le job existe
-            job_exists = db.query(OffreEmploiEnrichie).filter(OffreEmploiEnrichie.id == job_uuid).first()
-            if not job_exists:
-                raise ValueError(f"Job {job_id} does not exist")
-
-            # Vérifier si déjà sauvegardé
-            existing = db.query(UserSavedJob).filter(
-                UserSavedJob.user_id == user_id,
-                UserSavedJob.job_id == job_uuid
-            ).first()
-            if existing:
-                return existing
-
-            # Créer l'enregistrement
-            saved = UserSavedJob(
-                user_id=user_id,
-                job_id=job_uuid
-                # note=None par défaut, created_at sera automatique
-            )
-            db.add(saved)
-            db.commit()
-            db.refresh(saved)
-            return saved
-
-        except (ValueError, SQLAlchemyError) as e:
-            logger.error(f"Error saving job {job_id} for user {user_id}: {e}", exc_info=True)
-            raise
+    def save_job(self, db: Session, user_id: UUID, job_id: UUID):
+        # Trouver l'offre enrichie correspondant à l'offre brute
+        enrichie = db.query(OffreEmploiEnrichie).filter(
+            OffreEmploiEnrichie.offre_id == job_id
+        ).first()
+        if not enrichie:
+            raise ValueError(f"Job {job_id} n'a pas été enrichi, impossible de sauvegarder")
+        
+        saved = UserSavedJob(user_id=user_id, job_id=enrichie.id)
+        db.add(saved)
+        db.commit()
+        db.refresh(saved)
+        return saved
