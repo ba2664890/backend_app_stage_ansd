@@ -347,8 +347,8 @@ class JobService:
 
     def save_job(self, db: Session, user_id: UUID, job_id: UUID):
         # Trouver l'offre enrichie correspondant à l'offre brute
-        enrichie = db.query(OffreEmploiEnrichie).filter(
-            OffreEmploiEnrichie.offre_id == job_id
+        enrichie = db.query(offres_emploi_brutes).filter(
+            offres_emploi_brutes.id == job_id
         ).first()
         if not enrichie:
             raise ValueError(f"Job {job_id} n'a pas été enrichi, impossible de sauvegarder")
