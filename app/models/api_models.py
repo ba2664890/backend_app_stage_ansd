@@ -320,3 +320,10 @@ class ChoroplethResponse(BaseModel):
     offers: List[OfferGeoJSON]
     total_boundaries: int
     total_offers: int
+
+
+
+from pydantic import BaseModel
+
+class SaveJobRequest(BaseModel):
+    job_id: str

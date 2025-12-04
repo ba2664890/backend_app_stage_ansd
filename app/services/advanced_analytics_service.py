@@ -2301,3 +2301,6 @@ class AdvancedAnalyticsService:
         except Exception as e:
             logger.error(f"Erreur évolution contrats: {e}", exc_info=True)
             return []
+
+    # ==================== Evolution par heure ====================
+    

@@ -28,7 +28,7 @@ from .models.database_models import (
     JobRecommendation, JobStatistics 
 )
 from .models.api_models import (
-    ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, RecommendationResponse, SalaryByExperience,
+    ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, RecommendationResponse, SalaryByExperience, SaveJobRequest,
     UserProfileCreate, UserProfileResponse, JobSearchParams,
     PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData, UserResponse
 )
@@ -583,6 +583,22 @@ async def get_job(job_id: str, db=Depends(get_db)):
     except Exception as e:
         logger.error(f"Error fetching job {job_id}: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la récupération de l'offre")
+    
+@app.post("/api/v1/jobs/saved")
+async def save_job(
+    payload: SaveJobRequest,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.user_id
+    job_id = payload.job_id
+
+    try:
+        job_servic.save_job(db, user_id, job_id)
+        return {"message": "Job saved successfully"}
+    except Exception as e:
+        logger.error(f"Error saving job: {e}")
+        raise HTTPException(status_code=500, detail="Erreur lors de l'ajout du favori")
 
 @app.get("/api/v1/jobs/stats/summary", response_model=Dict[str, Any])
 async def get_jobs_summary(db=Depends(get_db)):
