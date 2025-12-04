@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from ..models.database_models import OffreEmploiBrute, OffreEmploiEnrichie, UserSavedJob
 from ..models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 
