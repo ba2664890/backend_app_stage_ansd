@@ -343,17 +343,16 @@ class JobService:
             logger.error(f"Error getting jobs summary: {e}", exc_info=True)
             raise
 
-        
+
     def save_job(self, db, user_id: UUID, job_id: str):
         """
         Sauvegarde une offre d'emploi pour un utilisateur.
         """
         try:
-            # Convertir en UUID
             job_uuid = UUID(job_id)
 
             # Vérifier que le job existe
-            job_exists = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_uuid).first()
+            job_exists = db.query(OffreEmploiEnrichie).filter(OffreEmploiEnrichie.id == job_uuid).first()
             if not job_exists:
                 raise ValueError(f"Job {job_id} does not exist")
 
@@ -368,14 +367,14 @@ class JobService:
             # Créer l'enregistrement
             saved = UserSavedJob(
                 user_id=user_id,
-                job_id=job_uuid,
-                saved_at=datetime.utcnow()
+                job_id=job_uuid
+                # note=None par défaut, created_at sera automatique
             )
             db.add(saved)
             db.commit()
             db.refresh(saved)
             return saved
 
-        except Exception as e:
+        except (ValueError, SQLAlchemyError) as e:
             logger.error(f"Error saving job {job_id} for user {user_id}: {e}", exc_info=True)
             raise
