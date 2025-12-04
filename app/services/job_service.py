@@ -352,8 +352,8 @@ class JobService:
         ).first()
         if not enrichie:
             raise ValueError(f"Job {job_id} n'a pas été enrichi, impossible de sauvegarder")
-        
         saved = UserSavedJob(user_id=user_id, job_id=enrichie.id)
+
         db.add(saved)
         db.commit()
         db.refresh(saved)
