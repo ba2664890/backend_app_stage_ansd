@@ -9,7 +9,7 @@ from uuid import UUID
 
 # Modèles de base
 class BaseResponse(BaseModel):
-    """Modèle de base pour les réponses API."""
+    """Modèle de base pour les réponsess API."""
     success: bool = True
     message: Optional[str] = None
 
