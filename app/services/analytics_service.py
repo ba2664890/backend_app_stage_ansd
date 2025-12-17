@@ -554,3 +554,191 @@ class AnalyticsService:
         }
         days = period_map.get(period, 30)
         return end_date - timedelta(days=days)
+
+
+
+    # Ajoutez ces méthodes à la classe AnalyticsService
+
+    def get_jobs_by_day(self, db: Session, days: int = 30) -> List[Dict[str, Any]]:
+        """Récupère le nombre d'offres par jour."""
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
+            daily_stats = db.query(
+                func.date(OffreEmploiBrute.posted_date).label('date'),
+                func.count(OffreEmploiBrute.id).label('count')
+            ).filter(
+                OffreEmploiBrute.posted_date >= start_date,
+                OffreEmploiBrute.posted_date <= end_date
+            ).group_by(
+                func.date(OffreEmploiBrute.posted_date)
+            ).order_by(
+                func.date(OffreEmploiBrute.posted_date)
+            ).all()
+            
+            return [{
+                "date": stat.date.isoformat() if stat.date else None,
+                "count": stat.count,
+                "day_name": stat.date.strftime('%A') if stat.date else None
+            } for stat in daily_stats]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des offres par jour: {str(e)}")
+            raise
+
+    def get_top_jobs(self, db: Session, period: str = "30d", limit: int = 20) -> List[Dict[str, Any]]:
+        """Récupère les métiers qui recrutent le plus."""
+        try:
+            end_date = datetime.now()
+            start_date = self._get_start_date(end_date, period)
+            
+            jobs = db.query(
+                OffreEmploiEnrichie.extracted_job_title.label('job_title'),
+                func.count(OffreEmploiEnrichie.id).label('count'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_salary_max'),
+                func.count(OffreEmploiBrute.company_name.distinct()).label('unique_companies')
+            ).join(
+                OffreEmploiBrute,
+                OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_job_title.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.extracted_job_title
+            ).order_by(
+                desc('count')
+            ).limit(limit).all()
+            
+            total_offers = sum(job.count for job in jobs)
+            
+            return [{
+                "job_title": self._safe_get(job, 'job_title'),
+                "count": self._safe_get(job, 'count', 0),
+                "percentage": round((job.count / total_offers * 100), 2) if total_offers > 0 else 0,
+                "avg_salary_min": float(self._safe_get(job, 'avg_salary_min')) if self._safe_get(job, 'avg_salary_min') else None,
+                "avg_salary_max": float(self._safe_get(job, 'avg_salary_max')) if self._safe_get(job, 'avg_salary_max') else None,
+                "unique_companies": self._safe_get(job, 'unique_companies', 0)
+            } for job in jobs]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des top métiers: {str(e)}")
+            raise
+
+    def get_education_level_distribution(self, db: Session, period: str = "30d") -> List[Dict[str, Any]]:
+        """Récupère la répartition par niveau d'étude."""
+        try:
+            end_date = datetime.now()
+            start_date = self._get_start_date(end_date, period)
+            
+            education_levels = db.query(
+                OffreEmploiEnrichie.education_level,
+                func.count(OffreEmploiEnrichie.id).label('count')
+            ).join(
+                OffreEmploiBrute,
+                OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.education_level.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.education_level
+            ).order_by(
+                desc('count')
+            ).all()
+            
+            total = sum(level.count for level in education_levels)
+            
+            return [{
+                "level": self._safe_get(level, 'education_level'),
+                "count": self._safe_get(level, 'count', 0),
+                "percentage": round((level.count / total * 100), 2) if total > 0 else 0
+            } for level in education_levels]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des niveaux d'étude: {str(e)}")
+            raise
+
+    def get_hierarchical_data(self, db: Session, period: str = "90d") -> Dict[str, Any]:
+        """Prépare les données pour la visualisation en TreeMap (secteur > métier > compétence)."""
+        try:
+            end_date = datetime.now()
+            start_date = self._get_start_date(end_date, period)
+            
+            # Récupération des secteurs avec leurs métiers
+            sector_job_query = db.query(
+                OffreEmploiEnrichie.secteur,
+                OffreEmploiEnrichie.extracted_job_title,
+                func.count(OffreEmploiEnrichie.id).label('job_count')
+            ).join(
+                OffreEmploiBrute,
+                OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.secteur.isnot(None),
+                OffreEmploiEnrichie.extracted_job_title.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.secteur,
+                OffreEmploiEnrichie.extracted_job_title
+            ).order_by(
+                OffreEmploiEnrichie.secteur,
+                desc('job_count')
+            ).all()
+            
+            # Construction de la hiérarchie
+            hierarchy = {}
+            for row in sector_job_query:
+                sector = row.secteur
+                job = row.extracted_job_title
+                
+                if sector not in hierarchy:
+                    hierarchy[sector] = {}
+                
+                if job not in hierarchy[sector]:
+                    hierarchy[sector][job] = row.job_count
+            
+            # Formatage pour TreeMap
+            treemap_data = {
+                "name": "Marché",
+                "children": []
+            }
+            
+            for sector, jobs in hierarchy.items():
+                sector_node = {
+                    "name": sector,
+                    "children": []
+                }
+                
+                for job, count in jobs.items():
+                    # Récupération des compétences principales pour ce métier
+                    top_skills = db.query(
+                        func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
+                        func.count(OffreEmploiEnrichie.id).label('skill_count')
+                    ).join(
+                        OffreEmploiBrute,
+                        OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+                    ).filter(
+                        OffreEmploiBrute.posted_date.between(start_date, end_date),
+                        OffreEmploiEnrichie.secteur == sector,
+                        OffreEmploiEnrichie.extracted_job_title == job,
+                        OffreEmploiEnrichie.extracted_skills.isnot(None)
+                    ).group_by(
+                        'skill'
+                    ).order_by(
+                        desc('skill_count')
+                    ).limit(5).all()
+                    
+                    job_node = {
+                        "name": job,
+                        "value": count,
+                        "children": [{"name": skill.skill, "value": skill.skill_count} for skill in top_skills]
+                    }
+                    sector_node["children"].append(job_node)
+                
+                treemap_data["children"].append(sector_node)
+            
+            return treemap_data
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération des données hiérarchiques: {str(e)}")
+            raise

@@ -305,6 +305,54 @@ def verify_import(db: Session = Depends(get_db)):
     }
 
 
+
+# À AJOUTER dans votre fichier de routes analytics
+
+@app.get("/analytics/temporal/daily")
+async def get_daily_analytics(
+    days: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db)
+):
+    """Récupère les statistiques quotidiennes des offres."""
+    try:
+        service = AnalyticsService()
+        data = service.get_daily_trends(db, days)
+        return {"success": True, "data": data}
+    except Exception as e:
+        logger.error(f"Erreur dans get_daily_analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/analytics/jobs/top")
+async def get_top_jobs_endpoint(
+    period: str = Query("30d", regex="^(1d|7d|30d|90d|1y)$"),
+    limit: int = Query(15, ge=5, le=50),
+    db: Session = Depends(get_db)
+):
+    """Récupère les métiers les plus demandés."""
+    try:
+        service = AnalyticsService()
+        data = service.get_top_job_titles(db, period, limit)
+        return {"success": True, "data": data}
+    except Exception as e:
+        logger.error(f"Erreur dans get_top_jobs: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/analytics/education/distribution")
+async def get_education_analytics(
+    period: str = Query("30d", regex="^(1d|7d|30d|90d|1y)$"),
+    db: Session = Depends(get_db)
+):
+    """Récupère la répartition par niveau d'étude."""
+    try:
+        service = AnalyticsService()
+        data = service.get_education_distribution(db, period)
+        return {"success": True, "data": data}
+    except Exception as e:
+        logger.error(f"Erreur dans get_education_analytics: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.post("/match-offers")
 def match_offers_to_boundaries(
     level: str = Query(None, description="Limiter à un niveau (ex: 'quartier')"),
