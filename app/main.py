@@ -317,7 +317,7 @@ async def get_daily_analytics(
 ):
     """Récupère les statistiques quotidiennes des offres."""
     try:
-        service = AnalyticsService()
+        service = AdvancedAnalyticsService()
         data = service.get_daily_trends(db, days)
         return {"success": True, "data": data}
     except Exception as e:
@@ -332,7 +332,7 @@ async def get_top_jobs_endpoint(
 ):
     """Récupère les métiers les plus demandés."""
     try:
-        service = AnalyticsService()
+        service = AdvancedAnalyticsService()
         data = service.get_top_job_titles(db, period, limit)
         return {"success": True, "data": data}
     except Exception as e:
@@ -346,7 +346,7 @@ async def get_education_analytics(
 ):
     """Récupère la répartition par niveau d'étude."""
     try:
-        service = AnalyticsService()
+        service = AdvancedAnalyticsService()
         data = service.get_education_distribution(db, period)
         return {"success": True, "data": data}
     except Exception as e:
