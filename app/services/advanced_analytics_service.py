@@ -2343,7 +2343,7 @@ class AdvancedAnalyticsService:
             start_date, end_date = self._get_period_bounds(period)  # ✅ CORRECT
             
             jobs = db.query(
-                OffreEmploiEnrichie.extracted_job_title.label('job_title'),
+                OffreEmploiBrute.extracted_job_title.label('job_title'),
                 func.count(OffreEmploiEnrichie.id).label('count'),
                 func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min'),
                 func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_salary_max'),
