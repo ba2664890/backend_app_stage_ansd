@@ -308,7 +308,9 @@ def verify_import(db: Session = Depends(get_db)):
 
 # À AJOUTER dans votre fichier de routes analytics
 
-@app.get("/analytics/temporal/daily")
+# À AJOUTER dans votre fichier de routes analytics
+
+@app.get("/api/v1/analytics/temporal/daily")
 async def get_daily_analytics(
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db)
@@ -322,7 +324,7 @@ async def get_daily_analytics(
         logger.error(f"Erreur dans get_daily_analytics: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/analytics/jobs/top")
+@app.get("/api/v1/analytics/jobs/top")
 async def get_top_jobs_endpoint(
     period: str = Query("30d", regex="^(1d|7d|30d|90d|1y)$"),
     limit: int = Query(15, ge=5, le=50),
@@ -331,13 +333,13 @@ async def get_top_jobs_endpoint(
     """Récupère les métiers les plus demandés."""
     try:
         service = AnalyticsService()
-        data = service.get_top_jobs(db, period, limit)
+        data = service.get_top_job_titles(db, period, limit)
         return {"success": True, "data": data}
     except Exception as e:
         logger.error(f"Erreur dans get_top_jobs: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/analytics/education/distribution")
+@app.get("/api/v1/analytics/education/distribution")
 async def get_education_analytics(
     period: str = Query("30d", regex="^(1d|7d|30d|90d|1y)$"),
     db: Session = Depends(get_db)
@@ -350,7 +352,6 @@ async def get_education_analytics(
     except Exception as e:
         logger.error(f"Erreur dans get_education_analytics: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 @app.post("/match-offers")

@@ -2303,4 +2303,111 @@ class AdvancedAnalyticsService:
             return []
 
     # ==================== Evolution par heure ====================
+
+    def get_daily_trends(self, db: Session, days: int = 30) -> List[Dict[str, Any]]:
+        """Récupère les tendances quotidiennes des offres."""
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
+            daily_stats = db.query(
+                func.date(OffreEmploiBrute.posted_date).label('date'),
+                func.count(OffreEmploiBrute.id).label('count'),
+                func.count(func.distinct(OffreEmploiBrute.company_name)).label('unique_companies'),
+                func.count(func.distinct(OffreEmploiBrute.location)).label('unique_locations')
+            ).filter(
+                OffreEmploiBrute.posted_date >= start_date,
+                OffreEmploiBrute.posted_date <= end_date
+            ).group_by(
+                func.date(OffreEmploiBrute.posted_date)
+            ).order_by(
+                func.date(OffreEmploiBrute.posted_date)
+            ).all()
+            
+            return [{
+                "date": stat.date.isoformat() if stat.date else None,
+                "count": self._safe_get(stat, 'count', 0),
+                "unique_companies": self._safe_get(stat, 'unique_companies', 0),
+                "unique_locations": self._safe_get(stat, 'unique_locations', 0),
+                "day_name": stat.date.strftime('%A') if stat.date else None,
+                "day_of_week": stat.date.weekday() if stat.date else None
+            } for stat in daily_stats]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des tendances quotidiennes: {str(e)}")
+            raise
+
+    def get_top_job_titles(self, db: Session, period: str = "30d", limit: int = 15) -> List[Dict[str, Any]]:
+        """Récupère les métiers qui recrutent le plus."""
+        try:
+            start_date, end_date = self._get_period_bounds(period)  # ✅ CORRECT
+            
+            jobs = db.query(
+                OffreEmploiEnrichie.extracted_job_title.label('job_title'),
+                func.count(OffreEmploiEnrichie.id).label('count'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_salary_max'),
+                func.count(func.distinct(OffreEmploiBrute.company_name)).label('unique_companies'),
+                func.count(func.distinct(OffreEmploiBrute.location)).label('unique_locations')
+            ).join(
+                OffreEmploiBrute,
+                OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_job_title.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.extracted_job_title
+            ).order_by(
+                desc('count')
+            ).limit(limit).all()
+            
+            total_offers = sum(job.count for job in jobs)
+            
+            return [{
+                "job_title": self._safe_get(job, 'job_title'),
+                "count": self._safe_get(job, 'count', 0),
+                "percentage": round((job.count / total_offers * 100), 2) if total_offers > 0 else 0,
+                "avg_salary_min": float(self._safe_get(job, 'avg_salary_min')) if self._safe_get(job, 'avg_salary_min') else None,
+                "avg_salary_max": float(self._safe_get(job, 'avg_salary_max')) if self._safe_get(job, 'avg_salary_max') else None,
+                "unique_companies": self._safe_get(job, 'unique_companies', 0),
+                "unique_locations": self._safe_get(job, 'unique_locations', 0)
+            } for job in jobs]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des top métiers: {str(e)}")
+            raise
+
+    def get_education_distribution(self, db: Session, period: str = "30d") -> List[Dict[str, Any]]:
+        """Récupère la répartition par niveau d'étude."""
+        try:
+            start_date, end_date = self._get_period_bounds(period)  # ✅ CORRECT
+            
+            education_levels = db.query(
+                OffreEmploiEnrichie.education_level,
+                func.count(OffreEmploiEnrichie.id).label('count'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min')
+            ).join(
+                OffreEmploiBrute,
+                OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.education_level.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.education_level
+            ).order_by(
+                desc('count')
+            ).all()
+            
+            total = sum(level.count for level in education_levels)
+            
+            return [{
+                "education_level": self._safe_get(level, 'education_level'),
+                "count": self._safe_get(level, 'count', 0),
+                "percentage": round((level.count / total * 100), 2) if total > 0 else 0,
+                "avg_salary": float(self._safe_get(level, 'avg_salary_min')) if self._safe_get(level, 'avg_salary_min') else None
+            } for level in education_levels]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des niveaux d'étude: {str(e)}")
+            raise
     
