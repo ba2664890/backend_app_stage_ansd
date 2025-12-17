@@ -331,7 +331,7 @@ async def get_top_jobs_endpoint(
     """Récupère les métiers les plus demandés."""
     try:
         service = AnalyticsService()
-        data = service.get_top_job_titles(db, period, limit)
+        data = service.get_top_jobs(db, period, limit)
         return {"success": True, "data": data}
     except Exception as e:
         logger.error(f"Erreur dans get_top_jobs: {str(e)}")
