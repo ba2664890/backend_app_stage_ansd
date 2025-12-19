@@ -1461,7 +1461,7 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.extracted_contract_type.label('type'),
                 func.count(OffreEmploiEnrichie.id).label('count')
             ).join(
-                OffreEmplOiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiEnrichie.extracted_contract_type.isnot(None)

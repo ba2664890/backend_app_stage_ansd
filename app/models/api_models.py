@@ -245,7 +245,8 @@ class DashboardStats(BaseModel):
     top_skills: List[Dict[str, Any]]
     contract_type_distribution: List[Dict[str, Any]]
     experience_level_distribution: List[Dict[str, Any]]
-    monthly_trend: List[Dict[str, Any]]
+    #monthly_trend: List[Dict[str, Any]]
+    offers_this_month: int
 
 class GeographicStats(BaseModel):
     """Statistiques géographiques."""
