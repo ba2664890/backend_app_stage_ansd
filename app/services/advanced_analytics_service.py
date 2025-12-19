@@ -54,38 +54,22 @@ class AdvancedAnalyticsService:
         """Convertit une période en dates de début/fin."""
         end_date = datetime.now()
         period_map = {
-            "1d": 1, "3d": 3, "7d": 7, "14d": 14,
-            "30d": 30, "90d": 90, "180d": 180, "365d": 365,
-            "1y": 365, "2y": 730
+            "1d": 1, "3d": 3,
+            "7d": 7, "30d": 30, "90d": 90, "180d": 180,
+            "6m": 180, "1y": 365, "2y": 730
         }
         days = period_map.get(period.lower(), 30)
         start_date = end_date - timedelta(days=days)
         return start_date, end_date
 
-    def _execute_salary_query(self, db: Session, query_filter) -> Dict[str, Optional[float]]:
-        """Exécute une requête de statistiques salariales de manière sûre."""
-        try:
-            stats = db.query(
-                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_min'),
-                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_max')
-            ).join(
-                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
-            ).filter(
-                query_filter,
-                OffreEmploiEnrichie.extracted_salary_min.isnot(None)
-            ).first()
-
-            return {
-                'avg_min': float(stats.avg_min) if stats and stats.avg_min else None,
-                'avg_max': float(stats.avg_max) if stats and stats.avg_max else None
-            }
-        except:
-            return {'avg_min': None, 'avg_max': None}
-
     # ==================== ANALYSES PRINCIPALES ====================
 
     def get_complete_analytics(self, db: Session, period: str = "90d") -> Dict[str, Any]:
-        """Récupère une analyse complète et multidimensionnelle du marché."""
+        """
+        Récupère une analyse complète et multidimensionnelle du marché.
+        
+        Cette méthode est le point d'entrée principal pour obtenir toutes les analyses.
+        """
         try:
             start_date, end_date = self._get_period_bounds(period)
             
@@ -106,8 +90,11 @@ class AdvancedAnalyticsService:
     # ==================== TABLEAU DE BORD ENRICHI ====================
 
     def get_enhanced_dashboard(self, db: Session, start_date: datetime, end_date: datetime) -> DashboardStats:
-        """Tableau de bord enrichi avec métriques clés et tendances."""
+        """
+        Tableau de bord enrichi avec métriques clés et tendances.
+        """
         try:
+            # Statistiques de base
             base_stats = db.query(
                 func.count(distinct(OffreEmploiBrute.id)).label('total_offers'),
                 func.count(distinct(OffreEmploiBrute.company_name)).label('total_companies'),
@@ -116,169 +103,216 @@ class AdvancedAnalyticsService:
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).first()
 
+            # Offres du mois en cours
+            current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0)
+            offers_this_month = db.query(func.count(OffreEmploiBrute.id)).filter(
+                OffreEmploiBrute.posted_date >= current_month_start
+            ).scalar() or 0
+
+            # Offres d'aujourd'hui
             today_start = datetime.now().replace(hour=0, minute=0, second=0)
             offers_today = db.query(func.count(OffreEmploiBrute.id)).filter(
                 OffreEmploiBrute.created_at >= today_start
             ).scalar() or 0
 
-            offers_yesterday = db.query(func.count(OffreEmploiBrute.id)).filter(
-                OffreEmploiBrute.created_at >= today_start - timedelta(days=1),
-                OffreEmploiBrute.created_at < today_start
-            ).scalar() or 0
+            # Salaires (si disponibles, mais non prioritaires)
+            salary_stats = self._get_safe_salary_stats(db, start_date, end_date)
 
-            salary_stats = self._execute_salary_query(
-                db, 
-                OffreEmploiBrute.posted_date.between(start_date, end_date)
-            )
+            # Top 10 secteurs avec croissance
+            top_sectors = self._get_top_sectors_with_growth(db, start_date, end_date, limit=10)
+
+            # Top 20 compétences avec tendance
+            top_skills = self._get_top_skills_with_trend(db, start_date, end_date, limit=20)
+
+            # Distribution des types de contrat
+            contract_distribution = self._get_contract_distribution(db, start_date, end_date)
+
+            # Distribution par niveau d'expérience
+            experience_distribution = self._get_experience_distribution(db, start_date, end_date)
+
+            # Tendance mensuelle sur 12 mois
+            monthly_trend = self._get_monthly_trend(db, 365)
 
             return DashboardStats(
                 total_offers=base_stats.total_offers or 0,
                 total_companies=base_stats.total_companies or 0,
                 total_locations=base_stats.total_locations or 0,
-                offers_this_month=offers_yesterday,
+                offers_this_month=offers_this_month,
                 offers_today=offers_today,
                 avg_salary_min=salary_stats.get('avg_min'),
                 avg_salary_max=salary_stats.get('avg_max'),
-                top_sectors=self._get_top_sectors_with_growth(db, start_date, end_date),
-                top_skills=self._get_top_skills_with_trend(db, start_date, end_date),
-                contract_type_distribution=self._get_distribution(db, start_date, end_date, 'contract'),
-                experience_level_distribution=self._get_distribution(db, start_date, end_date, 'experience'),
-                monthly_trend=self._get_daily_trend(db, 90)
+                top_sectors=top_sectors,
+                top_skills=top_skills,
+                contract_type_distribution=contract_distribution,
+                experience_level_distribution=experience_distribution,
+                monthly_trend=monthly_trend
             )
         except Exception as e:
             logger.error(f"Erreur dashboard enrichi: {e}", exc_info=True)
             raise
 
-    def _get_distribution(self, db: Session, start_date: datetime, end_date: datetime, dist_type: str) -> List[Dict[str, Any]]:
-        """Récupère la distribution pour un type donné (contract ou experience)."""
+    def _get_safe_salary_stats(self, db: Session, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+        """Récupère les stats salariales de manière sûre (peut retourner None)."""
         try:
-            if dist_type == 'contract':
-                query = db.query(
-                    OffreEmploiEnrichie.extracted_contract_type.label('key'),
-                    func.count(OffreEmploiEnrichie.id).label('count')
-                ).filter(
-                    OffreEmploiEnrichie.extracted_contract_type.isnot(None)
-                )
-            else:
-                query = db.query(
-                    OffreEmploiEnrichie.job_level.label('key'),
-                    func.count(OffreEmploiEnrichie.id).label('count')
-                ).filter(
-                    OffreEmploiEnrichie.job_level.isnot(None)
-                )
-
-            results = query.join(
+            stats = db.query(
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_min'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_max')
+            ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
-                OffreEmploiBrute.posted_date.between(start_date, end_date)
-            ).group_by('key').all()
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_salary_min.isnot(None)
+            ).first()
 
-            total = sum(r.count for r in results)
+            return {
+                'avg_min': float(stats.avg_min) if stats and stats.avg_min else None,
+                'avg_max': float(stats.avg_max) if stats and stats.avg_max else None
+            }
+        except:
+            return {'avg_min': None, 'avg_max': None}
+
+    def get_contract_type_evolution(
+        db: Session, start_date: datetime, end_date: datetime
+    ) -> List[ContractTypeEvolution]:
+        """
+        Évolution des contrats par mois.
+        Remplit ContractTypeEvolution pour FullAnalyticsResponse.
+        """
+        try:
+            # Période actuelle : compter les offres par type de contrat (ex: CDI, CDD, Stage)
+            current_counts = db.query(
+                OffreEmploiBrute.contract_type.label("contract_type"),
+                func.count(OffreEmploiBrute.id).label("count")
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiBrute.contract_type.isnot(None)
+            ).group_by(
+                OffreEmploiBrute.contract_type
+            ).all()
+
+            # Construire le dict contracts
+            contracts_dict = {row.contract_type: row.count for row in current_counts}
+
+            # Générer le month label
+            month_label = start_date.strftime("%Y-%m")
+
             return [
-                {
-                    "type" if dist_type == 'contract' else "level": r.key or "Non spécifié",
-                    "count": r.count,
-                    "percentage": round((r.count / total * 100), 2) if total > 0 else 0
-                }
-                for r in results
+                ContractTypeEvolution(
+                    month=month_label,
+                    contracts=contracts_dict
+                )
             ]
+
         except Exception as e:
-            logger.error(f"Erreur distribution {dist_type}: {e}")
+            logger.error(f"Erreur évolution contrats: {e}")
             return []
 
     # ==================== TAUX D'ÉVOLUTION DU MARCHÉ ====================
 
     def get_market_evolution_rates(self, db: Session, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
-        """Calcule les taux d'évolution clés du marché."""
+        """
+        Calcule les taux d'évolution clés du marché (comparaison avec période précédente).
+        """
         try:
             period_duration = (end_date - start_date).days
-            if period_duration == 0:
-                period_duration = 1
             previous_start = start_date - timedelta(days=period_duration)
             previous_end = start_date
 
-            metrics = ['offers', 'companies', 'locations', 'sectors', 'skills']
-            evolution_data = {}
+            # Offres totales
+            current_offers = db.query(func.count(OffreEmploiBrute.id)).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date)
+            ).scalar() or 0
 
-            for metric in metrics:
-                current, previous = self._get_metric_count(db, metric, start_date, end_date, previous_start, previous_end)
-                growth = self._calculate_growth(current, previous)
-                
-                trend_map = {
-                    'offers': "positive" if growth > 0 else "negative" if growth < 0 else "stable",
-                    'companies': "positive" if growth > 0 else "negative" if growth < 0 else "stable",
-                    'locations': "expanding" if growth > 0 else "contracting" if growth < 0 else "stable",
-                    'sectors': "diversifying" if growth > 0 else "consolidating" if growth < 0 else "stable",
-                    'skills': "expanding" if growth > 0 else "contracting" if growth < 0 else "stable"
-                }
+            previous_offers = db.query(func.count(OffreEmploiBrute.id)).filter(
+                OffreEmploiBrute.posted_date.between(previous_start, previous_end)
+            ).scalar() or 0
 
-                evolution_data[f'{metric}_growth'] = {
-                    "current": current,
-                    "previous": previous,
-                    "rate": growth,
-                    "trend": trend_map[metric]
-                }
+            offers_growth = self._calculate_growth(current_offers, previous_offers)
 
-            evolution_data["market_health"] = self._calculate_market_health(
-                evolution_data['offers_growth']['rate'],
-                evolution_data['companies_growth']['rate'],
-                evolution_data['sectors_growth']['rate']
-            )
+            # Entreprises actives
+            current_companies = db.query(func.count(distinct(OffreEmploiBrute.company_name))).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiBrute.company_name.isnot(None)
+            ).scalar() or 0
 
-            return evolution_data
+            previous_companies = db.query(func.count(distinct(OffreEmploiBrute.company_name))).filter(
+                OffreEmploiBrute.posted_date.between(previous_start, previous_end),
+                OffreEmploiBrute.company_name.isnot(None)
+            ).scalar() or 0
+
+            companies_growth = self._calculate_growth(current_companies, previous_companies)
+
+            # Diversité géographique
+            current_locations = db.query(func.count(distinct(OffreEmploiBrute.location))).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiBrute.location.isnot(None)
+            ).scalar() or 0
+
+            previous_locations = db.query(func.count(distinct(OffreEmploiBrute.location))).filter(
+                OffreEmploiBrute.posted_date.between(previous_start, previous_end),
+                OffreEmploiBrute.location.isnot(None)
+            ).scalar() or 0
+
+            locations_growth = self._calculate_growth(current_locations, previous_locations)
+
+            # Diversité sectorielle
+            current_sectors = db.query(func.count(distinct(OffreEmploiEnrichie.extracted_sector))).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_sector.isnot(None)
+            ).scalar() or 0
+
+            previous_sectors = db.query(func.count(distinct(OffreEmploiEnrichie.extracted_sector))).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(previous_start, previous_end),
+                OffreEmploiEnrichie.extracted_sector.isnot(None)
+            ).scalar() or 0
+
+            sectors_growth = self._calculate_growth(current_sectors, previous_sectors)
+
+            # Compétences uniques demandées
+            current_skills = self._count_unique_skills(db, start_date, end_date)
+            previous_skills = self._count_unique_skills(db, previous_start, previous_end)
+            skills_growth = self._calculate_growth(current_skills, previous_skills)
+
+            return {
+                "offers_growth": {
+                    "current": current_offers,
+                    "previous": previous_offers,
+                    "rate": offers_growth,
+                    "trend": "positive" if offers_growth > 0 else "negative" if offers_growth < 0 else "stable"
+                },
+                "companies_growth": {
+                    "current": current_companies,
+                    "previous": previous_companies,
+                    "rate": companies_growth,
+                    "trend": "positive" if companies_growth > 0 else "negative" if companies_growth < 0 else "stable"
+                },
+                "locations_diversity": {
+                    "current": current_locations,
+                    "previous": previous_locations,
+                    "rate": locations_growth,
+                    "trend": "expanding" if locations_growth > 0 else "contracting" if locations_growth < 0 else "stable"
+                },
+                "sectors_diversity": {
+                    "current": current_sectors,
+                    "previous": previous_sectors,
+                    "rate": sectors_growth,
+                    "trend": "diversifying" if sectors_growth > 0 else "consolidating" if sectors_growth < 0 else "stable"
+                },
+                "skills_diversity": {
+                    "current": current_skills,
+                    "previous": previous_skills,
+                    "rate": skills_growth,
+                    "trend": "expanding" if skills_growth > 0 else "contracting" if skills_growth < 0 else "stable"
+                },
+                "market_health": self._calculate_market_health(offers_growth, companies_growth, sectors_growth)
+            }
         except Exception as e:
             logger.error(f"Erreur taux d'évolution: {e}")
             return {}
-
-    def _get_metric_count(self, db: Session, metric: str, start_date: datetime, end_date: datetime, 
-                         previous_start: datetime, previous_end: datetime) -> Tuple[int, int]:
-        """Récupère le compte pour une métrique donnée sur deux périodes."""
-        try:
-            if metric == 'offers':
-                current = db.query(func.count(OffreEmploiBrute.id)).filter(
-                    OffreEmploiBrute.posted_date.between(start_date, end_date)
-                ).scalar() or 0
-                previous = db.query(func.count(OffreEmploiBrute.id)).filter(
-                    OffreEmploiBrute.posted_date.between(previous_start, previous_end)
-                ).scalar() or 0
-            elif metric == 'companies':
-                current = db.query(func.count(distinct(OffreEmploiBrute.company_name))).filter(
-                    OffreEmploiBrute.posted_date.between(start_date, end_date),
-                    OffreEmploiBrute.company_name.isnot(None)
-                ).scalar() or 0
-                previous = db.query(func.count(distinct(OffreEmploiBrute.company_name))).filter(
-                    OffreEmploiBrute.posted_date.between(previous_start, previous_end),
-                    OffreEmploiBrute.company_name.isnot(None)
-                ).scalar() or 0
-            elif metric == 'locations':
-                current = db.query(func.count(distinct(OffreEmploiBrute.location))).filter(
-                    OffreEmploiBrute.posted_date.between(start_date, end_date),
-                    OffreEmploiBrute.location.isnot(None)
-                ).scalar() or 0
-                previous = db.query(func.count(distinct(OffreEmploiBrute.location))).filter(
-                    OffreEmploiBrute.posted_date.between(previous_start, previous_end),
-                    OffreEmploiBrute.location.isnot(None)
-                ).scalar() or 0
-            elif metric == 'sectors':
-                current = db.query(func.count(distinct(OffreEmploiEnrichie.extracted_sector))).join(
-                    OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
-                ).filter(
-                    OffreEmploiBrute.posted_date.between(start_date, end_date),
-                    OffreEmploiEnrichie.extracted_sector.isnot(None)
-                ).scalar() or 0
-                previous = db.query(func.count(distinct(OffreEmploiEnrichie.extracted_sector))).join(
-                    OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
-                ).filter(
-                    OffreEmploiBrute.posted_date.between(previous_start, previous_end),
-                    OffreEmploiEnrichie.extracted_sector.isnot(None)
-                ).scalar() or 0
-            else:  # skills
-                current = self._count_unique_skills(db, start_date, end_date)
-                previous = self._count_unique_skills(db, previous_start, previous_end)
-
-            return current, previous
-        except:
-            return 0, 0
 
     def _calculate_growth(self, current: int, previous: int) -> float:
         """Calcule le taux de croissance en pourcentage."""
@@ -319,8 +353,12 @@ class AdvancedAnalyticsService:
     # ==================== ANALYSES AVANCÉES SUPPLÉMENTAIRES ====================
 
     def get_skills_co_occurrence(self, db: Session, start_date: datetime, end_date: datetime, min_count: int = 5) -> List[Dict[str, Any]]:
-        """Analyse de co-occurrence des compétences."""
+        """
+        Analyse de co-occurrence des compétences.
+        Identifie quelles compétences sont souvent demandées ensemble.
+        """
         try:
+            # Récupérer toutes les offres avec leurs compétences
             offers_skills = db.query(
                 OffreEmploiEnrichie.extracted_skills
             ).join(
@@ -331,31 +369,39 @@ class AdvancedAnalyticsService:
                 func.array_length(OffreEmploiEnrichie.extracted_skills, 1) >= 2
             ).all()
 
+            # Compter les co-occurrences
             co_occurrences = Counter()
             for (skills,) in offers_skills:
                 if skills and len(skills) >= 2:
+                    # Générer toutes les paires
                     for i, skill1 in enumerate(skills):
                         for skill2 in skills[i+1:]:
                             pair = tuple(sorted([skill1, skill2]))
                             co_occurrences[pair] += 1
 
-            return [
-                {
-                    "skill_1": skill1,
-                    "skill_2": skill2,
-                    "co_occurrence_count": count,
-                    "strength": "high" if count > 20 else "medium" if count > 10 else "low"
-                }
-                for (skill1, skill2), count in co_occurrences.most_common(50)
-                if count >= min_count
-            ]
+            # Filtrer et formater
+            result = []
+            for (skill1, skill2), count in co_occurrences.most_common(50):
+                if count >= min_count:
+                    result.append({
+                        "skill_1": skill1,
+                        "skill_2": skill2,
+                        "co_occurrence_count": count,
+                        "strength": "high" if count > 20 else "medium" if count > 10 else "low"
+                    })
+
+            return result
         except Exception as e:
             logger.error(f"Erreur co-occurrence compétences: {e}")
             return []
 
     def get_sector_skills_matrix(self, db: Session, start_date: datetime, end_date: datetime) -> Dict[str, Dict[str, int]]:
-        """Matrice complète secteurs x compétences."""
+        """
+        Matrice complète secteurs x compétences.
+        Utile pour des visualisations avancées type heatmap interactive.
+        """
         try:
+            # Top 20 secteurs
             top_sectors = db.query(
                 OffreEmploiEnrichie.extracted_sector
             ).join(
@@ -369,6 +415,7 @@ class AdvancedAnalyticsService:
 
             matrix = {}
             for (sector,) in top_sectors:
+                # Toutes les compétences pour ce secteur
                 skills = db.query(
                     func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
                     func.count(OffreEmploiEnrichie.id).label('count')
@@ -388,28 +435,42 @@ class AdvancedAnalyticsService:
             return {}
 
     def get_job_posting_velocity(self, db: Session, period: str = "90d") -> Dict[str, Any]:
-        """Vélocité de publication des offres par jour/semaine."""
+        """
+        Vélocité de publication des offres (combien d'offres par jour/semaine).
+        Utile pour identifier les pics d'activité.
+        """
         try:
             start_date, end_date = self._get_period_bounds(period)
 
+            # Par jour
             daily = db.query(
                 func.date(OffreEmploiBrute.posted_date).label('date'),
                 func.count(OffreEmploiBrute.id).label('count')
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
-            ).group_by(func.date(OffreEmploiBrute.posted_date)).order_by(func.date(OffreEmploiBrute.posted_date)).all()
+            ).group_by(
+                func.date(OffreEmploiBrute.posted_date)
+            ).order_by(
+                func.date(OffreEmploiBrute.posted_date)
+            ).all()
 
             daily_data = [{"date": d.date.isoformat(), "count": d.count} for d in daily if d.date]
 
+            # Par semaine
             weekly = db.query(
                 func.date_trunc('week', OffreEmploiBrute.posted_date).label('week'),
                 func.count(OffreEmploiBrute.id).label('count')
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
-            ).group_by(func.date_trunc('week', OffreEmploiBrute.posted_date)).order_by(func.date_trunc('week', OffreEmploiBrute.posted_date)).all()
+            ).group_by(
+                func.date_trunc('week', OffreEmploiBrute.posted_date)
+            ).order_by(
+                func.date_trunc('week', OffreEmploiBrute.posted_date)
+            ).all()
 
             weekly_data = [{"week": w.week.strftime('%Y-W%W'), "count": w.count} for w in weekly if w.week]
 
+            # Statistiques
             counts = [d.count for d in daily]
             avg_daily = sum(counts) / len(counts) if counts else 0
             peak_day = max(daily, key=lambda x: x.count) if daily else None
@@ -432,11 +493,17 @@ class AdvancedAnalyticsService:
             return {}
 
     def get_emerging_skills(self, db: Session, period: str = "90d", growth_threshold: float = 50.0) -> List[Dict[str, Any]]:
-        """Identifie les compétences émergentes."""
+        """
+        Identifie les compétences émergentes (forte croissance récente).
+        """
         try:
-            start_date, end_date = self._get_period_bounds(period)
+            end_date = datetime.now()
+            start_date, _ = self._get_period_bounds(period)
+            
+            # Diviser la période en deux
             mid_date = start_date + (end_date - start_date) / 2
 
+            # Compétences première moitié
             first_half = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
                 func.count(OffreEmploiEnrichie.id).label('count')
@@ -447,6 +514,9 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.extracted_skills.isnot(None)
             ).group_by('skill').all()
 
+            first_half_dict = {s.skill: s.count for s in first_half}
+
+            # Compétences deuxième moitié
             second_half = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
                 func.count(OffreEmploiEnrichie.id).label('count')
@@ -457,8 +527,7 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.extracted_skills.isnot(None)
             ).group_by('skill').all()
 
-            first_half_dict = {s.skill: s.count for s in first_half}
-
+            # Calculer la croissance
             emerging = []
             for s in second_half:
                 first_count = first_half_dict.get(s.skill, 0)
@@ -473,14 +542,19 @@ class AdvancedAnalyticsService:
                         "status": "new" if first_count == 0 else "growing"
                     })
 
+            # Trier par taux de croissance
             emerging.sort(key=lambda x: x['growth_rate'], reverse=True)
-            return emerging[:30]
+            return emerging[:30]  # Top 30
+
         except Exception as e:
             logger.error(f"Erreur compétences émergentes: {e}")
             return []
 
     def get_contract_type_by_sector(self, db: Session, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
-        """Distribution des types de contrat par secteur."""
+        """
+        Distribution des types de contrat par secteur.
+        Utile pour un graphique en barres empilées.
+        """
         try:
             data = db.query(
                 OffreEmploiEnrichie.extracted_sector.label('sector'),
@@ -497,21 +571,22 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.extracted_contract_type
             ).order_by(desc('count')).all()
 
+            # Organiser par secteur
             sectors_data = defaultdict(lambda: {"sector": "", "contracts": {}, "total": 0})
             for row in data:
                 sectors_data[row.sector]["sector"] = row.sector
                 sectors_data[row.sector]["contracts"][row.contract] = row.count
                 sectors_data[row.sector]["total"] += row.count
 
+            # Convertir en liste et calculer les pourcentages
             result = []
             for sector_name, sector_data in sectors_data.items():
-                contracts_with_pct = {
-                    contract: {
+                contracts_with_pct = {}
+                for contract, count in sector_data["contracts"].items():
+                    contracts_with_pct[contract] = {
                         "count": count,
                         "percentage": round((count / sector_data["total"] * 100), 2)
                     }
-                    for contract, count in sector_data["contracts"].items()
-                }
                 
                 result.append({
                     "sector": sector_name,
@@ -519,14 +594,18 @@ class AdvancedAnalyticsService:
                     "total_offers": sector_data["total"]
                 })
 
+            # Trier par nombre total d'offres
             result.sort(key=lambda x: x['total_offers'], reverse=True)
-            return result[:15]
+            return result[:15]  # Top 15 secteurs
+
         except Exception as e:
             logger.error(f"Erreur contrats par secteur: {e}")
             return []
 
     def get_experience_level_distribution_by_sector(self, db: Session, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
-        """Distribution des niveaux d'expérience par secteur."""
+        """
+        Distribution des niveaux d'expérience par secteur.
+        """
         try:
             data = db.query(
                 OffreEmploiEnrichie.extracted_sector.label('sector'),
@@ -543,21 +622,22 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.job_level
             ).all()
 
+            # Organiser par secteur
             sectors_data = defaultdict(lambda: {"sector": "", "levels": {}, "total": 0})
             for row in data:
                 sectors_data[row.sector]["sector"] = row.sector
                 sectors_data[row.sector]["levels"][row.level] = row.count
                 sectors_data[row.sector]["total"] += row.count
 
+            # Convertir et calculer pourcentages
             result = []
             for sector_name, sector_data in sectors_data.items():
-                levels_with_pct = {
-                    level: {
+                levels_with_pct = {}
+                for level, count in sector_data["levels"].items():
+                    levels_with_pct[level] = {
                         "count": count,
                         "percentage": round((count / sector_data["total"] * 100), 2)
                     }
-                    for level, count in sector_data["levels"].items()
-                }
                 
                 result.append({
                     "sector": sector_name,
@@ -567,19 +647,27 @@ class AdvancedAnalyticsService:
 
             result.sort(key=lambda x: x['total_offers'], reverse=True)
             return result[:15]
+
         except Exception as e:
             logger.error(f"Erreur niveaux d'expérience par secteur: {e}")
             return []
 
     def get_source_performance(self, db: Session, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
-        """Performance des différentes sources de scraping."""
+        """
+        Performance des différentes sources de scraping.
+        Utile pour optimiser les spiders.
+        """
         try:
             sources = db.query(
                 OffreEmploiBrute.spider_source.label('source'),
                 func.count(OffreEmploiBrute.id).label('total_offers'),
                 func.count(distinct(OffreEmploiBrute.company_name)).label('unique_companies'),
-                func.count(case((OffreEmploiBrute.description.isnot(None), 1))).label('offers_with_description'),
-                func.count(case((OffreEmploiBrute.salary.isnot(None), 1))).label('offers_with_salary')
+                func.count(case(
+                    (OffreEmploiBrute.description.isnot(None), 1)
+                )).label('offers_with_description'),
+                func.count(case(
+                    (OffreEmploiBrute.salary.isnot(None), 1)
+                )).label('offers_with_salary')
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).group_by(
@@ -607,72 +695,149 @@ class AdvancedAnalyticsService:
 
             result.sort(key=lambda x: x['total_offers'], reverse=True)
             return result
+
         except Exception as e:
             logger.error(f"Erreur performance sources: {e}")
             return []
 
+    # ==================== MÉTHODES UTILITAIRES ====================
+
+    def get_data_quality_report(self, db: Session) -> Dict[str, Any]:
+        """
+        Rapport sur la qualité des données collectées.
+        """
+        try:
+            total_offers = db.query(func.count(OffreEmploiBrute.id)).scalar() or 0
+            
+            # Complétude des champs principaux
+            fields_completeness = {
+                "title": db.query(func.count(OffreEmploiBrute.id)).filter(
+                    OffreEmploiBrute.title.isnot(None)
+                ).scalar() or 0,
+                "description": db.query(func.count(OffreEmploiBrute.id)).filter(
+                    OffreEmploiBrute.description.isnot(None)
+                ).scalar() or 0,
+                "company_name": db.query(func.count(OffreEmploiBrute.id)).filter(
+                    OffreEmploiBrute.company_name.isnot(None)
+                ).scalar() or 0,
+                "location": db.query(func.count(OffreEmploiBrute.id)).filter(
+                    OffreEmploiBrute.location.isnot(None)
+                ).scalar() or 0,
+                "salary": db.query(func.count(OffreEmploiBrute.id)).filter(
+                    OffreEmploiBrute.salary.isnot(None)
+                ).scalar() or 0,
+            }
+
+            # Taux d'enrichissement NLP
+            total_enriched = db.query(func.count(OffreEmploiEnrichie.id)).scalar() or 0
+            enrichment_rate = round((total_enriched / total_offers * 100), 2) if total_offers > 0 else 0
+
+            # Champs enrichis
+            enriched_fields = {
+                "skills": db.query(func.count(OffreEmploiEnrichie.id)).filter(
+                    OffreEmploiEnrichie.extracted_skills.isnot(None)
+                ).scalar() or 0,
+                "sector": db.query(func.count(OffreEmploiEnrichie.id)).filter(
+                    OffreEmploiEnrichie.extracted_sector.isnot(None)
+                ).scalar() or 0,
+                "contract_type": db.query(func.count(OffreEmploiEnrichie.id)).filter(
+                    OffreEmploiEnrichie.extracted_contract_type.isnot(None)
+                ).scalar() or 0,
+                "job_level": db.query(func.count(OffreEmploiEnrichie.id)).filter(
+                    OffreEmploiEnrichie.job_level.isnot(None)
+                ).scalar() or 0,
+            }
+
+            return {
+                "total_offers": total_offers,
+                "total_enriched": total_enriched,
+                "enrichment_rate": enrichment_rate,
+                "fields_completeness": {
+                    field: {
+                        "count": count,
+                        "rate": round((count / total_offers * 100), 2) if total_offers > 0 else 0
+                    }
+                    for field, count in fields_completeness.items()
+                },
+                "enriched_fields": {
+                    field: {
+                        "count": count,
+                        "rate": round((count / total_enriched * 100), 2) if total_enriched > 0 else 0
+                    }
+                    for field, count in enriched_fields.items()
+                },
+                "generated_at": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Erreur rapport qualité: {e}")
+            return {}
+
     # ==================== ANALYSES TEMPORELLES AVANCÉES ====================
 
-    def get_seasonal_trends(self, db: Session, days: int = 730) -> Dict[str, Any]:
-        """Analyse des tendances quotidiennes (patterns hebdomadaires)."""
+    def get_seasonal_trends(self, db: Session, years: int = 2) -> Dict[str, Any]:
+        """
+        Analyse des tendances saisonnières (par mois de l'année).
+        Identifie les pics de recrutement annuels.
+        """
         try:
-            start_date = datetime.now() - timedelta(days=days)
+            start_date = datetime.now() - timedelta(days=years * 365)
             
-            # Analyse par jour de la semaine
-            dow_patterns = db.query(
-                func.extract('dow', OffreEmploiBrute.posted_date).label('day_of_week'),
+            # Agrégation par mois (tous les janviers ensemble, tous les févriers, etc.)
+            monthly_patterns = db.query(
+                func.extract('month', OffreEmploiBrute.posted_date).label('month'),
                 func.count(OffreEmploiBrute.id).label('avg_count')
             ).filter(
                 OffreEmploiBrute.posted_date >= start_date
             ).group_by(
-                func.extract('dow', OffreEmploiBrute.posted_date)
-            ).order_by('day_of_week').all()
+                func.extract('month', OffreEmploiBrute.posted_date)
+            ).order_by('month').all()
 
-            day_names = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
-            
-            total_days = len(set(db.query(func.date(OffreEmploiBrute.posted_date)).filter(
-                OffreEmploiBrute.posted_date >= start_date
-            ).all()))
-            
+            # Noms des mois
+            month_names = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 
+                          'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+
             seasonal_data = []
-            max_count = max((m.avg_count for m in dow_patterns), default=0)
+            max_count = max((m.avg_count for m in monthly_patterns), default=0)
             
-            for pattern in dow_patterns:
-                day_idx = int(pattern.day_of_week)
-                avg_daily = pattern.avg_count / (total_days / 7) if total_days > 0 else 0
-                intensity = "high" if pattern.avg_count > max_count * 0.8 else "medium" if pattern.avg_count > max_count * 0.5 else "low"
+            for pattern in monthly_patterns:
+                month_idx = int(pattern.month) - 1
+                intensity = "high" if pattern.avg_count > max_count * 0.8 else \
+                           "medium" if pattern.avg_count > max_count * 0.5 else "low"
                 
                 seasonal_data.append({
-                    "day_number": int(pattern.day_of_week),
-                    "day_name": day_names[day_idx],
-                    "avg_offers": round(avg_daily, 2),
+                    "month_number": int(pattern.month),
+                    "month_name": month_names[month_idx],
+                    "avg_offers": round(pattern.avg_count / years, 2),
                     "total_offers": pattern.avg_count,
                     "intensity": intensity
                 })
 
-            peak_days = sorted(seasonal_data, key=lambda x: x['total_offers'], reverse=True)[:3]
-            low_days = sorted(seasonal_data, key=lambda x: x['total_offers'])[:3]
+            # Identifier les périodes de pic
+            peak_months = sorted(seasonal_data, key=lambda x: x['total_offers'], reverse=True)[:3]
+            low_months = sorted(seasonal_data, key=lambda x: x['total_offers'])[:3]
 
             return {
-                "daily_pattern": seasonal_data,
-                "peak_days": [d['day_name'] for d in peak_days],
-                "low_days": [d['day_name'] for d in low_days],
-                "pattern_strength": self._calculate_pattern_strength(seasonal_data)
+                "seasonal_pattern": seasonal_data,
+                "peak_months": [m['month_name'] for m in peak_months],
+                "low_months": [m['month_name'] for m in low_months],
+                "seasonality_strength": self._calculate_seasonality_strength(seasonal_data)
             }
+
         except Exception as e:
             logger.error(f"Erreur tendances saisonnières: {e}")
             return {}
 
-    def _calculate_pattern_strength(self, pattern_data: List[Dict]) -> str:
-        """Calcule la force du pattern quotidien."""
-        if not pattern_data:
+    def _calculate_seasonality_strength(self, seasonal_data: List[Dict]) -> str:
+        """Calcule la force de la saisonnalité."""
+        if not seasonal_data:
             return "unknown"
         
-        counts = [d['total_offers'] for d in pattern_data]
+        counts = [d['total_offers'] for d in seasonal_data]
         avg = sum(counts) / len(counts)
         variance = sum((x - avg) ** 2 for x in counts) / len(counts)
         std_dev = variance ** 0.5
-        cv = (std_dev / avg) if avg > 0 else 0
+        cv = (std_dev / avg) if avg > 0 else 0  # Coefficient de variation
 
         if cv > 0.3:
             return "strong"
@@ -682,7 +847,10 @@ class AdvancedAnalyticsService:
             return "weak"
 
     def get_day_of_week_patterns(self, db: Session, period: str = "90d") -> List[Dict[str, Any]]:
-        """Analyse les patterns par jour de la semaine."""
+        """
+        Analyse les patterns par jour de la semaine.
+        Identifie les meilleurs jours pour publier des offres.
+        """
         try:
             start_date, end_date = self._get_period_bounds(period)
 
@@ -713,19 +881,27 @@ class AdvancedAnalyticsService:
                 })
 
             return result
+
         except Exception as e:
             logger.error(f"Erreur patterns jour de la semaine: {e}")
             return []
 
+    # ==================== ANALYSES PRÉDICTIVES ====================
+
     def get_sector_momentum(self, db: Session, period: str = "180d") -> List[Dict[str, Any]]:
-        """Calcule le 'momentum' de chaque secteur."""
+        """
+        Calcule le "momentum" de chaque secteur (accélération de la croissance).
+        Identifie les secteurs en forte accélération vs décélération.
+        """
         try:
             start_date, end_date = self._get_period_bounds(period)
-            total_days = max((end_date - start_date).days, 1)
+            total_days = (end_date - start_date).days
             
+            # Diviser en 3 périodes égales
             period_1_end = start_date + timedelta(days=total_days // 3)
             period_2_end = period_1_end + timedelta(days=total_days // 3)
 
+            # Compter par secteur et période
             sectors = db.query(
                 OffreEmploiEnrichie.extracted_sector
             ).filter(
@@ -734,6 +910,7 @@ class AdvancedAnalyticsService:
 
             result = []
             for (sector,) in sectors:
+                # Période 1
                 p1_count = db.query(func.count(OffreEmploiEnrichie.id)).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
@@ -741,6 +918,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_sector == sector
                 ).scalar() or 0
 
+                # Période 2
                 p2_count = db.query(func.count(OffreEmploiEnrichie.id)).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
@@ -748,6 +926,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_sector == sector
                 ).scalar() or 0
 
+                # Période 3
                 p3_count = db.query(func.count(OffreEmploiEnrichie.id)).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
@@ -755,13 +934,14 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_sector == sector
                 ).scalar() or 0
 
+                # Calculer le momentum
                 if p1_count > 0 and p2_count > 0:
                     growth_1_2 = ((p2_count - p1_count) / p1_count) * 100
                     growth_2_3 = ((p3_count - p2_count) / p2_count) * 100
-                    momentum = growth_2_3 - growth_1_2
+                    momentum = growth_2_3 - growth_1_2  # Accélération
                     
                     total = p1_count + p2_count + p3_count
-                    if total >= 5:
+                    if total >= 5:  # Filtre: au moins 5 offres au total
                         result.append({
                             "sector": sector,
                             "period_1_count": p1_count,
@@ -769,22 +949,30 @@ class AdvancedAnalyticsService:
                             "period_3_count": p3_count,
                             "total_count": total,
                             "momentum": round(momentum, 2),
-                            "trend": "accelerating" if momentum > 10 else "decelerating" if momentum < -10 else "stable"
+                            "trend": "accelerating" if momentum > 10 else \
+                                    "decelerating" if momentum < -10 else "stable"
                         })
 
+            # Trier par momentum
             result.sort(key=lambda x: abs(x['momentum']), reverse=True)
-            return result[:20]
+            return result[:20]  # Top 20
+
         except Exception as e:
             logger.error(f"Erreur momentum secteurs: {e}")
             return []
 
     def get_skill_saturation_index(self, db: Session, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
-        """Indice de saturation des compétences."""
+        """
+        Indice de saturation des compétences.
+        Identifie les compétences sur-demandées vs sous-représentées.
+        """
         try:
+            # Total d'offres
             total_offers = db.query(func.count(OffreEmploiBrute.id)).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).scalar() or 1
 
+            # Compétences avec leur fréquence
             skills = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
                 func.count(OffreEmploiEnrichie.id).label('count')
@@ -799,6 +987,7 @@ class AdvancedAnalyticsService:
             for skill in skills:
                 penetration = (skill.count / total_offers) * 100
                 
+                # Indice de saturation (basé sur la fréquence)
                 if penetration > 50:
                     saturation = "very_high"
                 elif penetration > 30:
@@ -815,11 +1004,12 @@ class AdvancedAnalyticsService:
                     "demand_count": skill.count,
                     "market_penetration": round(penetration, 2),
                     "saturation_level": saturation,
-                    "opportunity_score": round((100 - penetration) / 10, 2)
+                    "opportunity_score": round((100 - penetration) / 10, 2)  # Plus c'est haut, plus c'est une opportunité
                 })
 
             result.sort(key=lambda x: x['demand_count'], reverse=True)
             return result[:50]
+
         except Exception as e:
             logger.error(f"Erreur indice saturation: {e}")
             return []
@@ -827,10 +1017,14 @@ class AdvancedAnalyticsService:
     # ==================== ANALYSES COMPARATIVES ====================
 
     def get_sector_comparison(self, db: Session, sectors: List[str], start_date: datetime, end_date: datetime) -> Dict[str, Any]:
-        """Compare plusieurs secteurs sur différentes dimensions."""
+        """
+        Compare plusieurs secteurs sur différentes dimensions.
+        """
         try:
             comparison = {}
+
             for sector in sectors:
+                # Nombre d'offres
                 offer_count = db.query(func.count(OffreEmploiEnrichie.id)).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
@@ -838,6 +1032,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_sector == sector
                 ).scalar() or 0
 
+                # Entreprises uniques
                 company_count = db.query(func.count(distinct(OffreEmploiBrute.company_name))).join(
                     OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id
                 ).filter(
@@ -846,6 +1041,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiBrute.company_name.isnot(None)
                 ).scalar() or 0
 
+                # Top 5 compétences
                 top_skills = db.query(
                     func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill')
                 ).join(
@@ -856,6 +1052,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_skills.isnot(None)
                 ).group_by('skill').order_by(func.count(OffreEmploiEnrichie.id).desc()).limit(5).all()
 
+                # Types de contrat dominants
                 contract_types = db.query(
                     OffreEmploiEnrichie.extracted_contract_type,
                     func.count(OffreEmploiEnrichie.id).label('count')
@@ -865,15 +1062,12 @@ class AdvancedAnalyticsService:
                     OffreEmploiBrute.posted_date.between(start_date, end_date),
                     OffreEmploiEnrichie.extracted_sector == sector,
                     OffreEmploiEnrichie.extracted_contract_type.isnot(None)
-                ).group_by(OffreEmploiEnrichie.extracted_contract_type).all()
+                ).group_by(
+                    OffreEmploiEnrichie.extracted_contract_type
+                ).all()
 
-                salary_stats = self._execute_salary_query(
-                    db,
-                    and_(
-                        OffreEmploiBrute.posted_date.between(start_date, end_date),
-                        OffreEmploiEnrichie.extracted_sector == sector
-                    )
-                )
+                # Salaires (si disponibles)
+                salary_stats = self._get_safe_salary_stats_by_sector(db, sector, start_date, end_date)
 
                 comparison[sector] = {
                     "total_offers": offer_count,
@@ -886,15 +1080,41 @@ class AdvancedAnalyticsService:
                 }
 
             return comparison
+
         except Exception as e:
             logger.error(f"Erreur comparaison secteurs: {e}")
             return {}
 
+    def _get_safe_salary_stats_by_sector(self, db: Session, sector: str, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+        """Salaires moyens par secteur (optionnel)."""
+        try:
+            stats = db.query(
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_min'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_max')
+            ).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_sector == sector,
+                OffreEmploiEnrichie.extracted_salary_min.isnot(None)
+            ).first()
+
+            return {
+                'avg_min': float(stats.avg_min) if stats and stats.avg_min else None,
+                'avg_max': float(stats.avg_max) if stats and stats.avg_max else None
+            }
+        except:
+            return {'avg_min': None, 'avg_max': None}
+
     # ==================== ANALYSES POUR RECOMMANDATIONS ====================
 
     def get_similar_job_clusters(self, db: Session, start_date: datetime, end_date: datetime, min_cluster_size: int = 3) -> List[Dict[str, Any]]:
-        """Identifie des clusters d'emplois similaires."""
+        """
+        Identifie des clusters d'emplois similaires basés sur les compétences communes.
+        Utile pour les recommandations.
+        """
         try:
+            # Récupérer toutes les offres avec compétences et secteur
             offers = db.query(
                 OffreEmploiEnrichie.id,
                 OffreEmploiEnrichie.extracted_sector,
@@ -906,8 +1126,9 @@ class AdvancedAnalyticsService:
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiEnrichie.extracted_skills.isnot(None),
                 func.array_length(OffreEmploiEnrichie.extracted_skills, 1) >= 2
-            ).limit(1000).all()
+            ).limit(1000).all()  # Limiter pour les performances
 
+            # Grouper par combinaison secteur + niveau
             clusters = defaultdict(list)
             for offer in offers:
                 if offer.extracted_sector and offer.job_level:
@@ -917,13 +1138,15 @@ class AdvancedAnalyticsService:
                         "skills": set(offer.extracted_skills or [])
                     })
 
+            # Analyser chaque cluster
             result = []
             for cluster_key, jobs in clusters.items():
                 if len(jobs) >= min_cluster_size:
+                    # Compétences communes
                     all_skills = [s for job in jobs for s in job["skills"]]
                     skill_counts = Counter(all_skills)
                     common_skills = [skill for skill, count in skill_counts.most_common(10) 
-                                   if count >= len(jobs) * 0.3]
+                                   if count >= len(jobs) * 0.3]  # Au moins 30% des jobs
 
                     sector, level = cluster_key.split('_', 1)
                     
@@ -939,6 +1162,7 @@ class AdvancedAnalyticsService:
 
             result.sort(key=lambda x: x['size'], reverse=True)
             return result[:30]
+
         except Exception as e:
             logger.error(f"Erreur clusters emplois similaires: {e}")
             return []
@@ -946,10 +1170,13 @@ class AdvancedAnalyticsService:
     # ==================== ANALYSES POUR ENTREPRISES ====================
 
     def get_company_insights(self, db: Session, company_name: str, period: str = "365d") -> Dict[str, Any]:
-        """Analyse approfondie d'une entreprise spécifique."""
+        """
+        Analyse approfondie d'une entreprise spécifique.
+        """
         try:
             start_date, end_date = self._get_period_bounds(period)
 
+            # Statistiques de base
             total_offers = db.query(func.count(OffreEmploiBrute.id)).filter(
                 OffreEmploiBrute.company_name.ilike(f"%{company_name}%"),
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
@@ -958,6 +1185,7 @@ class AdvancedAnalyticsService:
             if total_offers == 0:
                 return {"error": "Aucune offre trouvée pour cette entreprise"}
 
+            # Répartition par secteur
             sectors = db.query(
                 OffreEmploiEnrichie.extracted_sector,
                 func.count(OffreEmploiEnrichie.id).label('count')
@@ -967,8 +1195,11 @@ class AdvancedAnalyticsService:
                 OffreEmploiBrute.company_name.ilike(f"%{company_name}%"),
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiEnrichie.extracted_sector.isnot(None)
-            ).group_by(OffreEmploiEnrichie.extracted_sector).all()
+            ).group_by(
+                OffreEmploiEnrichie.extracted_sector
+            ).all()
 
+            # Compétences recherchées
             skills = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
                 func.count(OffreEmploiEnrichie.id).label('count')
@@ -980,6 +1211,7 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.extracted_skills.isnot(None)
             ).group_by('skill').order_by(desc('count')).limit(15).all()
 
+            # Types de contrat
             contracts = db.query(
                 OffreEmploiEnrichie.extracted_contract_type,
                 func.count(OffreEmploiEnrichie.id).label('count')
@@ -989,8 +1221,11 @@ class AdvancedAnalyticsService:
                 OffreEmploiBrute.company_name.ilike(f"%{company_name}%"),
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiEnrichie.extracted_contract_type.isnot(None)
-            ).group_by(OffreEmploiEnrichie.extracted_contract_type).all()
+            ).group_by(
+                OffreEmploiEnrichie.extracted_contract_type
+            ).all()
 
+            # Niveaux d'expérience
             levels = db.query(
                 OffreEmploiEnrichie.job_level,
                 func.count(OffreEmploiEnrichie.id).label('count')
@@ -1000,15 +1235,22 @@ class AdvancedAnalyticsService:
                 OffreEmploiBrute.company_name.ilike(f"%{company_name}%"),
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiEnrichie.job_level.isnot(None)
-            ).group_by(OffreEmploiEnrichie.job_level).all()
+            ).group_by(
+                OffreEmploiEnrichie.job_level
+            ).all()
 
+            # Tendance de recrutement (mensuelle)
             monthly = db.query(
                 func.date_trunc('month', OffreEmploiBrute.posted_date).label('month'),
                 func.count(OffreEmploiBrute.id).label('count')
             ).filter(
                 OffreEmploiBrute.company_name.ilike(f"%{company_name}%"),
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
-            ).group_by(func.date_trunc('month', OffreEmploiBrute.posted_date)).order_by(func.date_trunc('month', OffreEmploiBrute.posted_date)).all()
+            ).group_by(
+                func.date_trunc('month', OffreEmploiBrute.posted_date)
+            ).order_by(
+                func.date_trunc('month', OffreEmploiBrute.posted_date)
+            ).all()
 
             return {
                 "company_name": company_name,
@@ -1021,6 +1263,7 @@ class AdvancedAnalyticsService:
                 "hiring_trend": [{"month": m[0].strftime('%Y-%m'), "count": m[1]} for m in monthly if m[0]],
                 "avg_offers_per_month": round(total_offers / 12, 2) if period == "365d" else None
             }
+
         except Exception as e:
             logger.error(f"Erreur insights entreprise: {e}")
             return {}
@@ -1028,14 +1271,22 @@ class AdvancedAnalyticsService:
     # ==================== EXPORTS ET RAPPORTS ====================
 
     def generate_executive_summary(self, db: Session, period: str = "90d") -> Dict[str, Any]:
-        """Génère un résumé exécutif complet du marché."""
+        """
+        Génère un résumé exécutif complet du marché.
+        Parfait pour des rapports PDF ou présentations.
+        """
         try:
             start_date, end_date = self._get_period_bounds(period)
+
+            # KPIs principaux
             stats = self.get_enhanced_dashboard(db, start_date, end_date)
+            
+            # Insights clés
             evolution = self.get_market_evolution_rates(db, start_date, end_date)
             emerging = self.get_emerging_skills(db, period, 50.0)
             momentum = self.get_sector_momentum(db, period)
 
+            # Top insights
             top_growing_sector = momentum[0] if momentum else None
             top_emerging_skill = emerging[0] if emerging else None
 
@@ -1072,6 +1323,7 @@ class AdvancedAnalyticsService:
                 },
                 "recommendations": self._generate_recommendations(evolution, momentum, emerging)
             }
+
         except Exception as e:
             logger.error(f"Erreur résumé exécutif: {e}")
             return {}
@@ -1095,21 +1347,25 @@ class AdvancedAnalyticsService:
         """Génère des recommandations automatiques."""
         recommendations = []
 
+        # Sur la base de la croissance
         offers_growth = evolution.get('offers_growth', {}).get('rate', 0)
         if offers_growth > 15:
             recommendations.append("Période favorable pour la recherche d'emploi avec une forte croissance des opportunités.")
         elif offers_growth < -10:
             recommendations.append("Marché en contraction : privilégier les secteurs en croissance et la diversification des compétences.")
 
+        # Sur les secteurs
         if momentum:
             top_sector = momentum[0]
             if top_sector['momentum'] > 20:
                 recommendations.append(f"Le secteur {top_sector['sector']} affiche une forte accélération : opportunités prometteuses.")
 
+        # Sur les compétences
         if emerging:
             top_skills = [s['skill'] for s in emerging[:3]]
             recommendations.append(f"Compétences émergentes à développer : {', '.join(top_skills)}.")
 
+        # Diversification
         sector_diversity = evolution.get('sectors_diversity', {})
         if sector_diversity.get('trend') == 'diversifying':
             recommendations.append("Le marché se diversifie : explorer de nouveaux secteurs d'activité.")
@@ -1118,9 +1374,14 @@ class AdvancedAnalyticsService:
 
     # ==================== ANALYSES POUR CANDIDATS ====================
 
-    def get_career_path_analysis(self, db: Session, current_skills: List[str], target_sector: Optional[str] = None) -> Dict[str, Any]:
-        """Analyse de parcours de carrière basée sur les compétences actuelles."""
+    def get_career_path_analysis(self, db: Session, current_skills: List[str], 
+                                 target_sector: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Analyse de parcours de carrière basée sur les compétences actuelles.
+        Suggère les compétences à acquérir pour progresser.
+        """
         try:
+            # Trouver les jobs correspondant aux compétences actuelles
             matching_jobs = db.query(
                 OffreEmploiEnrichie.extracted_sector,
                 OffreEmploiEnrichie.job_level,
@@ -1132,6 +1393,7 @@ class AdvancedAnalyticsService:
             if not matching_jobs:
                 return {"error": "Aucune correspondance trouvée"}
 
+            # Analyser les niveaux possibles
             level_distribution = Counter()
             sector_distribution = Counter()
             complementary_skills = Counter()
@@ -1146,8 +1408,10 @@ class AdvancedAnalyticsService:
                         if skill not in current_skills:
                             complementary_skills[skill] += 1
 
+            # Identifier les compétences manquantes communes
             skill_gaps = complementary_skills.most_common(15)
 
+            # Progression possible
             level_order = ['Junior', 'Confirmé', 'Senior', 'Expert', 'Lead', 'Manager', 'Director']
             current_level_idx = -1
             for idx, level in enumerate(level_order):
@@ -1180,6 +1444,7 @@ class AdvancedAnalyticsService:
                 ],
                 "recommendations": self._generate_career_recommendations(skill_gaps, sector_distribution)
             }
+
         except Exception as e:
             logger.error(f"Erreur analyse parcours carrière: {e}")
             return {}
@@ -1203,23 +1468,31 @@ class AdvancedAnalyticsService:
     def _generate_career_recommendations(self, skill_gaps: List[Tuple], sector_distribution: Counter) -> List[str]:
         """Génère des recommandations de carrière."""
         recommendations = []
+
         if skill_gaps:
             top_gap = skill_gaps[0][0]
             recommendations.append(f"Priorité : développer la compétence '{top_gap}' très demandée sur le marché.")
+
         if sector_distribution:
             top_sector = sector_distribution.most_common(1)[0][0]
             recommendations.append(f"Le secteur '{top_sector}' offre le plus d'opportunités pour votre profil.")
+
         if len(skill_gaps) >= 3:
             recommendations.append(f"Focus sur 2-3 compétences clés parmi : {', '.join([s[0] for s in skill_gaps[:3]])}.")
+
         return recommendations
 
     def get_skill_value_analysis(self, db: Session, skills: List[str], period: str = "180d") -> Dict[str, Any]:
-        """Analyse la valeur marchande des compétences."""
+        """
+        Analyse la valeur marchande des compétences.
+        Estime leur impact sur l'employabilité et les salaires.
+        """
         try:
             start_date, end_date = self._get_period_bounds(period)
 
             skill_analysis = []
             for skill in skills:
+                # Demande du marché
                 demand = db.query(func.count(OffreEmploiEnrichie.id)).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
@@ -1227,6 +1500,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_skills.any(skill)
                 ).scalar() or 0
 
+                # Secteurs associés
                 sectors = db.query(
                     OffreEmploiEnrichie.extracted_sector
                 ).join(
@@ -1237,6 +1511,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_sector.isnot(None)
                 ).distinct().all()
 
+                # Salaire moyen (si disponible)
                 avg_salary = db.query(
                     func.avg((OffreEmploiEnrichie.extracted_salary_min + OffreEmploiEnrichie.extracted_salary_max) / 2)
                 ).join(
@@ -1248,9 +1523,8 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_salary_max.isnot(None)
                 ).scalar()
 
-                value_score = min(100, (demand / 10) * 10)
-
-                saturation = "high" if demand < 10 else "medium" if demand < 50 else "common"
+                # Score de valeur (0-100)
+                value_score = min(100, (demand / 10) * 10)  # Simplifié
 
                 skill_analysis.append({
                     "skill": skill,
@@ -1259,9 +1533,10 @@ class AdvancedAnalyticsService:
                     "sector_diversity": len(sectors),
                     "sectors": [s[0] for s in sectors[:5]],
                     "avg_salary": float(avg_salary) if avg_salary else None,
-                    "rarity": saturation
+                    "rarity": "high" if demand < 10 else "medium" if demand < 50 else "common"
                 })
 
+            # Trier par valeur
             skill_analysis.sort(key=lambda x: x['value_score'], reverse=True)
 
             return {
@@ -1270,6 +1545,7 @@ class AdvancedAnalyticsService:
                 "strongest_skill": skill_analysis[0]['skill'] if skill_analysis else None,
                 "diversification_score": len(set([s for sa in skill_analysis for s in sa['sectors']])) * 10
             }
+
         except Exception as e:
             logger.error(f"Erreur analyse valeur compétences: {e}")
             return {}
@@ -1277,16 +1553,21 @@ class AdvancedAnalyticsService:
     # ==================== BENCHMARK ET COMPARAISONS ====================
 
     def get_regional_benchmark(self, db: Session, period: str = "180d") -> Dict[str, Any]:
-        """Benchmark inter-régional du marché de l'emploi."""
+        """
+        Benchmark inter-régional du marché de l'emploi.
+        Compare les différentes régions du Sénégal.
+        """
         try:
             start_date, end_date = self._get_period_bounds(period)
 
             regions = {}
             for city_key, city_data in self.senegal_regions.items():
                 region_name = city_data['region']
+                
                 if region_name in regions:
                     continue
 
+                # Statistiques par région
                 offers = db.query(func.count(OffreEmploiBrute.id)).filter(
                     func.lower(OffreEmploiBrute.location).like(f"%{city_key}%"),
                     OffreEmploiBrute.posted_date.between(start_date, end_date)
@@ -1298,6 +1579,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiBrute.company_name.isnot(None)
                 ).scalar() or 0
 
+                # Top secteur de la région
                 top_sector = db.query(
                     OffreEmploiEnrichie.extracted_sector
                 ).join(
@@ -1306,7 +1588,9 @@ class AdvancedAnalyticsService:
                     func.lower(OffreEmploiBrute.location).like(f"%{city_key}%"),
                     OffreEmploiBrute.posted_date.between(start_date, end_date),
                     OffreEmploiEnrichie.extracted_sector.isnot(None)
-                ).group_by(OffreEmploiEnrichie.extracted_sector).order_by(func.count(OffreEmploiEnrichie.id).desc()).first()
+                ).group_by(
+                    OffreEmploiEnrichie.extracted_sector
+                ).order_by(func.count(OffreEmploiEnrichie.id).desc()).first()
 
                 if offers > 0:
                     regions[region_name] = {
@@ -1317,10 +1601,12 @@ class AdvancedAnalyticsService:
                         "main_cities": [city_key]
                     }
 
+            # Calculer les parts de marché
             total_offers = sum(r['total_offers'] for r in regions.values())
             for region_data in regions.values():
                 region_data['market_share'] = round((region_data['total_offers'] / total_offers * 100), 2) if total_offers > 0 else 0
 
+            # Classement
             ranked = sorted(regions.items(), key=lambda x: x[1]['total_offers'], reverse=True)
 
             return {
@@ -1329,13 +1615,17 @@ class AdvancedAnalyticsService:
                 "most_diversified": max(regions.items(), key=lambda x: x[1]['active_companies'])[0] if regions else None,
                 "concentration_index": round(regions[ranked[0][0]]['market_share'], 2) if ranked else 0
             }
+
         except Exception as e:
             logger.error(f"Erreur benchmark régional: {e}")
             return {}
 
     def get_time_series_comparison(self, db: Session, metrics: List[str] = ['offers', 'companies', 'sectors'], 
                                    periods: List[str] = ['30d', '90d', '180d', '365d']) -> Dict[str, Any]:
-        """Compare l'évolution de différentes métriques sur plusieurs périodes."""
+        """
+        Compare l'évolution de différentes métriques sur plusieurs périodes.
+        Parfait pour des graphiques multi-lignes.
+        """
         try:
             comparison = {metric: [] for metric in metrics}
 
@@ -1373,6 +1663,7 @@ class AdvancedAnalyticsService:
                 "periods_analyzed": periods,
                 "trends": self._identify_trends(comparison)
             }
+
         except Exception as e:
             logger.error(f"Erreur comparaison séries temporelles: {e}")
             return {}
@@ -1391,208 +1682,175 @@ class AdvancedAnalyticsService:
                     trends[metric] = "fluctuating"
         return trends
 
-    # ==================== ANALYSE GÉOGRAPHIQUE ====================
+    # ==================== VISUALISATIONS RECOMMANDÉES ====================
 
-    def get_geographic_analysis(self, db: Session, start_date: datetime, end_date: datetime) -> List[GeographicStats]:
-        """Analyse géographique détaillée."""
+    def get_visualization_config(self, analysis_type: str) -> Dict[str, Any]:
+        """
+        Retourne la configuration recommandée pour chaque type de visualisation.
+        Aide le frontend à choisir le bon type de graphique.
+        """
+        configs = {
+            "market_overview": {
+                "chart_type": "multi_metric_card",
+                "description": "Cartes KPI avec icônes et évolution",
+                "recommended_library": "recharts"
+            },
+            "sector_analysis": {
+                "chart_type": "horizontal_bar",
+                "description": "Barres horizontales avec labels",
+                "color_scheme": "categorical",
+                "recommended_library": "recharts"
+            },
+            "skills_heatmap": {
+                "chart_type": "heatmap",
+                "description": "Matrice de chaleur interactive",
+                "color_scheme": "sequential",
+                "recommended_library": "recharts or d3"
+            },
+            "geographic_distribution": {
+                "chart_type": "choropleth_map",
+                "description": "Carte du Sénégal avec régions colorées",
+                "fallback": "bubble_chart",
+                "recommended_library": "leaflet or recharts"
+            },
+            "contract_evolution": {
+                "chart_type": "stacked_area",
+                "description": "Aires empilées pour évolution temporelle",
+                "color_scheme": "categorical",
+                "recommended_library": "recharts"
+            },
+            "skill_co_occurrence": {
+                "chart_type": "network_graph",
+                "description": "Graphe de réseau avec nœuds et liens",
+                "recommended_library": "d3 or vis.js"
+            },
+            "seasonal_trends": {
+                "chart_type": "radar_chart",
+                "description": "Graphique radar pour 12 mois",
+                "alternative": "line_chart",
+                "recommended_library": "recharts"
+            },
+            "company_ranking": {
+                "chart_type": "horizontal_bar_race",
+                "description": "Classement animé des entreprises",
+                "fallback": "horizontal_bar",
+                "recommended_library": "recharts"
+            },
+            "skill_value": {
+                "chart_type": "scatter_plot",
+                "description": "Nuage de points (demande vs salaire)",
+                "recommended_library": "recharts"
+            },
+            "experience_distribution": {
+                "chart_type": "donut_chart",
+                "description": "Graphique en anneau avec pourcentages",
+                "recommended_library": "recharts"
+            }
+        }
+
+        return configs.get(analysis_type, {
+            "chart_type": "bar_chart",
+            "description": "Graphique en barres standard",
+            "recommended_library": "recharts"
+        })
+
+    # ==================== MÉTHODE PRINCIPALE D'EXPORT ====================
+
+    def export_comprehensive_report(self, db: Session, period: str = "90d", 
+                                   format: str = "json") -> Dict[str, Any]:
+        """
+        Exporte un rapport complet avec TOUTES les analyses disponibles.
+        Format JSON prêt pour le frontend ou export PDF/Excel.
+        """
         try:
-            locations = db.query(
-                func.lower(func.trim(OffreEmploiBrute.location)).label('location'),
-                func.count(OffreEmploiBrute.id).label('count')
-            ).filter(
-                OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiBrute.location.isnot(None),
-                OffreEmploiBrute.location != ''
-            ).group_by(
-                func.lower(func.trim(OffreEmploiBrute.location))
-            ).order_by(desc('count')).limit(20).all()
+            start_date, end_date = self._get_period_bounds(period)
 
-            total_offers = sum(loc.count for loc in locations)
+            comprehensive_report = {
+                "metadata": {
+                    "generated_at": datetime.now().isoformat(),
+                    "period": period,
+                    "date_range": {
+                        "start": start_date.isoformat(),
+                        "end": end_date.isoformat()
+                    },
+                    "report_version": "2.0"
+                },
+                
+                # Section 1: Vue d'ensemble
+                "overview": {
+                    "dashboard": self.get_enhanced_dashboard(db, start_date, end_date).dict(),
+                    "evolution_rates": self.get_market_evolution_rates(db, start_date, end_date),
+                    "executive_summary": self.generate_executive_summary(db, period)
+                },
 
-            result = []
-            for location in locations:
-                top_sectors = db.query(
-                    OffreEmploiEnrichie.extracted_sector
-                ).join(
-                    OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
-                ).filter(
-                    func.lower(func.trim(OffreEmploiBrute.location)) == location.location,
-                    OffreEmploiBrute.posted_date.between(start_date, end_date),
-                    OffreEmploiEnrichie.extracted_sector.isnot(None)
-                ).group_by(OffreEmploiEnrichie.extracted_sector).order_by(func.count(OffreEmploiEnrichie.id).desc()).limit(5).all()
+                # Section 2: Analyses sectorielles
+                "sectors": {
+                    "distribution": self.get_sector_analysis(db, start_date, end_date),
+                    "momentum": self.get_sector_momentum(db, period),
+                    "contract_by_sector": self.get_contract_type_by_sector(db, start_date, end_date),
+                    "experience_by_sector": self.get_experience_level_distribution_by_sector(db, start_date, end_date)
+                },
 
-                salary_stats = self._execute_salary_query(
-                    db,
-                    and_(
-                        func.lower(func.trim(OffreEmploiBrute.location)) == location.location,
-                        OffreEmploiBrute.posted_date.between(start_date, end_date)
-                    )
-                )
+                # Section 3: Compétences
+                "skills": {
+                    "top_skills": self.get_skills_analysis(db, start_date, end_date),
+                    "emerging_skills": self.get_emerging_skills(db, period),
+                    "co_occurrence": self.get_skills_co_occurrence(db, start_date, end_date),
+                    "saturation_index": self.get_skill_saturation_index(db, start_date, end_date),
+                    "sector_matrix": self.get_skills_sector_heatmap(db, start_date, end_date)
+                },
 
-                coords = self._find_coordinates(location.location)
+                # Section 4: Géographie
+                "geography": {
+                    "distribution": [g.dict() for g in self.get_geographic_analysis(db, start_date, end_date)],
+                    "regional_benchmark": self.get_regional_benchmark(db, period)
+                },
 
-                result.append(GeographicStats(
-                    region=location.location.title(),
-                    count=location.count,
-                    percentage=round((location.count / total_offers * 100), 2) if total_offers > 0 else 0,
-                    avg_salary_min=salary_stats.get('avg_min'),
-                    avg_salary_max=salary_stats.get('avg_max'),
-                    top_sectors=[s[0] for s in top_sectors if s[0]],
-                    coordinates=coords
-                ))
+                # Section 5: Entreprises
+                "companies": {
+                    "top_hiring": [c.dict() for c in self.get_top_hiring_companies(db, start_date, end_date, 20)],
+                    "source_performance": self.get_source_performance(db, start_date, end_date)
+                },
 
-            return result
+                # Section 6: Tendances temporelles
+                "temporal": {
+                    "monthly_trend": self._get_monthly_trend(db, 365),
+                    "seasonal": self.get_seasonal_trends(db, 2),
+                    "day_of_week": self.get_day_of_week_patterns(db, period),
+                    "velocity": self.get_job_posting_velocity(db, period),
+                    "contract_evolution": [c.dict() for c in self.get_contract_type_evolution(db, start_date, end_date)]
+                },
+
+                # Section 7: Salaires (si disponibles)
+                "compensation": {
+                    "trends": self.get_salary_trends(db, start_date, end_date),
+                    "by_experience": [s.dict() for s in self.get_salary_by_experience(db, start_date, end_date)]
+                },
+
+                # Section 8: Qualité des données
+                "data_quality": self.get_data_quality_report(db),
+
+                # Section 9: Recommandations de visualisation
+                "visualization_configs": {
+                    analysis: self.get_visualization_config(analysis)
+                    for analysis in ["market_overview", "sector_analysis", "skills_heatmap", 
+                                   "geographic_distribution", "contract_evolution", "skill_co_occurrence"]
+                }
+            }
+
+            return comprehensive_report
+
         except Exception as e:
-            logger.error(f"Erreur analyse géographique: {e}", exc_info=True)
-            return []
-
-    def _find_coordinates(self, location: str) -> Optional[Dict[str, float]]:
-        """Trouve les coordonnées GPS d'une localisation."""
-        location_clean = location.lower().strip()
-        
-        if location_clean in self.senegal_regions:
-            coords = self.senegal_regions[location_clean]
-            return {"lat": coords["lat"], "lng": coords["lng"]}
-        
-        for city, coords in self.senegal_regions.items():
-            if city in location_clean or location_clean in city:
-                return {"lat": coords["lat"], "lng": coords["lng"]}
-        
-        return None
-
-    # ==================== HEATMAP COMPÉTENCES x SECTEURS ====================
-
-    def get_skills_sector_heatmap(self, db: Session, start_date: datetime, end_date: datetime) -> List[HeatmapData]:
-        """Crée une heatmap des compétences par secteur."""
-        try:
-            top_sectors = db.query(
-                OffreEmploiEnrichie.extracted_sector
-            ).join(
-                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
-            ).filter(
-                OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiEnrichie.extracted_sector.isnot(None)
-            ).group_by(OffreEmploiEnrichie.extracted_sector).order_by(func.count(OffreEmploiEnrichie.id).desc()).limit(15).all()
-
-            result = []
-            for (sector,) in top_sectors:
-                skills = db.query(
-                    func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
-                    func.count(OffreEmploiEnrichie.id).label('count')
-                ).join(
-                    OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
-                ).filter(
-                    OffreEmploiBrute.posted_date.between(start_date, end_date),
-                    OffreEmploiEnrichie.extracted_sector == sector,
-                    OffreEmploiEnrichie.extracted_skills.isnot(None)
-                ).group_by('skill').order_by(desc('count')).limit(10).all()
-
-                result.append(HeatmapData(
-                    sector=sector,
-                    skills={s.skill: s.count for s in skills}
-                ))
-
-            return result
-        except Exception as e:
-            logger.error(f"Erreur heatmap: {e}", exc_info=True)
-            return []
-
-    # ==================== SALAIRES PAR EXPÉRIENCE ====================
-
-    def get_salary_by_experience(self, db: Session, start_date: datetime, end_date: datetime) -> List[SalaryByExperience]:
-        """Analyse des salaires par niveau d'expérience."""
-        try:
-            levels = db.query(
-                OffreEmploiEnrichie.job_level.label('level'),
-                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_min'),
-                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_max'),
-                func.count(OffreEmploiEnrichie.id).label('count')
-            ).join(
-                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
-            ).filter(
-                OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiEnrichie.job_level.isnot(None)
-            ).group_by(OffreEmploiEnrichie.job_level).all()
-
-            return [
-                SalaryByExperience(
-                    level=l.level or "Non spécifié",
-                    avg_min=float(l.avg_min) if l.avg_min else None,
-                    avg_max=float(l.avg_max) if l.avg_max else None,
-                    count=l.count
-                )
-                for l in levels
-            ]
-        except Exception as e:
-            logger.error(f"Erreur salaires par expérience: {e}")
-            return []
-
-    # ==================== TOP ENTREPRISES ====================
-
-    def get_top_hiring_companies(self, db: Session, start_date: datetime, end_date: datetime, limit: int = 20) -> List[CompanyHiringStats]:
-        """Top des entreprises qui recrutent le plus."""
-        try:
-            companies = db.query(
-                OffreEmploiBrute.company_name.label('company'),
-                func.count(OffreEmploiBrute.id).label('offers')
-            ).filter(
-                OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiBrute.company_name.isnot(None),
-                OffreEmploiBrute.company_name != ''
-            ).group_by(OffreEmploiBrute.company_name).order_by(desc('offers')).limit(limit).all()
-
-            return [
-                CompanyHiringStats(
-                    company=c.company,
-                    offers=c.offers
-                )
-                for c in companies
-            ]
-        except Exception as e:
-            logger.error(f"Erreur top entreprises: {e}")
-            return []
-
-    # ==================== ÉVOLUTION DES TYPES DE CONTRAT (UNIQUE) ====================
-
-    def get_contract_type_evolution(self, db: Session, start_date: datetime, end_date: datetime) -> List[ContractTypeEvolution]:
-        """Évolution des types de contrat par jour."""
-        try:
-            contract_types = db.query(distinct(OffreEmploiEnrichie.extracted_contract_type)).filter(
-                OffreEmploiEnrichie.extracted_contract_type.isnot(None)
-            ).all()
-            
-            contract_types_list = [ct[0] for ct in contract_types if ct[0]]
-
-            daily_data = db.query(
-                func.date(OffreEmploiBrute.posted_date).label('date'),
-                OffreEmploiEnrichie.extracted_contract_type.label('contract_type'),
-                func.count(OffreEmploiEnrichie.id).label('count')
-            ).join(OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id).filter(
-                OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiEnrichie.extracted_contract_type.isnot(None)
-            ).group_by(func.date(OffreEmploiBrute.posted_date), OffreEmploiEnrichie.extracted_contract_type).order_by(func.date(OffreEmploiBrute.posted_date)).all()
-
-            days_data = defaultdict(dict)
-            for row in daily_data:
-                date_str = row.date.isoformat() if row.date else None
-                if date_str:
-                    days_data[date_str][row.contract_type] = row.count
-
-            result = []
-            for date, contracts in sorted(days_data.items()):
-                contracts_complete = {ct: contracts.get(ct, 0) for ct in contract_types_list}
-                result.append(ContractTypeEvolution(month=date, contracts=contracts_complete))
-            return result
-        except Exception as e:
-            logger.error(f"Erreur évolution contrats quotidienne: {e}", exc_info=True)
-            return []
+            logger.error(f"Erreur export rapport complet: {e}", exc_info=True)
+            return {"error": str(e)}
 
     # ==================== MÉTHODES HÉRITÉES (compatibilité) ====================
 
     def get_jobs_summary(self, db: Session) -> dict:
         """Méthode de compatibilité avec l'ancien service."""
         try:
-            start_date = datetime.now() - timedelta(days=30)
+            thirty_days_ago = datetime.now() - timedelta(days=30)
+            start_date = thirty_days_ago
             end_date = datetime.now()
             
             dashboard = self.get_enhanced_dashboard(db, start_date, end_date)
@@ -1607,7 +1865,7 @@ class AdvancedAnalyticsService:
             logger.error(f"Erreur jobs summary: {e}")
             raise
 
-    def _get_top_skills_with_trend(self, db: Session, start_date: datetime, end_date: datetime, limit: int = 20) -> List[Dict[str, Any]]:
+    def     _get_top_skills_with_trend(self, db: Session, start_date: datetime, end_date: datetime, limit: int = 20) -> List[Dict[str, Any]]:
         """Top compétences avec tendance de demande."""
         try:
             skills = db.query(
@@ -1620,7 +1878,8 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.extracted_skills.isnot(None)
             ).group_by('skill').order_by(desc('count')).limit(limit).all()
 
-            period_duration = max((end_date - start_date).days, 1)
+            # Calculer la tendance (comparaison avec période précédente)
+            period_duration = (end_date - start_date).days
             previous_start = start_date - timedelta(days=period_duration)
 
             result = []
@@ -1650,8 +1909,95 @@ class AdvancedAnalyticsService:
             logger.error(f"Erreur top compétences: {e}")
             return []
 
-    def _get_top_sectors_with_growth(self, db: Session, start_date: datetime, end_date: datetime, limit: int = 10) -> List[Dict[str, Any]]:
-        """Retourne les top secteurs avec taux de croissance."""
+    def _get_contract_distribution(self, db: Session, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
+        """Distribution des types de contrat."""
+        try:
+            contracts = db.query(
+                OffreEmploiEnrichie.extracted_contract_type.label('type'),
+                func.count(OffreEmploiEnrichie.id).label('count')
+            ).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_contract_type.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.extracted_contract_type
+            ).all()
+
+            total = sum(c.count for c in contracts)
+            return [
+                {
+                    "type": c.type or "Non spécifié",
+                    "count": c.count,
+                    "percentage": round((c.count / total * 100), 2) if total > 0 else 0
+                }
+                for c in contracts
+            ]
+        except Exception as e:
+            logger.error(f"Erreur distribution contrats: {e}")
+            return []
+
+    def _get_experience_distribution(self, db: Session, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]:
+        """Distribution par niveau d'expérience."""
+        try:
+            levels = db.query(
+                OffreEmploiEnrichie.job_level.label('level'),
+                func.count(OffreEmploiEnrichie.id).label('count')
+            ).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.job_level.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.job_level
+            ).all()
+
+            total = sum(l.count for l in levels)
+            return [
+                {
+                    "level": l.level or "Non spécifié",
+                    "count": l.count,
+                    "percentage": round((l.count / total * 100), 2) if total > 0 else 0
+                }
+                for l in levels
+            ]
+        except Exception as e:
+            logger.error(f"Erreur distribution expérience: {e}")
+            return []
+
+    def _get_monthly_trend(self, db: Session, days: int = 365) -> List[Dict[str, Any]]:
+        """Tendance mensuelle sur N jours."""
+        try:
+            start_date = datetime.now() - timedelta(days=days)
+            
+            trends = db.query(
+                func.date_trunc('month', OffreEmploiBrute.posted_date).label('month'),
+                func.count(OffreEmploiBrute.id).label('count')
+            ).filter(
+                OffreEmploiBrute.posted_date >= start_date
+            ).group_by(
+                func.date_trunc('month', OffreEmploiBrute.posted_date)
+            ).order_by(
+                func.date_trunc('month', OffreEmploiBrute.posted_date)
+            ).all()
+
+            return [
+                {
+                    "month": t.month.strftime('%Y-%m') if t.month else None,
+                    "count": t.count
+                }
+                for t in trends if t.month
+            ]
+        except Exception as e:
+            logger.error(f"Erreur tendance mensuelle: {e}")
+            return []
+        
+    def _get_top_sectors_with_growth(
+        self, db: Session, start_date: datetime, end_date: datetime, limit: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Retourne les top secteurs avec taux de croissance.
+        """
         try:
             current_sectors = db.query(
                 OffreEmploiEnrichie.extracted_sector.label("sector"),
@@ -1661,9 +2007,12 @@ class AdvancedAnalyticsService:
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiEnrichie.extracted_sector.isnot(None)
-            ).group_by(OffreEmploiEnrichie.extracted_sector).order_by(desc("count")).limit(limit).all()
+            ).group_by(
+                OffreEmploiEnrichie.extracted_sector
+            ).order_by(desc("count")).limit(limit).all()
 
-            period_duration = max((end_date - start_date).days, 1)
+            # Période précédente pour calcul croissance
+            period_duration = (end_date - start_date).days
             previous_start = start_date - timedelta(days=period_duration)
 
             result = []
@@ -1689,76 +2038,376 @@ class AdvancedAnalyticsService:
                 })
 
             return result
+
         except Exception as e:
             logger.error(f"Erreur top sectors avec croissance: {e}")
             return []
 
-    def _get_daily_trend(self, db: Session, days: int) -> List[Dict[str, Any]]:
-        """Tendance quotidienne sur N jours."""
-        try:
-            start_date = datetime.now() - timedelta(days=days)
-            
-            trends = db.query(
-                func.date(OffreEmploiBrute.posted_date).label('date'),
-                func.count(OffreEmploiBrute.id).label('count')
-            ).filter(OffreEmploiBrute.posted_date >= start_date).group_by(
-                func.date(OffreEmploiBrute.posted_date)
-            ).order_by(func.date(OffreEmploiBrute.posted_date)).all()
+    # ==================== ANALYSE GÉOGRAPHIQUE ====================
 
-            return [
-                {
-                    "date": t.date.isoformat() if t.date else None,
-                    "count": t.count
-                }
-                for t in trends if t.date
-            ]
+    def get_geographic_analysis(self, db: Session, start_date: datetime, end_date: datetime) -> List[GeographicStats]:
+        """
+        Analyse géographique détaillée avec cartes de chaleur.
+        """
+        try:
+            locations = db.query(
+                func.lower(func.trim(OffreEmploiBrute.location)).label('location'),
+                func.count(OffreEmploiBrute.id).label('count')
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiBrute.location.isnot(None),
+                OffreEmploiBrute.location != ''
+            ).group_by(
+                func.lower(func.trim(OffreEmploiBrute.location))
+            ).order_by(desc('count')).limit(20).all()
+
+            total_offers = sum(loc.count for loc in locations)
+
+            result = []
+            for location in locations:
+                # Top secteurs par localisation
+                top_sectors = db.query(
+                    OffreEmploiEnrichie.extracted_sector
+                ).join(
+                    OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+                ).filter(
+                    func.lower(func.trim(OffreEmploiBrute.location)) == location.location,
+                    OffreEmploiBrute.posted_date.between(start_date, end_date),
+                    OffreEmploiEnrichie.extracted_sector.isnot(None)
+                ).group_by(
+                    OffreEmploiEnrichie.extracted_sector
+                ).order_by(func.count(OffreEmploiEnrichie.id).desc()).limit(5).all()
+
+                # Salaires (optionnel)
+                salary_stats = self._get_safe_salary_stats_by_location(db, location.location, start_date, end_date)
+
+                # Coordonnées GPS
+                coords = self._find_coordinates(location.location)
+
+                result.append(GeographicStats(
+                    region=location.location.title(),
+                    count=location.count,
+                    percentage=round((location.count / total_offers * 100), 2) if total_offers > 0 else 0,
+                    avg_salary_min=salary_stats.get('avg_min'),
+                    avg_salary_max=salary_stats.get('avg_max'),
+                    top_sectors=[s[0] for s in top_sectors if s[0]],
+                    coordinates=coords
+                ))
+
+            return result
         except Exception as e:
-            logger.error(f"Erreur tendance quotidienne: {e}")
+            logger.error(f"Erreur analyse géographique: {e}", exc_info=True)
             return []
 
-    def get_data_quality_report(self, db: Session) -> Dict[str, Any]:
-        """Rapport sur la qualité des données collectées."""
+    def _get_safe_salary_stats_by_location(self, db: Session, location: str, start_date: datetime, end_date: datetime) -> Dict[str, Optional[float]]:
+        """Salaires par localisation (optionnel)."""
         try:
-            total_offers = db.query(func.count(OffreEmploiBrute.id)).scalar() or 0
-            
-            fields_completeness = {
-                "title": db.query(func.count(OffreEmploiBrute.id)).filter(OffreEmploiBrute.title.isnot(None)).scalar() or 0,
-                "description": db.query(func.count(OffreEmploiBrute.id)).filter(OffreEmploiBrute.description.isnot(None)).scalar() or 0,
-                "company_name": db.query(func.count(OffreEmploiBrute.id)).filter(OffreEmploiBrute.company_name.isnot(None)).scalar() or 0,
-                "location": db.query(func.count(OffreEmploiBrute.id)).filter(OffreEmploiBrute.location.isnot(None)).scalar() or 0,
-                "salary": db.query(func.count(OffreEmploiBrute.id)).filter(OffreEmploiBrute.salary.isnot(None)).scalar() or 0,
-            }
-
-            total_enriched = db.query(func.count(OffreEmploiEnrichie.id)).scalar() or 0
-            enrichment_rate = round((total_enriched / total_offers * 100), 2) if total_offers > 0 else 0
-
-            enriched_fields = {
-                "skills": db.query(func.count(OffreEmploiEnrichie.id)).filter(OffreEmploiEnrichie.extracted_skills.isnot(None)).scalar() or 0,
-                "sector": db.query(func.count(OffreEmploiEnrichie.id)).filter(OffreEmploiEnrichie.extracted_sector.isnot(None)).scalar() or 0,
-                "contract_type": db.query(func.count(OffreEmploiEnrichie.id)).filter(OffreEmploiEnrichie.extracted_contract_type.isnot(None)).scalar() or 0,
-                "job_level": db.query(func.count(OffreEmploiEnrichie.id)).filter(OffreEmploiEnrichie.job_level.isnot(None)).scalar() or 0,
-            }
+            stats = db.query(
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_min'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_max')
+            ).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                func.lower(func.trim(OffreEmploiBrute.location)) == location,
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_salary_min.isnot(None)
+            ).first()
 
             return {
-                "total_offers": total_offers,
-                "total_enriched": total_enriched,
-                "enrichment_rate": enrichment_rate,
-                "fields_completeness": {
-                    field: {
-                        "count": count,
-                        "rate": round((count / total_offers * 100), 2) if total_offers > 0 else 0
-                    }
-                    for field, count in fields_completeness.items()
-                },
-                "enriched_fields": {
-                    field: {
-                        "count": count,
-                        "rate": round((count / total_enriched * 100), 2) if total_enriched > 0 else 0
-                    }
-                    for field, count in enriched_fields.items()
-                },
-                "generated_at": datetime.now().isoformat()
+                'avg_min': float(stats.avg_min) if stats and stats.avg_min else None,
+                'avg_max': float(stats.avg_max) if stats and stats.avg_max else None
             }
+        except:
+            return {'avg_min': None, 'avg_max': None}
+
+    def _find_coordinates(self, location: str) -> Optional[Dict[str, float]]:
+        """Trouve les coordonnées GPS d'une localisation."""
+        location_clean = location.lower().strip()
+        
+        # Recherche exacte
+        if location_clean in self.senegal_regions:
+            coords = self.senegal_regions[location_clean]
+            return {"lat": coords["lat"], "lng": coords["lng"]}
+        
+        # Recherche partielle
+        for city, coords in self.senegal_regions.items():
+            if city in location_clean or location_clean in city:
+                return {"lat": coords["lat"], "lng": coords["lng"]}
+        
+        return None
+
+    # ==================== HEATMAP COMPÉTENCES x SECTEURS ====================
+
+    def get_skills_sector_heatmap(self, db: Session, start_date: datetime, end_date: datetime) -> List[HeatmapData]:
+        """
+        Crée une heatmap des compétences par secteur.
+        Parfait pour visualiser les compétences les plus demandées par secteur.
+        """
+        try:
+            # Top 15 secteurs
+            top_sectors = db.query(
+                OffreEmploiEnrichie.extracted_sector
+            ).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_sector.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.extracted_sector
+            ).order_by(func.count(OffreEmploiEnrichie.id).desc()).limit(15).all()
+
+            result = []
+            for (sector,) in top_sectors:
+                # Top 10 compétences pour ce secteur
+                skills = db.query(
+                    func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
+                    func.count(OffreEmploiEnrichie.id).label('count')
+                ).join(
+                    OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+                ).filter(
+                    OffreEmploiBrute.posted_date.between(start_date, end_date),
+                    OffreEmploiEnrichie.extracted_sector == sector,
+                    OffreEmploiEnrichie.extracted_skills.isnot(None)
+                ).group_by('skill').order_by(desc('count')).limit(10).all()
+
+                skills_dict = {s.skill: s.count for s in skills}
+
+                result.append(HeatmapData(
+                    sector=sector,
+                    skills=skills_dict
+                ))
+
+            return result
         except Exception as e:
-            logger.error(f"Erreur rapport qualité: {e}")
-            return {}
+            logger.error(f"Erreur heatmap: {e}", exc_info=True)
+            return []
+
+    # ==================== SALAIRES PAR EXPÉRIENCE ====================
+
+    def get_salary_by_experience(self, db: Session, start_date: datetime, end_date: datetime) -> List[SalaryByExperience]:
+        """
+        Analyse des salaires par niveau d'expérience.
+        Note: Peut contenir des valeurs None si peu de données salariales.
+        """
+        try:
+            levels = db.query(
+                OffreEmploiEnrichie.job_level.label('level'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_min'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_max'),
+                func.count(OffreEmploiEnrichie.id).label('count')
+            ).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.job_level.isnot(None)
+            ).group_by(
+                OffreEmploiEnrichie.job_level
+            ).all()
+
+            return [
+                SalaryByExperience(
+                    level=l.level or "Non spécifié",
+                    avg_min=float(l.avg_min) if l.avg_min else None,
+                    avg_max=float(l.avg_max) if l.avg_max else None,
+                    count=l.count
+                )
+                for l in levels
+            ]
+        except Exception as e:
+            logger.error(f"Erreur salaires par expérience: {e}")
+            return []
+
+    # ==================== TOP ENTREPRISES ====================
+
+    def get_top_hiring_companies(self, db: Session, start_date: datetime, end_date: datetime, limit: int = 20) -> List[CompanyHiringStats]:
+        """
+        Top des entreprises qui recrutent le plus.
+        """
+        try:
+            companies = db.query(
+                OffreEmploiBrute.company_name.label('company'),
+                func.count(OffreEmploiBrute.id).label('offers')
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiBrute.company_name.isnot(None),
+                OffreEmploiBrute.company_name != ''
+            ).group_by(
+                OffreEmploiBrute.company_name
+            ).order_by(desc('offers')).limit(limit).all()
+
+            return [
+                CompanyHiringStats(
+                    company=c.company,
+                    offers=c.offers
+                )
+                for c in companies
+            ]
+        except Exception as e:
+            logger.error(f"Erreur top entreprises: {e}")
+            return []
+
+    # ==================== ÉVOLUTION DES TYPES DE CONTRAT ====================
+
+    def get_contract_type_evolution(self, db: Session, start_date: datetime, end_date: datetime) -> List[ContractTypeEvolution]:
+        """
+        Évolution des types de contrat par mois.
+        Parfait pour un graphique en aires empilées.
+        """
+        try:
+            # Récupérer tous les types de contrat uniques
+            contract_types = db.query(
+                distinct(OffreEmploiEnrichie.extracted_contract_type)
+            ).filter(
+                OffreEmploiEnrichie.extracted_contract_type.isnot(None)
+            ).all()
+            
+            contract_types_list = [ct[0] for ct in contract_types if ct[0]]
+
+            # Données mensuelles
+            monthly_data = db.query(
+                func.date_trunc('month', OffreEmploiBrute.posted_date).label('month'),
+                OffreEmploiEnrichie.extracted_contract_type.label('contract_type'),
+                func.count(OffreEmploiEnrichie.id).label('count')
+            ).join(
+                OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiEnrichie.extracted_contract_type.isnot(None)
+            ).group_by(
+                func.date_trunc('month', OffreEmploiBrute.posted_date),
+                OffreEmploiEnrichie.extracted_contract_type
+            ).order_by(
+                func.date_trunc('month', OffreEmploiBrute.posted_date)
+            ).all()
+
+            # Organiser par mois
+            months_data = defaultdict(dict)
+            for row in monthly_data:
+                month_str = row.month.strftime('%Y-%m') if row.month else None
+                if month_str:
+                    months_data[month_str][row.contract_type] = row.count
+
+            # Formater le résultat
+            result = []
+            for month, contracts in sorted(months_data.items()):
+                # S'assurer que tous les types de contrat sont présents (avec 0 si absent)
+                contracts_complete = {ct: contracts.get(ct, 0) for ct in contract_types_list}
+                
+                result.append(ContractTypeEvolution(
+                    month=month,
+                    contracts=contracts_complete  # ✅ corrigé ici
+                ))
+            return result
+        except Exception as e:
+            logger.error(f"Erreur évolution contrats: {e}", exc_info=True)
+            return []
+
+    # ==================== Evolution par heure ====================
+
+    def get_daily_trends(self, db: Session, days: int = 30) -> List[Dict[str, Any]]:
+        """Récupère les tendances quotidiennes des offres."""
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
+            daily_stats = db.query(
+                func.date(OffreEmploiBrute.posted_date).label('date'),
+                func.count(OffreEmploiBrute.id).label('count'),
+                func.count(func.distinct(OffreEmploiBrute.company_name)).label('unique_companies'),
+                func.count(func.distinct(OffreEmploiBrute.location)).label('unique_locations')
+            ).filter(
+                OffreEmploiBrute.posted_date >= start_date,
+                OffreEmploiBrute.posted_date <= end_date
+            ).group_by(
+                func.date(OffreEmploiBrute.posted_date)
+            ).order_by(
+                func.date(OffreEmploiBrute.posted_date)
+            ).all()
+            
+            return [{
+                "date": stat.date.isoformat() if stat.date else None,
+                "count": self._safe_get(stat, 'count', 0),
+                "unique_companies": self._safe_get(stat, 'unique_companies', 0),
+                "unique_locations": self._safe_get(stat, 'unique_locations', 0),
+                "day_name": stat.date.strftime('%A') if stat.date else None,
+                "day_of_week": stat.date.weekday() if stat.date else None
+            } for stat in daily_stats]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des tendances quotidiennes: {str(e)}")
+            raise
+
+    def get_top_job_titles(self, db: Session, period: str = "30d", limit: int = 15) -> List[Dict[str, Any]]:
+        """Récupère les métiers qui recrutent le plus."""
+        try:
+            start_date, end_date = self._get_period_bounds(period)  # ✅ CORRECT
+            
+            jobs = db.query(
+                OffreEmploiBrute.title.label('job_title'),
+                func.count(OffreEmploiEnrichie.id).label('count'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_salary_max'),
+                func.count(func.distinct(OffreEmploiBrute.company_name)).label('unique_companies'),
+                func.count(func.distinct(OffreEmploiBrute.location)).label('unique_locations')
+            ).join(
+                OffreEmploiBrute,
+                OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiBrute.title.isnot(None)
+            ).group_by(
+                OffreEmploiBrute.title
+            ).order_by(
+                desc('count')
+            ).limit(limit).all()
+            
+            total_offers = sum(job.count for job in jobs)
+            
+            return [{
+                "job_title": self._safe_get(job, 'job_title'),
+                "count": self._safe_get(job, 'count', 0),
+                "percentage": round((job.count / total_offers * 100), 2) if total_offers > 0 else 0,
+                "avg_salary_min": float(self._safe_get(job, 'avg_salary_min')) if self._safe_get(job, 'avg_salary_min') else None,
+                "avg_salary_max": float(self._safe_get(job, 'avg_salary_max')) if self._safe_get(job, 'avg_salary_max') else None,
+                "unique_companies": self._safe_get(job, 'unique_companies', 0),
+                "unique_locations": self._safe_get(job, 'unique_locations', 0)
+            } for job in jobs]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des top métiers: {str(e)}")
+            raise
+
+    def get_education_distribution(self, db: Session, period: str = "30d") -> List[Dict[str, Any]]:
+        """Récupère la répartition par niveau d'étude."""
+        try:
+            start_date, end_date = self._get_period_bounds(period)  # ✅ CORRECT
+            
+            education_levels = db.query(
+                OffreEmploiBrute.education_level,
+                func.count(OffreEmploiEnrichie.id).label('count'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min')
+            ).join(
+                OffreEmploiBrute,
+                OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+            ).filter(
+                OffreEmploiBrute.posted_date.between(start_date, end_date),
+                OffreEmploiBrute.education_level.isnot(None)
+            ).group_by(
+                OffreEmploiBrute.education_level
+            ).order_by(
+                desc('count')
+            ).all()
+            
+            total = sum(level.count for level in education_levels)
+            
+            return [{
+                "education_level": self._safe_get(level, 'education_level'),
+                "count": self._safe_get(level, 'count', 0),
+                "percentage": round((level.count / total * 100), 2) if total > 0 else 0,
+                "avg_salary": float(self._safe_get(level, 'avg_salary_min')) if self._safe_get(level, 'avg_salary_min') else None
+            } for level in education_levels]
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des niveaux d'étude: {str(e)}")
+            raise
+    
