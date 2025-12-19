@@ -2354,9 +2354,9 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiEnrichie.extracted_job_title.isnot(None)
+                OffreEmploiBrute.title.isnot(None)
             ).group_by(
-                OffreEmploiEnrichie.extracted_job_title
+                OffreEmploiBrute.title
             ).order_by(
                 desc('count')
             ).limit(limit).all()
@@ -2391,9 +2391,9 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiEnrichie.education_level.isnot(None)
+                OffreEmploiBrute.education_level.isnot(None)
             ).group_by(
-                OffreEmploiEnrichie.education_level
+                OffreEmploiBrute.education_level
             ).order_by(
                 desc('count')
             ).all()
