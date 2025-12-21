@@ -250,7 +250,7 @@ app.include_router(exports.router)
 # Webhooks, Users & Map
 app.include_router(webhooks.router)
 app.include_router(users.router)
-app.include_router(map.router)
+# app.include_router(map.router)
 
 
 @app.post("/import", status_code=201)
