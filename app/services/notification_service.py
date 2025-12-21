@@ -28,7 +28,7 @@ class NotificationService:
         title: str,
         message: str,
         action_url: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        extra_data: Optional[Dict] = None
     ) -> Notification:
         """Crée une notification in-app."""
         notification = Notification(
@@ -37,7 +37,7 @@ class NotificationService:
             title=title,
             message=message,
             action_url=action_url,
-            metadata=metadata or {}
+            extra_data=extra_data or {}
         )
         db.add(notification)
         db.commit()
@@ -186,7 +186,7 @@ class NotificationService:
                 title=notification_data["title"],
                 message=notification_data["message"],
                 action_url=f"/applications/{application.id}",
-                metadata={
+                extra_data={
                     "application_id": str(application.id),
                     "old_status": old_status,
                     "new_status": new_status
@@ -257,7 +257,7 @@ class NotificationService:
             title="📅 Rappel: Entretien demain",
             message=f"N'oubliez pas votre entretien pour '{job_title}' prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}",
             action_url=f"/applications/{application.id}",
-            metadata={"application_id": str(application.id)}
+            extra_data={"application_id": str(application.id)}
         )
         
         # Envoyer email

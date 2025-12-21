@@ -489,7 +489,7 @@ class Notification(Base):
     action_url = Column(String(500))  # URL vers l'action concernée
     is_read = Column(Boolean, default=False)
     is_sent = Column(Boolean, default=False)  # Pour tracking email/push
-    metadata = Column(JSON)  # Données additionnelles
+    extra_data = Column(JSON)  # Données additionnelles
     created_at = Column(DateTime, default=func.now())
     read_at = Column(DateTime)
     
