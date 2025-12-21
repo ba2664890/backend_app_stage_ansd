@@ -1,6 +1,6 @@
 """
 Service avancé pour l'analyse multidimensionnelle du marché de l'emploi au Sénégal.
-Version enrichie avec analyses complètes et visualisations innovantes.
+Version enrichie avec analyses complètes et visualisations innovantes. c'est
 """
 
 from typing import List, Dict, Any, Optional, Tuple
