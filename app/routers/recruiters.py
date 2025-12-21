@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/v1/recruiters", tags=["recruiters"])
 recruiter_service = RecruiterService()
 
 
-@router.post("", response_model=RecruiterResponse, status_code=201)
+@router.post("/register", response_model=RecruiterResponse, status_code=201)
 async def create_recruiter(
     recruiter_data: RecruiterCreate,
     db: Session = Depends(get_db),
@@ -29,8 +29,6 @@ async def create_recruiter(
 ):
     """
     Enregistre l'utilisateur actuel comme recruteur pour une entreprise.
-    
-    **Permissions**: Utilisateur authentifié
     """
     try:
         user_id = current_user.user_id
@@ -47,11 +45,7 @@ async def get_my_recruiter_profile(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    """
-    Récupère le profil recruteur de l'utilisateur actuel.
-    
-    **Permissions**: Utilisateur authentifié
-    """
+    # ... (inchangé)
     user_id = current_user.user_id
     recruiter = recruiter_service.get_recruiter_by_user(db, user_id)
     if not recruiter:
@@ -64,11 +58,7 @@ async def get_recruiter(
     recruiter_id: UUID,
     db: Session = Depends(get_db)
 ):
-    """
-    Récupère un recruteur par son ID.
-    
-    **Permissions**: Public
-    """
+    # ... (inchangé)
     recruiter = recruiter_service.get_recruiter_by_id(db, recruiter_id)
     if not recruiter:
         raise HTTPException(status_code=404, detail="Recruteur non trouvé")
@@ -81,21 +71,15 @@ async def delete_recruiter(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    """
-    Supprime un recruteur.
-    
-    **Permissions**: Utilisateur authentifié (devrait être le recruteur lui-même ou admin)
-    
-    TODO: Ajouter vérification des permissions
-    """
+    # ... (inchangé)
     success = recruiter_service.delete_recruiter(db, recruiter_id)
     if not success:
         raise HTTPException(status_code=404, detail="Recruteur non trouvé")
     return None
 
 
-# Route pour lister les recruteurs d'une entreprise (dans companies.py ou ici)
-@router.get("/company/{company_id}/recruiters", response_model=PaginatedResponse[RecruiterResponse])
+# Correction de la route pour matcher le frontend
+@router.get("/company/{company_id}", response_model=PaginatedResponse[RecruiterResponse])
 async def get_company_recruiters(
     company_id: UUID,
     skip: int = Query(0, ge=0),

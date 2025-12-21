@@ -509,3 +509,33 @@ class GenerateJobDescriptionResponse(BaseModel):
     job_description: str = Field(..., description="Description générée")
     suggested_skills: List[str] = Field(..., description="Compétences suggérées")
     suggested_salary_range: Optional[Dict[str, int]] = Field(None, description="Fourchette salariale suggérée")
+
+
+# ==================== WEBHOOKS ====================
+
+class WebhookBase(BaseModel):
+    """Modèle de base pour les webhooks."""
+    url: str = Field(..., description="URL de callback")
+    events: List[str] = Field(..., description="Liste des événements souscrits")
+    is_active: bool = Field(True, description="Si le webhook est actif")
+
+class WebhookCreate(WebhookBase):
+    """Modèle pour créer un webhook."""
+    company_id: UUID
+
+class WebhookUpdate(BaseModel):
+    """Modèle pour mettre à jour un webhook."""
+    url: Optional[str] = None
+    events: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
+class WebhookResponse(WebhookBase):
+    """Modèle de réponse pour un webhook."""
+    id: UUID
+    company_id: UUID
+    secret: Optional[str] = Field(None, description="Secret pour signature HMAC")
+    created_at: datetime
+    last_triggered_at: Optional[datetime] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+

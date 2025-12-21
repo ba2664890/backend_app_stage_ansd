@@ -250,3 +250,58 @@ class UserService:
         except Exception as e:
             logger.error(f"Erreur lors de la recherche par compétences: {e}")
             raise
+
+    def get_settings(self, db: Session, user_id: UUID) -> Dict[str, Any]:
+        """
+        Récupère les paramètres utilisateur (Mock).
+        """
+        # TODO: Implementer DB storage des settings
+        return {
+            "notifications": {
+                "email": True,
+                "push": False,
+                "job_alerts": True,
+                "new_offers": True,
+                "recommendations": True
+            },
+            "privacy": {
+                "profile_visible": True,
+                "data_analytics": True
+            },
+            "preferences": {
+                "theme": "light",
+                "language": "fr"
+            }
+        }
+
+    def update_settings(self, db: Session, user_id: UUID, settings: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Met à jour les paramètres utilisateur (Mock).
+        """
+        logger.info(f"Updating settings for user {user_id}: {settings}")
+        # On pourrait mapper certains settings sur le UserProfile s'ils correspondent
+        # ex: theme, language...
+        
+        # Pour l'instant on renvoie juste les settings reçus fusionnés au mock
+        return {**self.get_settings(db, user_id), **settings}
+
+    def delete_user(self, db: Session, user_id: UUID) -> bool:
+        """
+        Supprime définitivement un compte utilisateur et ses données associées.
+        """
+        try:
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                return False
+            
+            # La suppression en cascade devrait gérer le reste (profil, etc)
+            # si configurée dans SQLAlchemy models. Sinon:
+            db.query(UserProfile).filter(UserProfile.user_id == user_id).delete()
+            
+            db.delete(user)
+            db.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Erreur suppression compte {user_id}: {e}")
+            db.rollback()
+            raise

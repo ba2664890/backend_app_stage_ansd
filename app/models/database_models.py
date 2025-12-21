@@ -2,7 +2,8 @@
 Modèles SQLAlchemy pour la base de données.
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, ARRAY, JSON, ForeignKey, UniqueConstraint, Index
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, ARRAY, JSON, ForeignKey, UniqueConstraint, Index, Enum as SQLAlchemyEnum
+import enum
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -112,6 +113,11 @@ class SenegalAdminBoundary(Base):
         foreign_keys="OffreEmploiBrute.admin_boundary_id"
     )
 
+class UserRole(str, enum.Enum):
+    ADMIN = "admin"
+    RECRUITER = "recruiter"
+    CANDIDATE = "candidate"
+
 class User(Base):
     __tablename__ = "users"
 
@@ -125,8 +131,8 @@ class User(Base):
     reset_password_expires = Column(DateTime)
     last_login = Column(DateTime)
     
-    # AJOUT: Champ role simplifié pour le frontend
-    role = Column(String(50), default="candidate") 
+    # Champ role avec Enum PostgreSQL
+    role = Column(SQLAlchemyEnum(UserRole, name="user_role_enum", create_type=False), default=UserRole.CANDIDATE)
     
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

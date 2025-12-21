@@ -103,10 +103,11 @@ async def generate_job_description(
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 
-@router.get("/analyze-candidate/{candidate_id}/job/{job_id}", response_model=Dict[str, Any])
+from ..models.database_models import Application
+
+@router.post("/analyze-candidate", response_model=Dict[str, Any])
 async def analyze_candidate(
-    candidate_id: UUID,
-    job_id: UUID,
+    payload: Dict[str, Any],
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
@@ -120,6 +121,21 @@ async def analyze_candidate(
     
     if not recruiter:
         raise HTTPException(status_code=403, detail="Recruteur uniquement")
+        
+    application_id = payload.get("application_id")
+    if not application_id:
+        raise HTTPException(status_code=400, detail="application_id requis")
+        
+    application = db.query(Application).filter(Application.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Candidature non trouvée")
     
-    analysis = await assistant_service.analyze_candidate(db, recruiter.id, candidate_id, job_id)
+    # Appeler le service avec les IDs extraits
+    # Note: application.user_id est l'ID du candidat
+    analysis = await assistant_service.analyze_candidate(
+        db, 
+        recruiter.id, 
+        application.user_id, 
+        application.job_id
+    )
     return analysis

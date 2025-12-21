@@ -120,7 +120,7 @@ async def update_application_status(
         raise HTTPException(status_code=500, detail=f"Erreur lors de la mise à jour: {str(e)}")
 
 
-@router.put("/{application_id}/notes", response_model=ApplicationResponse)
+@router.post("/{application_id}/notes", response_model=ApplicationResponse)
 async def update_application_notes(
     application_id: UUID,
     notes_data: ApplicationUpdateNotes,
@@ -153,7 +153,7 @@ async def get_application_history(
     return history
 
 
-@router.delete("/{application_id}/withdraw", status_code=204)
+@router.post("/{application_id}/withdraw", status_code=204)
 async def withdraw_application(
     application_id: UUID,
     db: Session = Depends(get_db),
@@ -161,8 +161,6 @@ async def withdraw_application(
 ):
     """
     Retirer une candidature (par le candidat).
-    
-    **Permissions**: Le candidat lui-même
     """
     try:
         user_id = current_user.user_id
@@ -176,7 +174,7 @@ async def withdraw_application(
 
 # Routes pour les entreprises/recruteurs
 
-@router.get("/company/{company_id}/all", response_model=PaginatedResponse[ApplicationResponse])
+@router.get("/company/{company_id}", response_model=PaginatedResponse[ApplicationResponse])
 async def get_company_applications(
     company_id: UUID,
     status: Optional[str] = Query(None, description="Filtrer par statut"),
@@ -187,10 +185,6 @@ async def get_company_applications(
 ):
     """
     Récupère toutes les candidatures d'une entreprise.
-    
-    **Permissions**: Recruteur de l'entreprise
-    
-    TODO: Vérifier que l'utilisateur est recruteur de cette entreprise
     """
     applications, total = application_service.get_company_applications(
         db, company_id, status, skip, limit
@@ -209,6 +203,24 @@ async def get_company_applications(
         has_prev=page > 1
     )
 
+
+@router.get("/stats", response_model=ApplicationStatsResponse)
+async def get_application_stats_generic(
+    company_id: Optional[UUID] = Query(None),
+    job_id: Optional[UUID] = Query(None),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Endpoint unique pour les stats (supporte company_id ou job_id).
+    """
+    if company_id:
+        stats = application_service.get_application_stats(db, company_id=company_id)
+        return ApplicationStatsResponse(**stats)
+    if job_id:
+        stats = application_service.get_application_stats(db, job_id=job_id)
+        return ApplicationStatsResponse(**stats)
+    raise HTTPException(status_code=400, detail="company_id ou job_id requis")
 
 @router.get("/job/{job_id}/all", response_model=PaginatedResponse[ApplicationResponse])
 async def get_job_applications(

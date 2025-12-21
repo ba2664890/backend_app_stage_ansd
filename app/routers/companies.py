@@ -121,7 +121,7 @@ async def update_company(
         raise HTTPException(status_code=500, detail=f"Erreur lors de la mise à jour: {str(e)}")
 
 
-@router.put("/{company_id}/verify", response_model=CompanyResponse)
+@router.post("/{company_id}/verify", response_model=CompanyResponse)
 async def verify_company(
     company_id: UUID,
     db: Session = Depends(get_db),

@@ -347,14 +347,51 @@ class JobService:
 
     def save_job(self, db: Session, user_id: UUID, job_id: UUID):
         # Trouver l'offre enrichie correspondant à l'offre brute
+        # Si job_id est déjà celui de l'offre enrichie, on vérifie juste
         enrichie = db.query(OffreEmploiEnrichie).filter(
             OffreEmploiEnrichie.id == job_id
         ).first()
-        if not enrichie:
-            raise ValueError(f"Job {job_id} n'a pas été enrichi, impossible de sauvegarder")
-        saved = UserSavedJob(user_id=user_id, job_id=enrichie.id)
 
+        # Si pas trouvé dans enrichie, peut-être c'est l'ID brute
+        if not enrichie:
+             enrichie = db.query(OffreEmploiEnrichie).filter(
+                OffreEmploiEnrichie.offre_id == job_id
+            ).first()
+
+        if not enrichie:
+             # Fallback: Sauvegarder l'ID brute tel quel si la table le permet, ou erreur
+             # Pour l'instant on lève une erreur comme avant
+             raise ValueError(f"Job {job_id} n'a pas été enrichi ou introuvable, impossible de sauvegarder")
+        
+        # Vérifier doublon
+        existing = db.query(UserSavedJob).filter(
+            UserSavedJob.user_id == user_id,
+            UserSavedJob.job_id == enrichie.id
+        ).first()
+        if existing:
+            return existing
+
+        saved = UserSavedJob(user_id=user_id, job_id=enrichie.id)
         db.add(saved)
         db.commit()
         db.refresh(saved)
         return saved
+
+    def remove_saved_job(self, db: Session, user_id: UUID, job_id: UUID) -> bool:
+        """
+        Supprime une offre des favoris d'un utilisateur.
+        """
+        saved = db.query(UserSavedJob).filter(
+            UserSavedJob.user_id == user_id,
+            # On suppose que job_id est l'ID de l'offre enrichie (celui stocké)
+            # Ou on check les deux (brute/enrichie) ? Restons simple.
+            UserSavedJob.job_id == job_id
+        ).first()
+
+        if not saved:
+            return False
+
+        db.delete(saved)
+        db.commit()
+        return True
+
