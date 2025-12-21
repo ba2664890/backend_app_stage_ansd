@@ -141,6 +141,15 @@ class User(Base):
         cascade="all, delete-orphan",
         lazy="dynamic"  # Pour de meilleures performances avec de grands ensembles
     )
+    
+    # Relation avec Recruiter (1-to-1 optionnel)
+    recruiter_profile = relationship(
+        "Recruiter",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
 
 
 class UserProfile(Base):
@@ -259,8 +268,173 @@ class CompetenceReferentiel(Base):
         Index('idx_competences_name', 'competence_name'),
     )
 
+# ==================== MODULE 1: COMPANIES & RECRUITERS ====================
+
+class Company(Base):
+    """Modèle pour les entreprises."""
+    
+    __tablename__ = "companies"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False, unique=True)
+    sector = Column(String(100))
+    size = Column(String(50))  # PME, ETI, GE
+    location = Column(String(255))
+    description = Column(Text)
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relations
+    recruiters = relationship("Recruiter", back_populates="company", cascade="all, delete-orphan")
+    skill_needs = relationship("CompanySkillNeed", back_populates="company", cascade="all, delete-orphan")
+    
+    # Index
+    __table_args__ = (
+        Index('idx_companies_name', 'name'),
+        Index('idx_companies_sector', 'sector'),
+        Index('idx_companies_is_verified', 'is_verified'),
+    )
+
+class Recruiter(Base):
+    """Modèle pour les recruteurs."""
+    
+    __tablename__ = "recruiters"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    role = Column(String(50))  # RH, Manager, Admin RH
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relations
+    user = relationship("User", back_populates="recruiter_profile")
+    company = relationship("Company", back_populates="recruiters")
+    
+    # Index
+    __table_args__ = (
+        UniqueConstraint('user_id', 'company_id', name='uq_user_company'),
+        Index('idx_recruiters_user', 'user_id'),
+        Index('idx_recruiters_company', 'company_id'),
+    )
+
+class CompanySkillNeed(Base):
+    """Modèle pour les besoins en compétences des entreprises (GEPP)."""
+    
+    __tablename__ = "company_skill_needs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    competence_id = Column(UUID(as_uuid=True), ForeignKey("competences_referentiel.id", ondelete="CASCADE"), nullable=False)
+    priority = Column(Integer)  # 1=critique, 2=important, 3=souhaitable
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relations
+    company = relationship("Company", back_populates="skill_needs")
+    competence = relationship("CompetenceReferentiel")
+    
+    # Index
+    __table_args__ = (
+        UniqueConstraint('company_id', 'competence_id', name='uq_company_skill'),
+        Index('idx_company_skill_needs_company', 'company_id'),
+        Index('idx_company_skill_needs_priority', 'priority'),
+    )
+
+# ==================== MODULE 4: ATS (APPLICANT TRACKING SYSTEM) ====================
+
+class Application(Base):
+    """Modèle pour les candidatures (ATS)."""
+    
+    __tablename__ = "applications"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    job_id = Column(UUID(as_uuid=True), ForeignKey("offres_emploi_enrichies.id", ondelete="CASCADE"), nullable=False)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    
+    # Pipeline status: applied, shortlisted, interview_scheduled, interview_completed, offer_made, hired, rejected, withdrawn
+    status = Column(String(50), nullable=False, default="applied")
+    
+    # Additional fields
+    cover_letter = Column(Text)
+    notes = Column(Text)  # Notes internes RH
+    rating = Column(Integer)  # 1-5 rating by recruiter
+    
+    # Timestamps
+    applied_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    reviewed_at = Column(DateTime)  # When recruiter first reviewed
+    interview_date = Column(DateTime)
+    decision_date = Column(DateTime)
+    
+    # Relations
+    user = relationship("User", backref="applications")
+    job = relationship("OffreEmploiEnrichie", backref="applications")
+    company = relationship("Company", backref="applications")
+    status_history = relationship("ApplicationStatusHistory", back_populates="application", cascade="all, delete-orphan")
+    
+    # Index
+    __table_args__ = (
+        UniqueConstraint('user_id', 'job_id', name='uq_user_job_application'),
+        Index('idx_applications_user', 'user_id'),
+        Index('idx_applications_job', 'job_id'),
+        Index('idx_applications_company', 'company_id'),
+        Index('idx_applications_status', 'status'),
+        Index('idx_applications_applied_at', 'applied_at'),
+    )
+
+class ApplicationStatusHistory(Base):
+    """Historique des changements de statut des candidatures."""
+    
+    __tablename__ = "application_status_history"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    application_id = Column(UUID(as_uuid=True), ForeignKey("applications.id", ondelete="CASCADE"), nullable=False)
+    from_status = Column(String(50))
+    to_status = Column(String(50), nullable=False)
+    changed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))  # Recruiter who made the change
+    comment = Column(Text)
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relations
+    application = relationship("Application", back_populates="status_history")
+    changed_by_user = relationship("User")
+    
+    # Index
+    __table_args__ = (
+        Index('idx_status_history_application', 'application_id'),
+        Index('idx_status_history_created', 'created_at'),
+    )
+
+# ==================== MODULE 9: AI ASSISTANT (CHAT RH) ====================
+
+class RHChatHistory(Base):
+    """Historique des conversations avec l'assistant RH."""
+    
+    __tablename__ = "rh_chat_history"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    recruiter_id = Column(UUID(as_uuid=True), ForeignKey("recruiters.id", ondelete="CASCADE"), nullable=False)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    context = Column(JSON)  # Context utilisé pour la réponse (données, filtres, etc.)
+    model_used = Column(String(50))  # Nom du modèle LLM utilisé
+    tokens_used = Column(Integer)  # Nombre de tokens consommés
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relations
+    recruiter = relationship("Recruiter")
+    
+    # Index
+    __table_args__ = (
+        Index('idx_chat_history_recruiter', 'recruiter_id'),
+        Index('idx_chat_history_created', 'created_at'),
+    )
+
 # Vue pour les analyses rapides (à créer via migration)
 # Cette vue est déjà définie dans le script SQL d'initialisation
+
 
 class UserSavedJob(Base):
     __tablename__ = "user_saved_jobs"

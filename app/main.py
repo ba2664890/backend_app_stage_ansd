@@ -25,7 +25,7 @@ from app.services.admin_boundary_importer import AdminBoundaryImporterService
 from .database import SessionLocal, engine, Base, get_db
 from .models.database_models import (
     OffreEmploiBrute, OffreEmploiEnrichie, SenegalAdminBoundary, User, UserProfile, 
-    JobRecommendation, JobStatistics 
+    JobRecommendation, JobStatistics, Company, Recruiter, Application, RHChatHistory
 )
 from .models.api_models import (
     ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, RecommendationResponse, SalaryByExperience, SaveJobRequest,
@@ -223,6 +223,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==================== INCLUDE ROUTERS ====================
+from .routers import companies, recruiters, applications, assistant, skills, salary
+
+# Module 1: Companies & Recruiters
+app.include_router(companies.router)
+app.include_router(recruiters.router)
+
+# Module 4: ATS (Applicant Tracking System)
+app.include_router(applications.router)
+
+# Module 6: Skills & GEPP
+app.include_router(skills.router)
+
+# Module 7: Salary Benchmark
+app.include_router(salary.router)
+
+# Module 9: AI Assistant
+app.include_router(assistant.router)
 
 
 @app.post("/import", status_code=201)

@@ -245,8 +245,7 @@ class DashboardStats(BaseModel):
     top_skills: List[Dict[str, Any]]
     contract_type_distribution: List[Dict[str, Any]]
     experience_level_distribution: List[Dict[str, Any]]
-    #monthly_trend: List[Dict[str, Any]]
-    offers_this_month: int
+    monthly_trend: List[Dict[str, Any]]
 
 class GeographicStats(BaseModel):
     """Statistiques géographiques."""
@@ -328,3 +327,184 @@ from pydantic import BaseModel
 
 class SaveJobRequest(BaseModel):
     job_id: str
+
+# ==================== MODULE 1: COMPANIES & RECRUITERS ====================
+
+# Company schemas
+class CompanyBase(BaseModel):
+    """Modèle de base pour les entreprises."""
+    name: str = Field(..., description="Nom de l'entreprise")
+    sector: Optional[str] = Field(None, description="Secteur d'activité")
+    size: Optional[str] = Field(None, description="Taille de l'entreprise (PME, ETI, GE)")
+    location: Optional[str] = Field(None, description="Localisation")
+    description: Optional[str] = Field(None, description="Description de l'entreprise")
+
+class CompanyCreate(CompanyBase):
+    """Modèle pour créer une entreprise."""
+    pass
+
+class CompanyUpdate(BaseModel):
+    """Modèle pour mettre à jour une entreprise."""
+    name: Optional[str] = None
+    sector: Optional[str] = None
+    size: Optional[str] = None
+    location: Optional[str] = None
+    description: Optional[str] = None
+
+class CompanyResponse(CompanyBase):
+    """Modèle de réponse pour une entreprise."""
+    id: UUID
+    is_verified: bool
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Recruiter schemas
+class RecruiterBase(BaseModel):
+    """Modèle de base pour les recruteurs."""
+    role: Optional[str] = Field(None, description="Rôle (RH, Manager, Admin RH)")
+
+class RecruiterCreate(RecruiterBase):
+    """Modèle pour créer un recruteur."""
+    company_id: UUID = Field(..., description="ID de l'entreprise")
+
+class RecruiterResponse(RecruiterBase):
+    """Modèle de réponse pour un recruteur."""
+    id: UUID
+    user_id: UUID
+    company_id: UUID
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class RecruiterWithCompanyResponse(RecruiterResponse):
+    """Modèle de réponse pour un recruteur avec les détails de l'entreprise."""
+    company: CompanyResponse
+    
+    class Config:
+        from_attributes = True
+
+# Company Skill Need schemas
+class CompanySkillNeedCreate(BaseModel):
+    """Modèle pour créer un besoin en compétence."""
+    competence_id: UUID = Field(..., description="ID de la compétence")
+    priority: int = Field(..., ge=1, le=3, description="Priorité (1=critique, 2=important, 3=souhaitable)")
+
+class CompanySkillNeedResponse(BaseModel):
+    """Modèle de réponse pour un besoin en compétence."""
+    id: UUID
+    company_id: UUID
+    competence_id: UUID
+    priority: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# ==================== MODULE 4: ATS (APPLICANT TRACKING SYSTEM) ====================
+
+class ApplicationBase(BaseModel):
+    """Modèle de base pour les candidatures."""
+    cover_letter: Optional[str] = Field(None, description="Lettre de motivation")
+
+class ApplicationCreate(ApplicationBase):
+    """Modèle pour créer une candidature."""
+    job_id: UUID = Field(..., description="ID de l'offre d'emploi")
+
+class ApplicationUpdateStatus(BaseModel):
+    """Modèle pour mettre à jour le statut d'une candidature."""
+    status: str = Field(..., description="Nouveau statut (applied, shortlisted, interview_scheduled, etc.)")
+    comment: Optional[str] = Field(None, description="Commentaire sur le changement")
+    interview_date: Optional[datetime] = Field(None, description="Date d'entretien si applicable")
+
+class ApplicationUpdateNotes(BaseModel):
+    """Modèle pour mettre à jour les notes RH."""
+    notes: Optional[str] = None
+    rating: Optional[int] = Field(None, ge=1, le=5, description="Note de 1 à 5")
+
+class ApplicationResponse(ApplicationBase):
+    """Modèle de réponse pour une candidature."""
+    id: UUID
+    user_id: UUID
+    job_id: UUID
+    company_id: UUID
+    status: str
+    notes: Optional[str]
+    rating: Optional[int]
+    applied_at: datetime
+    updated_at: datetime
+    reviewed_at: Optional[datetime]
+    interview_date: Optional[datetime]
+    decision_date: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+
+class ApplicationWithDetailsResponse(ApplicationResponse):
+    """Modèle de réponse avec détails utilisateur et offre."""
+    user_email: Optional[str] = None
+    user_name: Optional[str] = None
+    job_title: Optional[str] = None
+    company_name: Optional[str] = None
+
+class ApplicationStatusHistoryResponse(BaseModel):
+    """Modèle de réponse pour l'historique de statut."""
+    id: UUID
+    application_id: UUID
+    from_status: Optional[str]
+    to_status: str
+    changed_by: Optional[UUID]
+    comment: Optional[str]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ApplicationStatsResponse(BaseModel):
+    """Statistiques des candidatures."""
+    total: int
+    by_status: Dict[str, int]
+    avg_time_to_review: Optional[float]  # en heures
+    avg_time_to_hire: Optional[float]  # en jours
+    conversion_rate: Optional[float]  # % applied → hired
+
+# ==================== MODULE 9: AI ASSISTANT (CHAT RH) ====================
+
+class ChatRequest(BaseModel):
+    """Requête pour le chat RH."""
+    question: str = Field(..., description="Question posée à l'assistant")
+    context: Optional[Dict[str, Any]] = Field(None, description="Contexte additionnel")
+
+class ChatResponse(BaseModel):
+    """Réponse du chat RH."""
+    answer: str = Field(..., description="Réponse de l'assistant")
+    sources: Optional[List[str]] = Field(None, description="Sources utilisées")
+    suggestions: Optional[List[str]] = Field(None, description="Suggestions de questions")
+
+class ChatHistoryResponse(BaseModel):
+    """Historique de chat."""
+    id: UUID
+    recruiter_id: UUID
+    question: str
+    answer: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class GenerateJobDescriptionRequest(BaseModel):
+    """Requête pour générer une description de poste."""
+    job_title: str = Field(..., description="Titre du poste")
+    sector: Optional[str] = Field(None, description="Secteur d'activité")
+    experience_level: Optional[str] = Field(None, description="Niveau d'expérience requis")
+    key_skills: Optional[List[str]] = Field(None, description="Compétences clés")
+    additional_context: Optional[str] = Field(None, description="Contexte additionnel")
+
+class GenerateJobDescriptionResponse(BaseModel):
+    """Réponse de génération de description."""
+    job_description: str = Field(..., description="Description générée")
+    suggested_skills: List[str] = Field(..., description="Compétences suggérées")
+    suggested_salary_range: Optional[Dict[str, int]] = Field(None, description="Fourchette salariale suggérée")
