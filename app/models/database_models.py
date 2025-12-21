@@ -124,6 +124,10 @@ class User(Base):
     reset_password_token = Column(String(255))
     reset_password_expires = Column(DateTime)
     last_login = Column(DateTime)
+    
+    # AJOUT: Champ role simplifié pour le frontend
+    role = Column(String(50), default="candidate") 
+    
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

@@ -181,6 +181,7 @@ class UserProfileResponses(BaseModel):
 class UserResponse(BaseModel):
     id: UUID
     email: EmailStr
+    role: Optional[str] = "candidate"
     profile: Optional[UserProfileResponses] = None
 
     model_config = {"from_attributes": True}
