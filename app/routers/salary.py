@@ -2,7 +2,7 @@
 Routes API pour l'analyse salariale et benchmark.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from uuid import UUID
