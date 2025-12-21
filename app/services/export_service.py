@@ -145,7 +145,7 @@ class ExportService:
                 ['Métrique', 'Valeur'],
                 ['Total candidatures', str(stats.get('total', 0))],
                 ['Temps moyen de review', f"{stats.get('avg_time_to_review', 0):.1f}h"],
-                ['Temps moyen d'embauche', f"{stats.get('avg_time_to_hire', 0):.1f} jours"],
+                ['Temps moyen d\'embauche', f"{stats.get('avg_time_to_hire', 0):.1f} jours"],
                 ['Taux de conversion', f"{stats.get('conversion_rate', 0):.1f}%"],
             ]
             
