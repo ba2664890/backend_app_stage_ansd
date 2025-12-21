@@ -29,7 +29,7 @@ from .models.database_models import (
 )
 from .models.api_models import (
     ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, RecommendationResponse, SalaryByExperience, SaveJobRequest,
-    UserProfileCreate, UserProfileResponse, JobSearchParams,
+    UserProfileCreate, UserProfileResponse, JobSearchParams, AuthResponse,
     PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData, UserResponse
 )
 
@@ -804,18 +804,53 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
 
 
 # ==================== LOGIN ====================
-@app.post("/login")
+@app.post("/login", response_model=AuthResponse)
 async def login(username: str, password: str, db: Session = Depends(get_db)):
     """
     Authentification utilisateur.
-    Renvoie un token JWT si les identifiants sont valides.
+    Renvoie un token JWT et les informations de l'utilisateur (avec son rôle).
     """
     user = db.query(User).filter(User.email == username).first()
     if not user or not verify_password(password, str(user.hashed_password)):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
     
     access_token = create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    # Récupération du profil
+    profile = user.profile
+    if not profile:
+        # Création d'un profil vide si manquant (fallback)
+        profile = UserProfile(user_id=user.id)
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+    
+    # Construction de la réponse utilisateur (similaire à get_user_profile)
+    user_response = UserProfileResponse(
+        id=UUID(str(profile.id)),
+        user_id=UUID(str(user.id)),
+        email=user.email,
+        role=user.role.value if user.role else "candidate",
+        first_name=cast(Optional[str], profile.first_name),
+        last_name=cast(Optional[str], profile.last_name),
+        phone=cast(Optional[str], profile.phone),
+        location=cast(Optional[str], profile.location),
+        experience_years=cast(Optional[int], profile.experience_years),
+        education_level=cast(Optional[str], profile.education_level),
+        skills=cast(Optional[List[str]], profile.skills),
+        preferred_contract_type=cast(Optional[List[str]], profile.preferred_contract_type),
+        preferred_salary_min=cast(Optional[int], profile.preferred_salary_min),
+        preferred_salary_max=cast(Optional[int], profile.preferred_salary_max),
+        cv_url=cast(Optional[str], profile.cv_url),
+        created_at=cast(datetime, profile.created_at),
+        updated_at=cast(datetime, profile.updated_at),
+    )
+
+    return AuthResponse(
+        access_token=access_token, 
+        token_type="bearer",
+        user=user_response
+    )
 
 # ==================== PROFIL UTILISATEUR ====================
 @app.post("/api/v1/users/profile", response_model=UserProfileResponse)
@@ -854,6 +889,7 @@ async def get_user_profile(
         id=UUID(str(user.id)),
         user_id=UUID(str(user.user_id)),
         email=user_account.email, # type: ignore
+        role=user_account.role.value if user_account.role else "candidate",
         first_name=cast(Optional[str], user.first_name),
         last_name=cast(Optional[str], user.last_name),
         phone=cast(Optional[str], user.phone),

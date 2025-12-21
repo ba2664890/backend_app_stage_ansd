@@ -219,6 +219,23 @@ class UserProfileResponse(UserProfileBase):
     class Config:
         from_attributes = True
 
+class UserProfileResponse(UserProfileBase):
+    """Modèle de réponse pour un profil utilisateur."""
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    user_id: UUID
+    role: Optional[str] = Field(None, description="Rôle utilisateur")
+    
+    class Config:
+        from_attributes = True
+
+class AuthResponse(BaseModel):
+    """Réponse d'authentification incluant le token et l'utilisateur."""
+    access_token: str
+    token_type: str = "bearer"
+    user: UserProfileResponse
+
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
