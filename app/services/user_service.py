@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 import logging
 from datetime import datetime
+from uuid import UUID
 
 from ..models.database_models import User, UserProfile
 from ..models.api_models import UserProfileCreate, UserProfileResponse
