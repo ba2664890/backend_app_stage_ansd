@@ -225,7 +225,7 @@ app.add_middleware(
 )
 
 # ==================== INCLUDE ROUTERS ====================
-from .routers import companies, recruiters, applications, assistant, skills, salary
+from .routers import companies, recruiters, applications, assistant, skills, salary, notifications, exports
 
 # Module 1: Companies & Recruiters
 app.include_router(companies.router)
@@ -242,6 +242,10 @@ app.include_router(salary.router)
 
 # Module 9: AI Assistant
 app.include_router(assistant.router)
+
+# Improvements: Notifications & Exports
+app.include_router(notifications.router)
+app.include_router(exports.router)
 
 
 @app.post("/import", status_code=201)

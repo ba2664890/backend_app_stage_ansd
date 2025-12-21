@@ -432,6 +432,101 @@ class RHChatHistory(Base):
         Index('idx_chat_history_created', 'created_at'),
     )
 
+# ==================== RBAC: ROLES & PERMISSIONS ====================
+
+class Role(Base):
+    """Rôles utilisateur pour le système RBAC."""
+    
+    __tablename__ = "roles"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(50), unique=True, nullable=False)  # admin, recruiter, candidate, hr_manager
+    description = Column(Text)
+    permissions = Column(ARRAY(String))  # Liste des permissions
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relations
+    user_roles = relationship("UserRole", back_populates="role", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index('idx_roles_name', 'name'),
+    )
+
+class UserRole(Base):
+    """Association utilisateur-rôle."""
+    
+    __tablename__ = "user_roles"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role_id = Column(UUID(as_uuid=True), ForeignKey("roles.id", ondelete="CASCADE"), nullable=False)
+    assigned_at = Column(DateTime, default=func.now())
+    assigned_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))  # Qui a assigné ce rôle
+    
+    # Relations
+    user = relationship("User", foreign_keys=[user_id], backref="user_roles")
+    role = relationship("Role", back_populates="user_roles")
+    assigner = relationship("User", foreign_keys=[assigned_by])
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'role_id', name='uq_user_role'),
+        Index('idx_user_roles_user', 'user_id'),
+        Index('idx_user_roles_role', 'role_id'),
+    )
+
+# ==================== NOTIFICATIONS ====================
+
+class Notification(Base):
+    """Notifications pour les utilisateurs."""
+    
+    __tablename__ = "notifications"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String(50), nullable=False)  # application_status, new_match, interview_reminder, etc.
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    action_url = Column(String(500))  # URL vers l'action concernée
+    is_read = Column(Boolean, default=False)
+    is_sent = Column(Boolean, default=False)  # Pour tracking email/push
+    metadata = Column(JSON)  # Données additionnelles
+    created_at = Column(DateTime, default=func.now())
+    read_at = Column(DateTime)
+    
+    # Relations
+    user = relationship("User", backref="notifications")
+    
+    __table_args__ = (
+        Index('idx_notifications_user', 'user_id'),
+        Index('idx_notifications_is_read', 'is_read'),
+        Index('idx_notifications_created', 'created_at'),
+        Index('idx_notifications_type', 'type'),
+    )
+
+# ==================== WEBHOOKS ====================
+
+class Webhook(Base):
+    """Webhooks pour intégrations externes."""
+    
+    __tablename__ = "webhooks"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    url = Column(String(500), nullable=False)
+    events = Column(ARRAY(String), nullable=False)  # ["application.created", "application.status_changed"]
+    secret = Column(String(255))  # Pour signature HMAC
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=func.now())
+    last_triggered_at = Column(DateTime)
+    
+    # Relations
+    company = relationship("Company", backref="webhooks")
+    
+    __table_args__ = (
+        Index('idx_webhooks_company', 'company_id'),
+        Index('idx_webhooks_is_active', 'is_active'),
+    )
+
 # Vue pour les analyses rapides (à créer via migration)
 # Cette vue est déjà définie dans le script SQL d'initialisation
 
