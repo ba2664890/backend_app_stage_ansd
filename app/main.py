@@ -779,14 +779,23 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     # Création de l'utilisateur
     user = User(
         email=user_in.email,
-        hashed_password=get_password_hash(user_in.password)
+        hashed_password=get_password_hash(user_in.password),
+        role=user_in.role if user_in.role else UserRole.CANDIDATE
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    # Création du profil associé
-    profile = UserProfile(user_id=user.id)
+    # Création du profil associé avec les données fournies
+    profile = UserProfile(
+        user_id=user.id,
+        first_name=user_in.first_name,
+        last_name=user_in.last_name,
+        phone=user_in.phone,
+        location=user_in.location,
+        current_title=user_in.current_title,
+        experience_years=user_in.experience_years
+    )
     db.add(profile)
     db.commit()
     db.refresh(profile)

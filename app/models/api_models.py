@@ -169,6 +169,15 @@ class UserCreate(BaseModel):
     """Modèle pour créer un utilisateur."""
     email: EmailStr = Field(..., description="Email de l'utilisateur")
     password: str = Field(..., min_length=8, description="Mot de passe de l'utilisateur")
+    role: Optional[str] = Field(None, description="Rôle de l'utilisateur (admin, recruiter, candidate)")
+    
+    # Champs optionnels pour le profil à la création
+    first_name: Optional[str] = Field(None, description="Prénom")
+    last_name: Optional[str] = Field(None, description="Nom")
+    phone: Optional[str] = Field(None, description="Numéro de téléphone")
+    location: Optional[str] = Field(None, description="Localisation")
+    current_title: Optional[str] = Field(None, description="Titre actuel du poste")
+    experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
 
 
 class UserProfileResponses(BaseModel):
@@ -196,6 +205,7 @@ class UserProfileBase(BaseModel):
     first_name: Optional[str] = Field(None, description="Prénom")
     last_name: Optional[str] = Field(None, description="Nom")
     location: Optional[str] = Field(None, description="Localisation")
+    current_title: Optional[str] = Field(None, description="Titre du poste actuel")
     experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
     education_level: Optional[str] = Field(None, description="Niveau d'éducation")
     skills: Optional[List[str]] = Field(None, description="Compétences")

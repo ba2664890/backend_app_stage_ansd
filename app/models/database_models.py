@@ -182,6 +182,7 @@ class UserProfile(Base):
     first_name = Column(String(100))
     last_name = Column(String(100))
     location = Column(String(255))
+    current_title = Column(String(255))
     experience_years = Column(Integer)
     education_level = Column(String(100))
     skills = Column(ARRAY(String))
