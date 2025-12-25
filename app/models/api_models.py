@@ -7,6 +7,8 @@ from typing import List, Optional, Dict, Any, Generic, TypeVar
 from datetime import date, datetime
 from uuid import UUID
 
+from .database_models import UserRole
+
 # Modèles de base
 class BaseResponse(BaseModel):
     """Modèle de base pour les réponsess API."""
@@ -178,6 +180,14 @@ class UserCreate(BaseModel):
     location: Optional[str] = Field(None, description="Localisation")
     current_title: Optional[str] = Field(None, description="Titre actuel du poste")
     experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
+
+    @validator('role', pre=True, always=True)
+    def validate_role(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
 
 class UserProfileResponses(BaseModel):

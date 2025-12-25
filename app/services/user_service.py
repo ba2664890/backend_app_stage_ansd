@@ -78,7 +78,7 @@ class UserService:
         """
         try:
             profile = db.query(UserProfile).filter(
-                UserProfile.id == user_id
+                UserProfile.user_id == user_id
             ).first()
             
             return profile

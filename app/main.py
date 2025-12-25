@@ -784,7 +784,7 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     user = User(
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),
-        role=user_in.role if user_in.role else UserRole.CANDIDATE
+        role=UserRole(user_in.role) if user_in.role else UserRole.CANDIDATE
     )
     db.add(user)
     db.commit()

@@ -114,10 +114,10 @@ class SenegalAdminBoundary(Base):
     )
 
 class UserRole(str, enum.Enum):
-    ADMIN = "admin"
-    RECRUITER = "recruiter"
-    CANDIDATE = "candidate"
-    GOVERNMENT = "government"
+    ADMIN = "ADMIN"
+    RECRUITER = "RECRUITER"
+    CANDIDATE = "CANDIDATE"
+    GOVERNMENT = "GOVERNMENT"
 
 class User(Base):
     __tablename__ = "users"
@@ -133,7 +133,7 @@ class User(Base):
     last_login = Column(DateTime)
     
     # Champ role avec Enum PostgreSQL
-    role = Column(SQLAlchemyEnum(UserRole, name="user_role_enum", create_type=False), default=UserRole.CANDIDATE)
+    role = Column(SQLAlchemyEnum(UserRole, name="user_role_enum", create_type=True), default=UserRole.CANDIDATE)
     
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
