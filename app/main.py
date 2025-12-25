@@ -25,7 +25,8 @@ from app.services.admin_boundary_importer import AdminBoundaryImporterService
 from .database import SessionLocal, engine, Base, get_db
 from .models.database_models import (
     OffreEmploiBrute, OffreEmploiEnrichie, SenegalAdminBoundary, User, UserProfile, 
-    JobRecommendation, JobStatistics, Company, Recruiter, Application, RHChatHistory
+    JobRecommendation, JobStatistics, Company, Recruiter, Application, RHChatHistory,
+    UserRole
 )
 from .models.api_models import (
     ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, RecommendationResponse, SalaryByExperience, SaveJobRequest,

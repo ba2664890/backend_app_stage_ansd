@@ -48,11 +48,11 @@ class Permission(str, Enum):
 
 class RoleType(str, Enum):
     """Types de rôles prédéfinis."""
-    ADMIN = "admin"
-    RECRUITER = "recruiter"
-    HR_MANAGER = "hr_manager"
-    CANDIDATE = "candidate"
-    GOVERNMENT = "government"
+    ADMIN = "ADMIN"
+    RECRUITER = "RECRUITER"
+    HR_MANAGER = "HR_MANAGER"
+    CANDIDATE = "CANDIDATE"
+    GOVERNMENT = "GOVERNMENT"
 
 
 # Définition des permissions par rôle
