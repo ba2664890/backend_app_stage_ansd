@@ -215,7 +215,9 @@ app = FastAPI(
 
 ALLOWED_ORIGINS = [
     "https://frontend-webscraping-pvfqjzk4q-cardans-projects-cb73ad15.vercel.app",
-    "https://frontend-webscraping.vercel.app"  
+    "https://frontend-webscraping.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
 ]
 
 app.add_middleware(
@@ -836,26 +838,10 @@ async def login(username: str, password: str, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(profile)
     
-    # Construction de la réponse utilisateur (similaire à get_user_profile)
-    user_response = UserProfileResponse(
-        id=UUID(str(profile.id)),
-        user_id=UUID(str(user.id)),
-        email=user.email,
-        role=user.role.value if user.role else "candidate",
-        first_name=cast(Optional[str], profile.first_name),
-        last_name=cast(Optional[str], profile.last_name),
-        phone=cast(Optional[str], profile.phone),
-        location=cast(Optional[str], profile.location),
-        experience_years=cast(Optional[int], profile.experience_years),
-        education_level=cast(Optional[str], profile.education_level),
-        skills=cast(Optional[List[str]], profile.skills),
-        preferred_contract_type=cast(Optional[List[str]], profile.preferred_contract_type),
-        preferred_salary_min=cast(Optional[int], profile.preferred_salary_min),
-        preferred_salary_max=cast(Optional[int], profile.preferred_salary_max),
-        cv_url=cast(Optional[str], profile.cv_url),
-        created_at=cast(datetime, profile.created_at),
-        updated_at=cast(datetime, profile.updated_at),
-    )
+    # Construction de la réponse utilisateur via l'ORM
+    user_response = UserProfileResponse.from_orm(profile)
+    user_response.role = user.role.value if user.role else "candidate"
+    user_response.email = user.email
 
     return AuthResponse(
         access_token=access_token, 
@@ -896,25 +882,12 @@ async def get_user_profile(
     if not user_account:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
 
-    return UserProfileResponse(
-        id=UUID(str(user.id)),
-        user_id=UUID(str(user.user_id)),
-        email=user_account.email, # type: ignore
-        role=user_account.role.value if user_account.role else "candidate",
-        first_name=cast(Optional[str], user.first_name),
-        last_name=cast(Optional[str], user.last_name),
-        phone=cast(Optional[str], user.phone),
-        location=cast(Optional[str], user.location),
-        experience_years=cast(Optional[int], user.experience_years),
-        education_level=cast(Optional[str], user.education_level),
-        skills=cast(Optional[List[str]], user.skills),
-        preferred_contract_type=cast(Optional[List[str]], user.preferred_contract_type),
-        preferred_salary_min=cast(Optional[int], user.preferred_salary_min),
-        preferred_salary_max=cast(Optional[int], user.preferred_salary_max),
-        cv_url=cast(Optional[str], user.cv_url),
-        created_at=cast(datetime, user.created_at),
-        updated_at=cast(datetime, user.updated_at),
-    )
+    # Construction de la réponse via l'ORM
+    response = UserProfileResponse.from_orm(user)
+    response.role = user_account.role.value if user_account.role else "candidate"
+    response.email = user_account.email
+    
+    return response
 
 
 

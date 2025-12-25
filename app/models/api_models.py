@@ -225,17 +225,8 @@ class UserProfileResponse(UserProfileBase):
     created_at: datetime
     updated_at: datetime
     user_id: UUID
-    
-    class Config:
-        from_attributes = True
-
-class UserProfileResponse(UserProfileBase):
-    """Modèle de réponse pour un profil utilisateur."""
-    id: UUID
-    created_at: datetime
-    updated_at: datetime
-    user_id: UUID
     role: Optional[str] = Field(None, description="Rôle utilisateur")
+    email: Optional[str] = Field(None, description="Email de l'utilisateur")
     
     class Config:
         from_attributes = True
