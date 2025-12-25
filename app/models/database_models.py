@@ -114,10 +114,11 @@ class SenegalAdminBoundary(Base):
     )
 
 class UserRole(str, enum.Enum):
-    ADMIN = "ADMIN"
-    RECRUITER = "RECRUITER"
-    CANDIDATE = "CANDIDATE"
-    GOVERNMENT = "GOVERNMENT"
+    ADMIN = "admin"
+    RECRUITER = "recruiter"
+    HR_MANAGER = "hr_manager"
+    CANDIDATE = "candidate"
+    GOVERNMENT = "government"
 
 class User(Base):
     __tablename__ = "users"

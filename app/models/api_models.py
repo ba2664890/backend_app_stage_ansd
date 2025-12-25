@@ -186,7 +186,7 @@ class UserCreate(BaseModel):
         if v is None:
             return v
         if isinstance(v, str):
-            return v.upper()
+            return v.lower()
         return v
 
 
