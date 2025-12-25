@@ -42,6 +42,7 @@ from .models.api_models import AdminBoundaryOut
 from .services.file_service import FileService
 
 from .utils.auth import create_access_token, get_current_user, verify_password
+from .utils.permissions import PermissionService
 from .utils.logger import setup_logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -134,10 +135,11 @@ async def lifespan(app: FastAPI):
             app.state.user_service = UserService()
             app.state.file_service = FileService()
             
-            # Tu peux ajouter ici des vérifications de santé des services
-            # ex: await app.state.job_service.health_check()
+            # Initialisation des rôles par défaut
+            logger.info("Étape 3.5 : Initialisation des rôles par défaut...")
+            PermissionService().initialize_default_roles(db)
             
-            logger.info("✅ Services initialisés")
+            logger.info("✅ Services et rôles initialisés")
             
         except Exception as e:
             logger.exception("❌ Erreur lors de l'init des services")

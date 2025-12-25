@@ -52,6 +52,7 @@ class RoleType(str, Enum):
     RECRUITER = "recruiter"
     HR_MANAGER = "hr_manager"
     CANDIDATE = "candidate"
+    GOVERNMENT = "government"
 
 
 # Définition des permissions par rôle
@@ -91,6 +92,12 @@ ROLE_PERMISSIONS = {
     ],
     RoleType.CANDIDATE: [
         Permission.VIEW_OWN_APPLICATIONS,
+    ],
+    RoleType.GOVERNMENT: [
+        Permission.VIEW_DASHBOARD,
+        Permission.VIEW_ANALYTICS,
+        Permission.VIEW_APPLICATIONS,
+        Permission.EXPORT_DATA,
     ],
 }
 

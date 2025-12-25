@@ -117,6 +117,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
     RECRUITER = "recruiter"
     CANDIDATE = "candidate"
+    GOVERNMENT = "government"
 
 class User(Base):
     __tablename__ = "users"

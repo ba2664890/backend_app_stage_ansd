@@ -169,7 +169,7 @@ class UserCreate(BaseModel):
     """Modèle pour créer un utilisateur."""
     email: EmailStr = Field(..., description="Email de l'utilisateur")
     password: str = Field(..., min_length=8, description="Mot de passe de l'utilisateur")
-    role: Optional[str] = Field(None, description="Rôle de l'utilisateur (admin, recruiter, candidate)")
+    role: Optional[str] = Field(None, description="Rôle de l'utilisateur (admin, recruiter, candidate, government)")
     
     # Champs optionnels pour le profil à la création
     first_name: Optional[str] = Field(None, description="Prénom")
