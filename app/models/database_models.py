@@ -458,13 +458,13 @@ class Role(Base):
     created_at = Column(DateTime, default=func.now())
     
     # Relations
-    user_roles = relationship("UserRole", back_populates="role", cascade="all, delete-orphan")
+    user_roles = relationship("UserAssignment", back_populates="role", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index('idx_roles_name', 'name'),
     )
 
-class UserRole(Base):
+class UserAssignment(Base):
     """Association utilisateur-rôle."""
     
     __tablename__ = "user_roles"

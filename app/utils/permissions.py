@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from ..database import get_db
-from ..models.database_models import User, Role, UserRole
+from ..models.database_models import User, Role, UserAssignment
 
 
 class Permission(str, Enum):
@@ -107,7 +107,7 @@ class PermissionService:
     
     def get_user_permissions(self, db: Session, user_id: UUID) -> List[str]:
         """Récupère toutes les permissions d'un utilisateur."""
-        user_roles = db.query(UserRole).filter(UserRole.user_id == user_id).all()
+        user_roles = db.query(UserAssignment).filter(UserAssignment.user_id == user_id).all()
         
         all_permissions = set()
         for user_role in user_roles:
@@ -137,7 +137,7 @@ class PermissionService:
         user_id: UUID,
         role_name: str,
         assigned_by: UUID
-    ) -> UserRole:
+    ) -> UserAssignment:
         """Assigne un rôle à un utilisateur."""
         # Vérifier que le rôle existe
         role = db.query(Role).filter(Role.name == role_name).first()
@@ -145,16 +145,16 @@ class PermissionService:
             raise ValueError(f"Rôle '{role_name}' non trouvé")
         
         # Vérifier si déjà assigné
-        existing = db.query(UserRole).filter(
-            UserRole.user_id == user_id,
-            UserRole.role_id == role.id
+        existing = db.query(UserAssignment).filter(
+            UserAssignment.user_id == user_id,
+            UserAssignment.role_id == role.id
         ).first()
         
         if existing:
             return existing
         
         # Créer l'assignation
-        user_role = UserRole(
+        user_role = UserAssignment(
             user_id=user_id,
             role_id=role.id,
             assigned_by=assigned_by
@@ -171,9 +171,9 @@ class PermissionService:
         if not role:
             return False
         
-        user_role = db.query(UserRole).filter(
-            UserRole.user_id == user_id,
-            UserRole.role_id == role.id
+        user_role = db.query(UserAssignment).filter(
+            UserAssignment.user_id == user_id,
+            UserAssignment.role_id == role.id
         ).first()
         
         if user_role:
@@ -254,8 +254,8 @@ def require_role(role: RoleType):
                 raise HTTPException(status_code=401, detail="Non authentifié")
             
             user_id = current_user.user_id
-            user_role = db.query(UserRole).join(Role).filter(
-                UserRole.user_id == user_id,
+            user_role = db.query(UserAssignment).join(Role).filter(
+                UserAssignment.user_id == user_id,
                 Role.name == role.value
             ).first()
             

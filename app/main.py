@@ -49,33 +49,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from uuid import UUID
 
+from .db.init_postgis import PostGISManager
+from .core.exceptions import AppError, setup_exception_handlers
 from app.services import job_service
 
 # Configuration du logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-"""
-Application FastAPI avec lifespan robuste.
-Gère PostGIS, création tables, et init services avec retry.
-"""
-
-import logging
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, HTTPException
-from sqlalchemy.orm import Session
-
-
-from .db.init_postgis import PostGISManager
-from .core.exceptions import AppError, setup_exception_handlers
-from .services.job_service import JobService
-from .services.analytics_service import AnalyticsService
-from .services.recommendation_service import RecommendationService
-from .services.user_service import UserService
-from .services.file_service import FileService
-
-logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
