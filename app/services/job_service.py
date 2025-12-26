@@ -281,7 +281,17 @@ class JobService:
                 "job_type": enrichie.job_type,
                 "confidence_score": enrichie.confidence_score,
                 "processed_at": enrichie.processed_at,
-            })
+        })
+        
+        # Identifier le type d'offre basé sur les mots clés si non présent
+        if not job_data.get("job_type"):
+            title_lower = brute.title.lower()
+            if any(k in title_lower for k in ['bourse', 'concours', 'examen', 'scolaire']):
+                job_data["job_type"] = "scholarship_exam"
+            elif any(k in title_lower for k in ['atelier', 'apprentissage', 'technique', 'artisan']):
+                job_data["job_type"] = "workshop_training"
+            else:
+                job_data["job_type"] = "employment"
         
         return JobOfferResponse.model_validate(job_data)
     
