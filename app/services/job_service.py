@@ -348,7 +348,7 @@ class JobService:
     def save_job(self, db: Session, user_id: UUID, job_id: Any):
         """
         Sauvegarde une offre pour un utilisateur.
-        Crée une 'coquille' enrichie si l'offre brute existe mais n'a pas encore été traitée.
+        L'ID peut être celui d'une offre brute ou enrichie.
         """
         try:
             # Conversion robuste de l'ID en UUID
@@ -360,32 +360,36 @@ class JobService:
             else:
                 job_uuid = job_id
 
-            # 1. Chercher l'offre enrichie
-            enrichie = db.query(OffreEmploiEnrichie).filter(
-                or_(
-                    OffreEmploiEnrichie.id == job_uuid,
-                    OffreEmploiEnrichie.offre_id == job_uuid
-                )
-            ).first()
-
-            # 2. Si non enrichie, vérifier si l'offre brute existe
-            if not enrichie:
-                brute = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_uuid).first()
-                if not brute:
-                    raise ValueError(f"Offre d'emploi {job_id} introuvable")
+            # 1. Chercher d'abord si c'est une offre brute
+            brute = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_uuid).first()
+            
+            if brute:
+                # C'est une offre brute, chercher son enrichissement
+                enrichie = db.query(OffreEmploiEnrichie).filter(
+                    OffreEmploiEnrichie.offre_id == brute.id
+                ).first()
                 
-                # Créer une coquille (skeleton) pour permettre la liaison
-                enrichie = OffreEmploiEnrichie(
-                    offre_id=brute.id,
-                    processed_at=None,
-                    confidence_score=0.0
-                )
-                db.add(enrichie)
-                db.commit()
-                db.refresh(enrichie)
-                logger.info(f"Skeleton enrichment créé pour l'offre {brute.id}")
+                if not enrichie:
+                    # Créer une coquille enrichie
+                    enrichie = OffreEmploiEnrichie(
+                        offre_id=brute.id,
+                        processed_at=None,
+                        confidence_score=0.0
+                    )
+                    db.add(enrichie)
+                    db.commit()
+                    db.refresh(enrichie)
+                    logger.info(f"Skeleton enrichment créé pour l'offre {brute.id}")
+            else:
+                # Chercher si c'est directement une offre enrichie
+                enrichie = db.query(OffreEmploiEnrichie).filter(
+                    OffreEmploiEnrichie.id == job_uuid
+                ).first()
+                
+                if not enrichie:
+                    raise ValueError(f"Offre d'emploi {job_id} introuvable dans la base de données")
 
-            # 3. Vérifier si déjà sauvegardé
+            # 2. Vérifier si déjà sauvegardé
             existing = db.query(UserSavedJob).filter(
                 UserSavedJob.user_id == user_id,
                 UserSavedJob.job_id == enrichie.id
@@ -394,7 +398,7 @@ class JobService:
             if existing:
                 return existing
 
-            # 4. Sauvegarder
+            # 3. Sauvegarder
             saved = UserSavedJob(user_id=user_id, job_id=enrichie.id)
             db.add(saved)
             db.commit()
