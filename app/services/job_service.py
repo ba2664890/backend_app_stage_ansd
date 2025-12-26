@@ -390,11 +390,10 @@ class JobService:
     def remove_saved_job(self, db: Session, user_id: UUID, job_id: UUID) -> bool:
         """
         Supprime une offre des favoris d'un utilisateur.
+        job_id est l'ID de l'offre brute.
         """
         saved = db.query(UserSavedJob).filter(
             UserSavedJob.user_id == user_id,
-            # On suppose que job_id est l'ID de l'offre enrichie (celui stocké)
-            # Ou on check les deux (brute/enrichie) ? Restons simple.
             UserSavedJob.job_id == job_id
         ).first()
 

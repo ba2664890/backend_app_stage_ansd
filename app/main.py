@@ -665,6 +665,30 @@ async def save_job(
         logger.error(f"Error saving job: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de l'ajout du favori")
 
+@app.delete("/api/v1/jobs/saved/{job_id}")
+async def remove_saved_job(
+    job_id: str,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user_id = user.user_id
+
+    try:
+        # Convertir l'ID en UUID
+        from uuid import UUID
+        job_uuid = UUID(job_id)
+        
+        success = job_servic.remove_saved_job(db, user_id, job_uuid)
+        if success:
+            return {"message": "Job removed from favorites"}
+        else:
+            raise HTTPException(status_code=404, detail="Job not found in favorites")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except Exception as e:
+        logger.error(f"Error removing saved job: {e}")
+        raise HTTPException(status_code=500, detail="Erreur lors de la suppression du favori")
+
 @app.get("/api/v1/jobs/stats/summary", response_model=Dict[str, Any])
 async def get_jobs_summary(db=Depends(get_db)):
     """Récupère un résumé des statistiques des offres d'emploi."""
