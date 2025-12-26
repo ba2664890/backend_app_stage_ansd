@@ -345,37 +345,67 @@ class JobService:
             raise
 
 
-    def save_job(self, db: Session, user_id: UUID, job_id: UUID):
-        # Trouver l'offre enrichie correspondant à l'offre brute
-        # Si job_id est déjà celui de l'offre enrichie, on vérifie juste
-        enrichie = db.query(OffreEmploiEnrichie).filter(
-            OffreEmploiEnrichie.id == job_id
-        ).first()
+    def save_job(self, db: Session, user_id: UUID, job_id: Any):
+        """
+        Sauvegarde une offre pour un utilisateur.
+        Crée une 'coquille' enrichie si l'offre brute existe mais n'a pas encore été traitée.
+        """
+        try:
+            # Conversion robuste de l'ID en UUID
+            if isinstance(job_id, str):
+                try:
+                    job_uuid = UUID(job_id)
+                except ValueError:
+                    raise ValueError(f"Format d'ID invalide : {job_id}")
+            else:
+                job_uuid = job_id
 
-        # Si pas trouvé dans enrichie, peut-être c'est l'ID brute
-        if not enrichie:
-             enrichie = db.query(OffreEmploiEnrichie).filter(
-                OffreEmploiEnrichie.offre_id == job_id
+            # 1. Chercher l'offre enrichie
+            enrichie = db.query(OffreEmploiEnrichie).filter(
+                or_(
+                    OffreEmploiEnrichie.id == job_uuid,
+                    OffreEmploiEnrichie.offre_id == job_uuid
+                )
             ).first()
 
-        if not enrichie:
-             # Fallback: Sauvegarder l'ID brute tel quel si la table le permet, ou erreur
-             # Pour l'instant on lève une erreur comme avant
-             raise ValueError(f"Job {job_id} n'a pas été enrichi ou introuvable, impossible de sauvegarder")
-        
-        # Vérifier doublon
-        existing = db.query(UserSavedJob).filter(
-            UserSavedJob.user_id == user_id,
-            UserSavedJob.job_id == enrichie.id
-        ).first()
-        if existing:
-            return existing
+            # 2. Si non enrichie, vérifier si l'offre brute existe
+            if not enrichie:
+                brute = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_uuid).first()
+                if not brute:
+                    raise ValueError(f"Offre d'emploi {job_id} introuvable")
+                
+                # Créer une coquille (skeleton) pour permettre la liaison
+                enrichie = OffreEmploiEnrichie(
+                    offre_id=brute.id,
+                    processed_at=None,
+                    confidence_score=0.0
+                )
+                db.add(enrichie)
+                db.commit()
+                db.refresh(enrichie)
+                logger.info(f"Skeleton enrichment créé pour l'offre {brute.id}")
 
-        saved = UserSavedJob(user_id=user_id, job_id=enrichie.id)
-        db.add(saved)
-        db.commit()
-        db.refresh(saved)
-        return saved
+            # 3. Vérifier si déjà sauvegardé
+            existing = db.query(UserSavedJob).filter(
+                UserSavedJob.user_id == user_id,
+                UserSavedJob.job_id == enrichie.id
+            ).first()
+            
+            if existing:
+                return existing
+
+            # 4. Sauvegarder
+            saved = UserSavedJob(user_id=user_id, job_id=enrichie.id)
+            db.add(saved)
+            db.commit()
+            db.refresh(saved)
+            return saved
+
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            logger.error(f"Erreur lors de la sauvegarde de l'offre: {e}", exc_info=True)
+            raise RuntimeError(f"Erreur interne lors de la sauvegarde : {str(e)}")
 
     def remove_saved_job(self, db: Session, user_id: UUID, job_id: UUID) -> bool:
         """

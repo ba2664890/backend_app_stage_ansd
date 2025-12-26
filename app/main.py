@@ -659,6 +659,8 @@ async def save_job(
     try:
         job_servic.save_job(db, user_id, job_id)
         return {"message": "Job saved successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error saving job: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de l'ajout du favori")

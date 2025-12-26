@@ -31,45 +31,66 @@ class ApplicationService:
     ) -> Application:
         """
         Crée une nouvelle candidature.
-        
-        Args:
-            db: Session de base de données
-            user_id: ID de l'utilisateur candidat
-            application_data: Données de la candidature
-            
-        Returns:
-            Application: La candidature créée
-            
-        Raises:
-            ValueError: Si l'offre n'existe pas ou si candidature déjà existante
+        Supporte les offres non encore enrichies en créant une coquille (skeleton).
         """
-        # Vérifier que l'offre existe
+        # 1. Chercher l'offre enrichie
         job = db.query(OffreEmploiEnrichie).filter(
             OffreEmploiEnrichie.id == application_data.job_id
         ).first()
         
+        # 2. Si non enrichie, chercher l'offre brute
         if not job:
-            raise ValueError(f"Offre d'emploi {application_data.job_id} non trouvée")
+            brute = db.query(OffreEmploiBrute).filter(
+                OffreEmploiBrute.id == application_data.job_id
+            ).first()
+            
+            if not brute:
+                raise ValueError(f"Offre d'emploi {application_data.job_id} non trouvée")
+            
+            # Créer une coquille (skeleton) pour permettre la candidature
+            job = OffreEmploiEnrichie(
+                offre_id=brute.id,
+                processed_at=None,
+                confidence_score=0.0
+            )
+            db.add(job)
+            db.commit()
+            db.refresh(job)
+            logger.info(f"Skeleton enrichment créé lors de la candidature pour l'offre {brute.id}")
+        else:
+            brute = job.offre_brute
+
+        # 3. Récupérer l'entreprise (via brute ou enrichie si ajoutée plus tard)
+        # Note: company_id semble manquer sur OffreEmploiBrute dans le modèle, 
+        # mais ApplicationService l'attendait. On vérifie si l'entreprise peut être trouvée via le nom.
+        # TODO: S'assurer que le modèle OffreEmploiBrute a bien company_id ou gérer via le nom
+        company_id = None
+        if hasattr(brute, 'company_id') and brute.company_id:
+            company_id = brute.company_id
+        else:
+            # Fallback : chercher l'entreprise par nom
+            from ..models.database_models import Company
+            company = db.query(Company).filter(Company.name == brute.company_name).first()
+            if company:
+                company_id = company.id
+            else:
+                # Créer une entreprise placeholder si nécessaire ? 
+                # Pour l'instant, on lève une erreur si pas d'ID
+                raise ValueError(f"L'entreprise '{brute.company_name}' n'est pas référencée dans le système")
         
-        # Récupérer l'entreprise via l'offre brute
-        if not job.offre_brute or not job.offre_brute.company_id:
-            raise ValueError("Cette offre n'est pas liée à une entreprise")
-        
-        company_id = job.offre_brute.company_id
-        
-        # Vérifier si candidature existe déjà
+        # 4. Vérifier si candidature existe déjà
         existing = db.query(Application).filter(
             Application.user_id == user_id,
-            Application.job_id == application_data.job_id
+            Application.job_id == job.id
         ).first()
         
         if existing:
             raise ValueError("Vous avez déjà postulé à cette offre")
         
-        # Créer la candidature
+        # 5. Créer la candidature
         application = Application(
             user_id=user_id,
-            job_id=application_data.job_id,
+            job_id=job.id,
             company_id=company_id,
             cover_letter=application_data.cover_letter,
             status="applied"
@@ -79,7 +100,7 @@ class ApplicationService:
         db.commit()
         db.refresh(application)
         
-        # Créer l'entrée d'historique
+        # 6. Créer l'entrée d'historique
         history = ApplicationStatusHistory(
             application_id=application.id,
             from_status=None,
@@ -89,7 +110,7 @@ class ApplicationService:
         db.add(history)
         db.commit()
         
-        logger.info(f"Candidature créée: User {user_id} → Job {application_data.job_id}")
+        logger.info(f"Candidature créée: User {user_id} → Job {job.id}")
         return application
     
     def get_application_by_id(self, db: Session, application_id: UUID) -> Optional[Application]:
