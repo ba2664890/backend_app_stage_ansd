@@ -806,7 +806,8 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
         phone=user_in.phone,
         location=user_in.location,
         current_title=user_in.current_title,
-        experience_years=user_in.experience_years
+        experience_years=user_in.experience_years,
+        category=user_in.category
     )
     db.add(profile)
     db.commit()

@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any, Generic, TypeVar
 from datetime import date, datetime
 from uuid import UUID
 
-from .database_models import UserRole
+from .database_models import UserRole, CandidateCategory
 
 # Modèles de base
 class BaseResponse(BaseModel):
@@ -180,6 +180,7 @@ class UserCreate(BaseModel):
     location: Optional[str] = Field(None, description="Localisation")
     current_title: Optional[str] = Field(None, description="Titre actuel du poste")
     experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
+    category: Optional[CandidateCategory] = Field(CandidateCategory.STUDENT_PRO, description="Catégorie de profil candidat")
 
     @validator('role', pre=True, always=True)
     def validate_role(cls, v):
@@ -215,6 +216,7 @@ class UserProfileBase(BaseModel):
     first_name: Optional[str] = Field(None, description="Prénom")
     last_name: Optional[str] = Field(None, description="Nom")
     location: Optional[str] = Field(None, description="Localisation")
+    category: Optional[CandidateCategory] = Field(CandidateCategory.STUDENT_PRO, description="Catégorie de profil candidat")
     current_title: Optional[str] = Field(None, description="Titre du poste actuel")
     experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
     education_level: Optional[str] = Field(None, description="Niveau d'éducation")

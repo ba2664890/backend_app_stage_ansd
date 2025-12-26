@@ -120,6 +120,11 @@ class UserRole(str, enum.Enum):
     CANDIDATE = "candidate"
     GOVERNMENT = "government"
 
+class CandidateCategory(str, enum.Enum):
+    PUPIL = "pupil"
+    STUDENT_PRO = "student_pro"
+    INFORMAL = "informal"
+
 class User(Base):
     __tablename__ = "users"
 
@@ -184,6 +189,7 @@ class UserProfile(Base):
     first_name = Column(String(100))
     last_name = Column(String(100))
     location = Column(String(255))
+    category = Column(SQLAlchemyEnum(CandidateCategory, name="candidate_category_enum", create_type=True), default=CandidateCategory.PROFESSIONAL)
     current_title = Column(String(255))
     experience_years = Column(Integer)
     education_level = Column(String(100))
