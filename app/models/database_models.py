@@ -189,7 +189,7 @@ class UserProfile(Base):
     first_name = Column(String(100))
     last_name = Column(String(100))
     location = Column(String(255))
-    category = Column(SQLAlchemyEnum(CandidateCategory, name="candidate_category_enum", create_type=True), default=CandidateCategory.PROFESSIONAL)
+    category = Column(SQLAlchemyEnum(CandidateCategory, name="candidate_category_enum", create_type=True), default=CandidateCategory.STUDENT_PRO)
     current_title = Column(String(255))
     experience_years = Column(Integer)
     education_level = Column(String(100))
