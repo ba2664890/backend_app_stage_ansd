@@ -33,13 +33,14 @@ class ApplicationService:
         Crée une nouvelle candidature.
         Supporte les offres non encore enrichies en créant une coquille (skeleton).
         """
-        # 1. Chercher l'offre enrichie
+        # 1. Chercher l'offre enrichie (via offre_id car le frontend envoie l'ID brute)
         job = db.query(OffreEmploiEnrichie).filter(
-            OffreEmploiEnrichie.id == application_data.job_id
+            OffreEmploiEnrichie.offre_id == application_data.job_id
         ).first()
         
         # 2. Si non enrichie, chercher l'offre brute
         if not job:
+            from ..models.database_models import OffreEmploiBrute
             brute = db.query(OffreEmploiBrute).filter(
                 OffreEmploiBrute.id == application_data.job_id
             ).first()
