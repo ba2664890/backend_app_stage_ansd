@@ -348,7 +348,7 @@ class JobService:
     def save_job(self, db: Session, user_id: UUID, job_id: Any):
         """
         Sauvegarde une offre pour un utilisateur.
-        L'ID peut être celui d'une offre brute ou enrichie.
+        Utilise directement l'ID de l'offre brute (plus stable).
         """
         try:
             # Conversion robuste de l'ID en UUID
@@ -360,46 +360,22 @@ class JobService:
             else:
                 job_uuid = job_id
 
-            # 1. Chercher d'abord si c'est une offre brute
+            # 1. Vérifier que l'offre brute existe
             brute = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_uuid).first()
-            
-            if brute:
-                # C'est une offre brute, chercher son enrichissement
-                enrichie = db.query(OffreEmploiEnrichie).filter(
-                    OffreEmploiEnrichie.offre_id == brute.id
-                ).first()
-                
-                if not enrichie:
-                    # Créer une coquille enrichie
-                    enrichie = OffreEmploiEnrichie(
-                        offre_id=brute.id,
-                        processed_at=None,
-                        confidence_score=0.0
-                    )
-                    db.add(enrichie)
-                    db.commit()
-                    db.refresh(enrichie)
-                    logger.info(f"Skeleton enrichment créé pour l'offre {brute.id}")
-            else:
-                # Chercher si c'est directement une offre enrichie
-                enrichie = db.query(OffreEmploiEnrichie).filter(
-                    OffreEmploiEnrichie.id == job_uuid
-                ).first()
-                
-                if not enrichie:
-                    raise ValueError(f"Offre d'emploi {job_id} introuvable dans la base de données")
+            if not brute:
+                raise ValueError(f"Offre d'emploi {job_id} introuvable dans la base de données")
 
             # 2. Vérifier si déjà sauvegardé
             existing = db.query(UserSavedJob).filter(
                 UserSavedJob.user_id == user_id,
-                UserSavedJob.job_id == enrichie.id
+                UserSavedJob.job_id == brute.id
             ).first()
             
             if existing:
                 return existing
 
             # 3. Sauvegarder
-            saved = UserSavedJob(user_id=user_id, job_id=enrichie.id)
+            saved = UserSavedJob(user_id=user_id, job_id=brute.id)
             db.add(saved)
             db.commit()
             db.refresh(saved)

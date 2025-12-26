@@ -51,6 +51,13 @@ class OffreEmploiBrute(Base):
         foreign_keys=[admin_boundary_id]
     )
 
+    saved_by_users = relationship(
+        "UserSavedJob",
+        back_populates="job",
+        cascade="all, delete-orphan",
+        lazy="dynamic"
+    )
+
 class OffreEmploiEnrichie(Base):
     __tablename__ = "offres_emploi_enrichies"
     
@@ -86,13 +93,6 @@ class OffreEmploiEnrichie(Base):
     
     # ✅ Colonne sans relation pour éviter l'ambigüité
     boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"), index=True)
-
-    saved_by_users = relationship(
-        "UserSavedJob",
-        back_populates="job",
-        cascade="all, delete-orphan",
-        lazy="dynamic"
-    )
 
 class SenegalAdminBoundary(Base):
     __tablename__ = "senegal_admin_boundaries"
@@ -556,10 +556,10 @@ class UserSavedJob(Base):
         nullable=False
     )
 
-    # Relation vers l'offre enrichie (UNIQUE, NORMALISÉE, COHÉRENTE)
+    # Relation vers l'offre brute (plus stable que l'enrichie)
     job_id = Column(
         UUID(as_uuid=True),
-        ForeignKey('offres_emploi_enrichies.id', ondelete="CASCADE"),
+        ForeignKey('offres_emploi_brutes.id', ondelete="CASCADE"),
         nullable=False
     )
 
@@ -571,7 +571,7 @@ class UserSavedJob(Base):
 
     # Relations correctes & cohérentes
     user = relationship("User", back_populates="saved_jobs")
-    job = relationship("OffreEmploiEnrichie", back_populates="saved_by_users")
+    job = relationship("OffreEmploiBrute", back_populates="saved_by_users")
 
     __table_args__ = (
         UniqueConstraint('user_id', 'job_id', name='uq_user_saved_job'),
