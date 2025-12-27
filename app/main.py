@@ -211,7 +211,7 @@ app.add_middleware(
 )
 
 # ==================== INCLUDE ROUTERS ====================
-from .routers import companies, recruiters, applications, assistant, skills, salary, notifications, exports, webhooks, users, map
+from .routers import companies, recruiters, applications, assistant, skills, salary, notifications, exports, webhooks, users, map, documents
 
 # Module 1: Companies & Recruiters
 app.include_router(companies.router)
@@ -236,6 +236,7 @@ app.include_router(exports.router)
 # Webhooks, Users & Map
 app.include_router(webhooks.router)
 app.include_router(users.router)
+app.include_router(documents.router)
 # app.include_router(map.router)
 
 

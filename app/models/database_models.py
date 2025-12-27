@@ -593,3 +593,26 @@ class UserSavedJob(Base):
         Index('idx_user_saved_jobs_job', 'job_id'),
         Index('idx_user_saved_jobs_created', 'created_at'),
     )
+
+class Document(Base):
+    """Modèle pour les documents des candidats (CV, diplômes, etc.)."""
+    
+    __tablename__ = "documents"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_type = Column(String(50), nullable=False) # 'application/pdf', 'image/jpeg', etc.
+    size = Column(String(50)) # Human readable size or bytes
+    category = Column(String(50), nullable=False) # 'cv', 'diploma', 'cert', 'other'
+    uploaded_at = Column(DateTime, default=func.now())
+    is_verified = Column(Boolean, default=False)
+    
+    # Relations
+    user = relationship("User", backref="documents")
+
+    __table_args__ = (
+        Index('idx_documents_user', 'user_id'),
+        Index('idx_documents_category', 'category'),
+    )
