@@ -210,11 +210,11 @@ class SalaryBenchmarkService:
         start_date = datetime.now() - timedelta(days=months * 30)
         
         offers = db.query(OffreEmploiEnrichie).join(
-            OffreEmploiEnrichie.offre_brute
+            OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
         ).filter(
             OffreEmploiEnrichie.extracted_job_category == job_category,
             OffreEmploiEnrichie.extracted_salary_min.isnot(None),
-            OffreEmploiEnrichie.offre_brute.has(posted_date__gte=start_date)
+            OffreEmploiBrute.posted_date >= start_date
         ).all()
         
         # Grouper par mois

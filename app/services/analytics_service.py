@@ -53,15 +53,15 @@ class AnalyticsService:
             # Top 5 secteurs avec cast des counts
             top_sectors = (
                 db.query(
-                    OffreEmploiEnrichie.secteur,
+                    OffreEmploiEnrichie.extracted_sector,
                     cast(func.count(OffreEmploiEnrichie.id), Float).label('count')
                 )
                 .join(
                     OffreEmploiBrute,
                     OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 )
-                .filter(OffreEmploiEnrichie.secteur.isnot(None))
-                .group_by(OffreEmploiEnrichie.secteur)
+                .filter(OffreEmploiEnrichie.extracted_sector.isnot(None))
+                .group_by(OffreEmploiEnrichie.extracted_sector)
                 .order_by(desc('count'))
                 .limit(5)
                 .all()
@@ -202,18 +202,18 @@ class AnalyticsService:
         try:
             # Requête optimisée avec CTE
             sectors_cte = db.query(
-                OffreEmploiEnrichie.secteur.label('sector'),
+                OffreEmploiEnrichie.extracted_sector.label('sector'),
                 func.count(OffreEmploiEnrichie.id).label('count'),
-                func.avg(OffreEmploiEnrichie.salaire_min).label('avg_min'),
-                func.avg(OffreEmploiEnrichie.salaire_max).label('avg_max')
+                func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_min'),
+                func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_max')
             ).join(
                 OffreEmploiBrute,
                 OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiEnrichie.secteur.isnot(None)
+                OffreEmploiEnrichie.extracted_sector.isnot(None)
             ).group_by(
-                OffreEmploiEnrichie.secteur
+                OffreEmploiEnrichie.extracted_sector
             ).cte()
             
             # Requête principale
@@ -258,14 +258,14 @@ class AnalyticsService:
                 
                 # Secteurs associés à cette compétence
                 related_sectors = db.query(
-                    OffreEmploiEnrichie.secteur
+                    OffreEmploiEnrichie.extracted_sector
                 ).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     OffreEmploiBrute.posted_date >= start_date,
                     OffreEmploiBrute.posted_date <= end_date,
                     OffreEmploiEnrichie.extracted_skills.any(skill.skill),
-                    OffreEmploiEnrichie.secteur.isnot(None)
+                    OffreEmploiEnrichie.extracted_sector.isnot(None)
                 ).distinct().limit(5).all()
                 
                 result.append({
@@ -356,12 +356,12 @@ class AnalyticsService:
             
             # Top secteurs
             top_sectors = db.query(
-                OffreEmploiEnrichie.secteur,
+                OffreEmploiEnrichie.extracted_sector,
                 func.count(OffreEmploiEnrichie.id).label('count')
             ).filter(
-                OffreEmploiEnrichie.secteur.isnot(None)
+                OffreEmploiEnrichie.extracted_sector.isnot(None)
             ).group_by(
-                OffreEmploiEnrichie.secteur
+                OffreEmploiEnrichie.extracted_sector
             ).order_by(desc('count')).limit(10).all()
             
             # Top compétences
@@ -497,12 +497,12 @@ class AnalyticsService:
                 
                 # Secteurs principaux pour cette localisation
                 top_sectors = db.query(
-                    OffreEmploiEnrichie.secteur
+                    OffreEmploiEnrichie.extracted_sector
                 ).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     func.trim(OffreEmploiBrute.location) == location.location,
-                    OffreEmploiEnrichie.secteur.isnot(None)
+                    OffreEmploiEnrichie.extracted_sector.isnot(None)
                 ).distinct().limit(5).all()
                 
                 result.append({
@@ -667,7 +667,7 @@ class AnalyticsService:
             
             # Récupération des secteurs avec leurs métiers
             sector_job_query = db.query(
-                OffreEmploiEnrichie.secteur,
+                OffreEmploiEnrichie.extracted_sector,
                 OffreEmploiEnrichie.extracted_job_title,
                 func.count(OffreEmploiEnrichie.id).label('job_count')
             ).join(
@@ -675,20 +675,20 @@ class AnalyticsService:
                 OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiEnrichie.secteur.isnot(None),
+                OffreEmploiEnrichie.extracted_sector.isnot(None),
                 OffreEmploiEnrichie.extracted_job_title.isnot(None)
             ).group_by(
-                OffreEmploiEnrichie.secteur,
+                OffreEmploiEnrichie.extracted_sector,
                 OffreEmploiEnrichie.extracted_job_title
             ).order_by(
-                OffreEmploiEnrichie.secteur,
+                OffreEmploiEnrichie.extracted_sector,
                 desc('job_count')
             ).all()
             
             # Construction de la hiérarchie
             hierarchy = {}
             for row in sector_job_query:
-                sector = row.secteur
+                sector = row.extracted_sector
                 job = row.extracted_job_title
                 
                 if sector not in hierarchy:
@@ -719,7 +719,7 @@ class AnalyticsService:
                         OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                     ).filter(
                         OffreEmploiBrute.posted_date.between(start_date, end_date),
-                        OffreEmploiEnrichie.secteur == sector,
+                        OffreEmploiEnrichie.extracted_sector == sector,
                         OffreEmploiEnrichie.extracted_job_title == job,
                         OffreEmploiEnrichie.extracted_skills.isnot(None)
                     ).group_by(
