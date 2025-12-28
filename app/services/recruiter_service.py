@@ -135,6 +135,8 @@ class RecruiterService:
             
         # Fallback registration
         from ..models.database_models import UserRole
+        from ..utils.permissions import PermissionService
+        
         user = db.query(User).filter(User.id == user_id).first()
         if user and user.role in [UserRole.RECRUITER, UserRole.HR_MANAGER, UserRole.ADMIN]:
             company = db.query(Company).first()
@@ -150,6 +152,14 @@ class RecruiterService:
                 role="admin"
             )
             db.add(recruiter)
+            
+            # S'assurer que le rôle est aussi assigné dans le système de permissions RBAC
+            try:
+                perm_service = PermissionService()
+                perm_service.assign_role(db, user_id, user.role.value, user_id)
+            except Exception as e:
+                logger.warning(f"Failed to auto-assign RBAC role for user {user_id}: {e}")
+                
             db.commit()
             db.refresh(recruiter)
             return recruiter

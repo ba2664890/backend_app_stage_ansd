@@ -89,6 +89,7 @@ ROLE_PERMISSIONS = {
         Permission.UPDATE_APPLICATION_STATUS,
         Permission.VIEW_COMPANY_ANALYTICS,
         Permission.USE_AI_ASSISTANT,
+        Permission.EXPORT_DATA,
     ],
     RoleType.CANDIDATE: [
         Permission.VIEW_OWN_APPLICATIONS,
@@ -107,12 +108,21 @@ class PermissionService:
     
     def get_user_permissions(self, db: Session, user_id: UUID) -> List[str]:
         """Récupère toutes les permissions d'un utilisateur."""
+        # 1. Chercher les permissions via les assignations de rôles (RBAC)
         user_roles = db.query(UserAssignment).filter(UserAssignment.user_id == user_id).all()
         
         all_permissions = set()
         for user_role in user_roles:
             if user_role.role and user_role.role.permissions:
                 all_permissions.update(user_role.role.permissions)
+        
+        # 2. Si aucune permission n'est trouvée, utiliser le rôle par défaut de l'utilisateur (Fallback)
+        if not all_permissions:
+            user = db.query(User).filter(User.id == user_id).first()
+            if user and user.role:
+                # Récupérer les permissions statiques définies dans ROLE_PERMISSIONS
+                static_permissions = ROLE_PERMISSIONS.get(user.role, [])
+                all_permissions.update([p.value for p in static_permissions])
         
         return list(all_permissions)
     

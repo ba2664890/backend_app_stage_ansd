@@ -61,22 +61,18 @@ class ApplicationService:
         else:
             brute = job.offre_brute
 
-        # 3. Récupérer l'entreprise (via brute ou enrichie si ajoutée plus tard)
-        # Note: company_id semble manquer sur OffreEmploiBrute dans le modèle, 
-        # mais ApplicationService l'attendait. On vérifie si l'entreprise peut être trouvée via le nom.
-        # TODO: S'assurer que le modèle OffreEmploiBrute a bien company_id ou gérer via le nom
+        # 3. Récupérer l'entreprise
         company_id = None
-        if hasattr(brute, 'company_id') and brute.company_id:
+        if brute.company_id:
             company_id = brute.company_id
         else:
-            # Fallback : chercher l'entreprise par nom
+            # Fallback : chercher l'entreprise par nom si l'ID n'est pas encore migré
             from ..models.database_models import Company
             company = db.query(Company).filter(Company.name == brute.company_name).first()
             if company:
                 company_id = company.id
             else:
-                # Créer une entreprise placeholder si nécessaire ? 
-                # Pour l'instant, on lève une erreur si pas d'ID
+                # Créer une entreprise par défaut ou lever une erreur
                 raise ValueError(f"L'entreprise '{brute.company_name}' n'est pas référencée dans le système")
         
         # 4. Vérifier si candidature existe déjà
