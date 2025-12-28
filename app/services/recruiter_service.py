@@ -124,6 +124,37 @@ class RecruiterService:
             Optional[Recruiter]: Le recruteur ou None si l'utilisateur n'est pas recruteur
         """
         return db.query(Recruiter).filter(Recruiter.user_id == user_id).first()
+
+    def get_or_create_recruiter(self, db: Session, user_id: UUID) -> Optional[Recruiter]:
+        """
+        Récupère le profil recruteur ou le crée si l'utilisateur a le rôle requis.
+        """
+        recruiter = self.get_recruiter_by_user(db, user_id)
+        if recruiter:
+            return recruiter
+            
+        # Fallback registration
+        from ..models.database_models import UserRole
+        user = db.query(User).filter(User.id == user_id).first()
+        if user and user.role in [UserRole.RECRUITER, UserRole.HR_MANAGER, UserRole.ADMIN]:
+            company = db.query(Company).first()
+            if not company:
+                company = Company(name="Entreprise par défaut", sector="Général")
+                db.add(company)
+                db.commit()
+                db.refresh(company)
+            
+            recruiter = Recruiter(
+                user_id=user_id,
+                company_id=company.id,
+                role="admin"
+            )
+            db.add(recruiter)
+            db.commit()
+            db.refresh(recruiter)
+            return recruiter
+            
+        return None
     
     def update_recruiter_role(
         self,

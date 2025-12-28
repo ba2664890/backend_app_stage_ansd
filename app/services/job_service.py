@@ -414,3 +414,65 @@ class JobService:
         db.commit()
         return True
 
+    def create_job(self, db: Session, job_data: Dict[str, Any], recruiter_id: UUID, company_id: UUID) -> JobOfferResponse:
+        """
+        Crée une nouvelle offre d'emploi postée par un recruteur.
+        """
+        try:
+            # 1. Créer l'offre brute
+            brute = OffreEmploiBrute(
+                spider_source="platform",
+                original_id=f"PLAT-{uuid.uuid4().hex[:8]}",
+                title=job_data.get("title"),
+                company_name=job_data.get("company_name"),
+                location=job_data.get("location"),
+                contract_type=job_data.get("contract_type"),
+                description=job_data.get("description"),
+                url=job_data.get("url", ""),
+                source="Internal Platform",
+                posted_date=datetime.utcnow(),
+                recruiter_id=recruiter_id,
+                company_id=company_id
+                # category et sector peuvent être extraits plus tard ou passés ici
+            )
+            db.add(brute)
+            db.flush() # Récupérer l'ID pour l'enrichissement
+
+            # 2. Créer l'enrichissement par défaut (pour que les jointures fonctionnent)
+            enrichie = OffreEmploiEnrichie(
+                offre_id=brute.id,
+                extracted_contract_type=brute.contract_type,
+                extracted_sector=job_data.get("sector"),
+                extracted_salary_min=job_data.get("min_salary"),
+                extracted_salary_max=job_data.get("max_salary"),
+                extracted_skills=job_data.get("skills", []),
+                confidence_score=1.0, # Donnée manuelle = 100% confiance
+                processed_at=datetime.utcnow()
+            )
+            db.add(enrichie)
+            db.commit()
+            db.refresh(brute)
+            
+            return self._create_job_response(brute, enrichie)
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error creating job: {e}")
+            raise
+
+    def get_recruiter_jobs(self, db: Session, recruiter_id: UUID) -> List[JobOfferResponse]:
+        """
+        Récupère toutes les offres postées par un recruteur spécifique.
+        """
+        try:
+            results = self._get_base_query(db).filter(
+                OffreEmploiBrute.recruiter_id == recruiter_id
+            ).order_by(desc(OffreEmploiBrute.posted_date)).all()
+            
+            return [
+                self._create_job_response(brute, enrichie) 
+                for brute, enrichie in results
+            ]
+        except Exception as e:
+            logger.error(f"Error fetching recruiter jobs: {e}")
+            raise
+

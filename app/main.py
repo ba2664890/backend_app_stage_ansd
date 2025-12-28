@@ -35,12 +35,14 @@ from .models.api_models import (
 )
 
 from .services.job_service import JobService
+from .models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, RecruiterCreate
 from .services.analytics_service import AnalyticsService
 from .services.recommendation_service import RecommendationService
 from .services.user_service import UserService
 from .services.admin_boundary import AdminBoundaryService, CarteService
 from .models.api_models import AdminBoundaryOut
 from .services.file_service import FileService
+from .services.recruiter_service import RecruiterService
 
 from .utils.auth import create_access_token, get_current_user, verify_password
 from .utils.permissions import PermissionService
@@ -116,6 +118,7 @@ async def lifespan(app: FastAPI):
             app.state.recommendation_service = RecommendationService()
             app.state.user_service = UserService()
             app.state.file_service = FileService()
+            app.state.recruiter_service = RecruiterService()
             
             # Initialisation des rôles par défaut
             logger.info("Étape 3.5 : Initialisation des rôles par défaut...")
@@ -211,7 +214,7 @@ app.add_middleware(
 )
 
 # ==================== INCLUDE ROUTERS ====================
-from .routers import companies, recruiters, applications, assistant, skills, salary, notifications, exports, webhooks, users, map, documents
+from .routers import companies, recruiters, applications, assistant, skills, salary, notifications, exports, webhooks, users, map, documents, government
 
 # Module 1: Companies & Recruiters
 app.include_router(companies.router)
@@ -233,10 +236,11 @@ app.include_router(assistant.router)
 app.include_router(notifications.router)
 app.include_router(exports.router)
 
-# Webhooks, Users & Map
+# Webhooks, Users, Map & Government
 app.include_router(webhooks.router)
 app.include_router(users.router)
 app.include_router(documents.router)
+app.include_router(government.router)
 # app.include_router(map.router)
 
 
@@ -622,6 +626,46 @@ async def get_jobs(
     except Exception as e:
         logger.error(f"Error fetching jobs: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la récupération des offres")
+
+
+@app.post("/api/v1/jobs", response_model=JobOfferResponse)
+async def create_job(
+    job_data: Dict[str, Any],
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Crée une nouvelle offre d'emploi (Recruteur uniquement)."""
+    try:
+        # Utiliser le service pour récupérer ou créer le profil recruteur
+        recruiter = app.state.recruiter_service.get_or_create_recruiter(db, user.user_id)
+        
+        if not recruiter:
+            raise HTTPException(status_code=403, detail="Accès réservé aux recruteurs")
+
+        result = app.state.job_service.create_job(db, job_data, recruiter.id, recruiter.company_id)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/jobs/my", response_model=List[JobOfferResponse])
+async def get_my_jobs(
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Récupère les offres postées par le recruteur actuel."""
+    try:
+        recruiter = app.state.recruiter_service.get_or_create_recruiter(db, user.user_id)
+        if not recruiter:
+            return []
+
+        return app.state.job_service.get_recruiter_jobs(db, recruiter.id)
+    except Exception as e:
+        logger.error(f"Error fetching my jobs: {e}")
+        raise HTTPException(status_code=500, detail="Erreur lors de la récupération de vos offres")
 
 
 job_servic = JobService()

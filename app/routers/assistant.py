@@ -38,7 +38,7 @@ async def chat_with_assistant(
     try:
         # Vérifier que l'utilisateur est un recruteur
         user_id = current_user.user_id
-        recruiter = recruiter_service.get_recruiter_by_user(db, user_id)
+        recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
         
         if not recruiter:
             raise HTTPException(
@@ -67,7 +67,7 @@ async def get_chat_history(
     **Permissions**: Recruteur
     """
     user_id = current_user.user_id
-    recruiter = recruiter_service.get_recruiter_by_user(db, user_id)
+    recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
     
     if not recruiter:
         raise HTTPException(status_code=403, detail="Recruteur uniquement")
@@ -89,7 +89,7 @@ async def generate_job_description(
     """
     try:
         user_id = current_user.user_id
-        recruiter = recruiter_service.get_recruiter_by_user(db, user_id)
+        recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
         
         if not recruiter:
             raise HTTPException(status_code=403, detail="Recruteur uniquement")
@@ -117,7 +117,7 @@ async def analyze_candidate(
     **Permissions**: Recruteur
     """
     user_id = current_user.user_id
-    recruiter = recruiter_service.get_recruiter_by_user(db, user_id)
+    recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
     
     if not recruiter:
         raise HTTPException(status_code=403, detail="Recruteur uniquement")

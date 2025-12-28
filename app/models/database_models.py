@@ -42,7 +42,12 @@ class OffreEmploiBrute(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
+    # Liens pour les offres postées via la plateforme
+    recruiter_id = Column(UUID(as_uuid=True), ForeignKey("recruiters.id", ondelete="SET NULL"), nullable=True)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
+    
     # Relations CORRIGÉES
+    recruiter = relationship("Recruiter", backref="posted_jobs")
     enrichie = relationship("OffreEmploiEnrichie", back_populates="offre_brute", uselist=False)
     admin_boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"))
     admin_boundary = relationship(

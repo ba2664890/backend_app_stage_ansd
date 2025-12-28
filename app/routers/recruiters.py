@@ -47,7 +47,7 @@ async def get_my_recruiter_profile(
 ):
     # ... (inchangé)
     user_id = current_user.user_id
-    recruiter = recruiter_service.get_recruiter_by_user(db, user_id)
+    recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
     if not recruiter:
         raise HTTPException(status_code=404, detail="Vous n'êtes pas enregistré comme recruteur")
     return recruiter
