@@ -75,6 +75,59 @@ async def get_my_applications(
     )
 
 
+# Statistique Routes (Static paths must come before variable paths like /{application_id})
+
+@router.get("/stats", response_model=ApplicationStatsResponse)
+async def get_application_stats_generic(
+    company_id: Optional[UUID] = Query(None),
+    job_id: Optional[UUID] = Query(None),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Endpoint unique pour les stats (supporte company_id ou job_id).
+    """
+    if company_id:
+        stats = application_service.get_application_stats(db, company_id=company_id)
+        return ApplicationStatsResponse(**stats)
+    if job_id:
+        stats = application_service.get_application_stats(db, job_id=job_id)
+        return ApplicationStatsResponse(**stats)
+    raise HTTPException(status_code=400, detail="company_id ou job_id requis")
+
+
+@router.get("/stats/company/{company_id}", response_model=ApplicationStatsResponse)
+async def get_company_application_stats(
+    company_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Statistiques des candidatures pour une entreprise.
+    
+    **Permissions**: Recruteur de l'entreprise
+    """
+    stats = application_service.get_application_stats(db, company_id=company_id)
+    return ApplicationStatsResponse(**stats)
+
+
+@router.get("/stats/job/{job_id}", response_model=ApplicationStatsResponse)
+async def get_job_application_stats(
+    job_id: UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Statistiques des candidatures pour une offre.
+    
+    **Permissions**: Recruteur de l'entreprise
+    """
+    stats = application_service.get_application_stats(db, job_id=job_id)
+    return ApplicationStatsResponse(**stats)
+
+
+# Instance Routes (Variable paths)
+
 @router.get("/{application_id}", response_model=ApplicationResponse)
 async def get_application(
     application_id: UUID,
@@ -204,24 +257,6 @@ async def get_company_applications(
     )
 
 
-@router.get("/stats", response_model=ApplicationStatsResponse)
-async def get_application_stats_generic(
-    company_id: Optional[UUID] = Query(None),
-    job_id: Optional[UUID] = Query(None),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """
-    Endpoint unique pour les stats (supporte company_id ou job_id).
-    """
-    if company_id:
-        stats = application_service.get_application_stats(db, company_id=company_id)
-        return ApplicationStatsResponse(**stats)
-    if job_id:
-        stats = application_service.get_application_stats(db, job_id=job_id)
-        return ApplicationStatsResponse(**stats)
-    raise HTTPException(status_code=400, detail="company_id ou job_id requis")
-
 @router.get("/job/{job_id}/all", response_model=PaginatedResponse[ApplicationResponse])
 async def get_job_applications(
     job_id: UUID,
@@ -249,33 +284,3 @@ async def get_job_applications(
         has_next=page < pages,
         has_prev=page > 1
     )
-
-
-@router.get("/stats/company/{company_id}", response_model=ApplicationStatsResponse)
-async def get_company_application_stats(
-    company_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """
-    Statistiques des candidatures pour une entreprise.
-    
-    **Permissions**: Recruteur de l'entreprise
-    """
-    stats = application_service.get_application_stats(db, company_id=company_id)
-    return ApplicationStatsResponse(**stats)
-
-
-@router.get("/stats/job/{job_id}", response_model=ApplicationStatsResponse)
-async def get_job_application_stats(
-    job_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """
-    Statistiques des candidatures pour une offre.
-    
-    **Permissions**: Recruteur de l'entreprise
-    """
-    stats = application_service.get_application_stats(db, job_id=job_id)
-    return ApplicationStatsResponse(**stats)

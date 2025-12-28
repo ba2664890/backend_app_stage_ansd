@@ -392,6 +392,7 @@ class Application(Base):
     cover_letter = Column(Text)
     notes = Column(Text)  # Notes internes RH
     rating = Column(Integer)  # 1-5 rating by recruiter
+    match_score = Column(Float)  # % de matching calculé par l'IA
     
     # Timestamps
     applied_at = Column(DateTime, default=func.now())

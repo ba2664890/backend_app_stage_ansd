@@ -491,6 +491,10 @@ class ApplicationStatusHistoryResponse(BaseModel):
     comment: Optional[str]
     created_at: datetime
     
+    # Extra fields for dashboard
+    candidate_name: Optional[str] = None
+    action_label: Optional[str] = None
+    
     class Config:
         from_attributes = True
 
@@ -498,9 +502,11 @@ class ApplicationStatsResponse(BaseModel):
     """Statistiques des candidatures."""
     total: int
     by_status: Dict[str, int]
-    avg_time_to_review: Optional[float]  # en heures
-    avg_time_to_hire: Optional[float]  # en jours
-    conversion_rate: Optional[float]  # % applied → hired
+    avg_time_to_review: Optional[float] = None  # en heures
+    avg_time_to_hire: Optional[float] = None  # en jours
+    conversion_rate: Optional[float] = None  # % applied → hired
+    avg_match_score: Optional[float] = None  # % moyen de matching
+    recent_activities: List[ApplicationStatusHistoryResponse] = []
 
 # ==================== MODULE 9: AI ASSISTANT (CHAT RH) ====================
 

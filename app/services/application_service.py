@@ -230,7 +230,7 @@ class ApplicationService:
         
         if notes_data.rating is not None:
             application.rating = notes_data.rating
-        
+            
         db.commit()
         db.refresh(application)
         
@@ -250,7 +250,8 @@ class ApplicationService:
         self,
         db: Session,
         company_id: Optional[UUID] = None,
-        job_id: Optional[UUID] = None
+        job_id: Optional[UUID] = None,
+        include_history: bool = True
     ) -> Dict:
         """
         Calcule des statistiques sur les candidatures.
@@ -296,11 +297,53 @@ class ApplicationService:
         if hired_apps:
             hire_times = [
                 (app.decision_date - app.applied_at).total_seconds() / (3600 * 24)
-                for app in hired_apps if app.decision_date
+                for app in hired_apps if app.decision_date and app.applied_at
             ]
             avg_time_to_hire = sum(hire_times) / len(hire_times) if hire_times else None
         else:
             avg_time_to_hire = None
+        
+        # Match Score Moyen
+        avg_match_score = query.with_entities(func.avg(Application.match_score)).scalar()
+        
+        # Activités récentes
+        recent_activities = []
+        if include_history:
+            history_query = db.query(ApplicationStatusHistory).join(Application)
+            if company_id:
+                history_query = history_query.filter(Application.company_id == company_id)
+            if job_id:
+                history_query = history_query.filter(Application.job_id == job_id)
+            
+            activities = history_query.order_by(ApplicationStatusHistory.created_at.desc()).limit(5).all()
+            
+            status_labels = {
+                "applied": "Candidature reçue",
+                "shortlisted": "Profil présélectionné",
+                "interview_scheduled": "Entretien planifié",
+                "interview_completed": "Entretien réalisé",
+                "offer_made": "Offre envoyée",
+                "hired": "Candidat recruté",
+                "rejected": "Candidature refusée",
+                "withdrawn": "Candidature retirée"
+            }
+            
+            for act in activities:
+                # Récupérer l'utilisateur (candidat) lié à la candidature
+                candidate = act.application.user
+                candidate_name = f"{candidate.first_name} {candidate.last_name}" if candidate else "Candidat"
+                
+                recent_activities.append({
+                    "id": act.id,
+                    "application_id": act.application_id,
+                    "from_status": act.from_status,
+                    "to_status": act.to_status,
+                    "changed_by": act.changed_by,
+                    "comment": act.comment,
+                    "created_at": act.created_at,
+                    "candidate_name": candidate_name,
+                    "action_label": status_labels.get(act.to_status, act.to_status)
+                })
         
         # Taux de conversion
         hired_count = by_status.get("hired", 0)
@@ -311,7 +354,9 @@ class ApplicationService:
             "by_status": by_status,
             "avg_time_to_review": avg_time_to_review,
             "avg_time_to_hire": avg_time_to_hire,
-            "conversion_rate": conversion_rate
+            "conversion_rate": conversion_rate,
+            "avg_match_score": avg_match_score,
+            "recent_activities": recent_activities
         }
     
     def withdraw_application(
