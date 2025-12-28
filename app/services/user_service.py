@@ -306,3 +306,35 @@ class UserService:
             logger.error(f"Erreur suppression compte {user_id}: {e}")
             db.rollback()
             raise
+
+    def search_users(
+        self, 
+        db: Session, 
+        role: Optional[str] = None, 
+        search: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 20
+    ) -> tuple[list[User], int]:
+        """
+        Recherche des utilisateurs avec filtres.
+        """
+        try:
+            query = db.query(User)
+            
+            if role:
+                query = query.filter(User.role == role)
+            
+            if search:
+                query = query.filter(or_(
+                    User.email.ilike(f"%{search}%"),
+                    User.first_name.ilike(f"%{search}%"),
+                    User.last_name.ilike(f"%{search}%")
+                ))
+            
+            total = query.count()
+            users = query.offset(skip).limit(limit).all()
+            
+            return users, total
+        except Exception as e:
+            logger.error(f"Erreur lors de la recherche utilisateurs: {e}")
+            raise

@@ -26,6 +26,15 @@ class JobOfferBase(BaseModel):
     posted_date: Optional[datetime] = Field(None, description="Date de publication")
     url: Optional[str] = Field(None, description="URL de l'offre")
     source: Optional[str] = Field(None, description="Source de l'offre")
+    
+    # Nouveaux champs pour la publication
+    education_level: Optional[str] = Field(None, description="Niveau d'études requis")
+    nb_positions: Optional[int] = Field(1, description="Nombre de postes ouverts")
+    expiration_date: Optional[datetime] = Field(None, description="Date d'expiration de l'offre")
+    remote_type: Optional[str] = Field(None, description="Type de télétravail (Onsite, Hybrid, Remote)")
+    is_urgent: Optional[bool] = Field(False, description="Marquer comme urgent")
+    languages: Optional[List[str]] = Field(None, description="Langues requises")
+    benefits: Optional[List[str]] = Field(None, description="Avantages proposés")
 
 
 class JobOfferResponse(JobOfferBase):

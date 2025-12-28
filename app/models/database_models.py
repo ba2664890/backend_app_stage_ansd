@@ -39,6 +39,13 @@ class OffreEmploiBrute(Base):
     education_level = Column(String(255))
     nb_positions = Column(Integer, default=1)
     expiration_date = Column(DateTime)
+    
+    # Nouveaux champs pour la plateforme
+    remote_type = Column(String(50)) # Onsite, Hybrid, Remote
+    is_urgent = Column(Boolean, default=False)
+    languages = Column(ARRAY(String))
+    benefits = Column(ARRAY(String))
+    
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     

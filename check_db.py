@@ -1,22 +1,24 @@
-from app.database import SessionLocal, engine
-from sqlalchemy import text
-import logging
+import os
+from sqlalchemy import create_engine, text
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+DATABASE_URL = "postgresql://neondb_owner:npg_dMZCO35gNoeP@ep-long-resonance-a4y4jpe4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
-def check():
+engine = create_engine(DATABASE_URL)
+
+def check_and_fix():
+    with engine.connect() as conn:
+        print("Checking for match_score in applications table...")
+        result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='applications' AND column_name='match_score'"))
+        if not result.fetchone():
+            print("Column match_score missing. Adding it...")
+            conn.execute(text("ALTER TABLE applications ADD COLUMN match_score FLOAT"))
+            conn.commit()
+            print("Column match_score added successfully.")
+        else:
+            print("Column match_score already exists.")
+
+if __name__ == "__main__":
     try:
-        with engine.connect() as connection:
-            result = connection.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'offres_emploi_brutes';"))
-            columns = [row[0] for row in result]
-            logger.info(f"Columns in offres_emploi_brutes: {columns}")
-            
-            result = connection.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'user_saved_jobs';"))
-            columns = [row[0] for row in result]
-            logger.info(f"Columns in user_saved_jobs: {columns}")
+        check_and_fix()
     except Exception as e:
-        logger.error(f"Error: {e}")
-
-if __name__ == '__main__':
-    check()
+        print(f"Error: {e}")

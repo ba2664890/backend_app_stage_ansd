@@ -135,7 +135,7 @@ class ApplicationService:
         skip: int = 0,
         limit: int = 50
     ) -> tuple[List[Application], int]:
-        """Récupère toutes les candidatures d'une entreprise."""
+        """Récupère toutes les candidatures d'une entreprise avec détails."""
         query = db.query(Application).filter(Application.company_id == company_id)
         
         if status:
@@ -143,6 +143,18 @@ class ApplicationService:
         
         total = query.count()
         applications = query.order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
+        
+        # Enriches applications with basic details if needed (or rely on relationship loading)
+        # However, for ApplicationWithDetailsResponse, we need specific fields.
+        # Ensure relationships are loaded
+        for app in applications:
+            if app.user:
+                app.user_name = f"{app.user.first_name} {app.user.last_name}"
+                app.user_email = app.user.email
+            if app.job and app.job.offre_brute:
+                app.job_title = app.job.offre_brute.title
+                app.company_name = app.job.offre_brute.company_name
+
         return applications, total
     
     def get_job_applications(
@@ -152,10 +164,19 @@ class ApplicationService:
         skip: int = 0,
         limit: int = 100
     ) -> tuple[List[Application], int]:
-        """Récupère toutes les candidatures pour une offre."""
+        """Récupère toutes les candidatures pour une offre avec détails."""
         query = db.query(Application).filter(Application.job_id == job_id)
         total = query.count()
         applications = query.order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
+        
+        for app in applications:
+            if app.user:
+                app.user_name = f"{app.user.first_name or ''} {app.user.last_name or ''}".strip() or "Candidat"
+                app.user_email = app.user.email
+            if app.job and app.job.offre_brute:
+                app.job_title = app.job.offre_brute.title
+                app.company_name = app.job.offre_brute.company_name
+                
         return applications, total
     
     def update_status(

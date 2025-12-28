@@ -227,7 +227,7 @@ async def withdraw_application(
 
 # Routes pour les entreprises/recruteurs
 
-@router.get("/company/{company_id}", response_model=PaginatedResponse[ApplicationResponse])
+@router.get("/company/{company_id}", response_model=PaginatedResponse[ApplicationWithDetailsResponse])
 async def get_company_applications(
     company_id: UUID,
     status: Optional[str] = Query(None, description="Filtrer par statut"),
@@ -257,7 +257,7 @@ async def get_company_applications(
     )
 
 
-@router.get("/job/{job_id}/all", response_model=PaginatedResponse[ApplicationResponse])
+@router.get("/job/{job_id}/all", response_model=PaginatedResponse[ApplicationWithDetailsResponse])
 async def get_job_applications(
     job_id: UUID,
     skip: int = Query(0, ge=0),

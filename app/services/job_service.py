@@ -262,6 +262,13 @@ class JobService:
             "url": brute.url,
             "source": brute.source,
             "created_at": brute.created_at,
+            "education_level": brute.education_level,
+            "nb_positions": brute.nb_positions,
+            "expiration_date": brute.expiration_date,
+            "remote_type": brute.remote_type,
+            "is_urgent": brute.is_urgent,
+            "languages": brute.languages or [],
+            "benefits": brute.benefits or []
         }
         
         # Ajouter les données enrichies si disponibles
@@ -432,8 +439,16 @@ class JobService:
                 source="Internal Platform",
                 posted_date=datetime.utcnow(),
                 recruiter_id=recruiter_id,
-                company_id=company_id
-                # category et sector peuvent être extraits plus tard ou passés ici
+                company_id=company_id,
+                
+                # Nouveaux champs
+                education_level=job_data.get("education_level"),
+                nb_positions=job_data.get("nb_positions", 1),
+                expiration_date=datetime.fromisoformat(job_data.get("expiration_date")) if job_data.get("expiration_date") else None,
+                remote_type=job_data.get("remote_type"),
+                is_urgent=job_data.get("is_urgent", False),
+                languages=job_data.get("languages", []),
+                benefits=job_data.get("benefits", [])
             )
             db.add(brute)
             db.flush() # Récupérer l'ID pour l'enrichissement
