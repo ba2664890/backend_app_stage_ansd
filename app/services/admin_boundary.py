@@ -266,7 +266,7 @@ class AdminBoundaryService:
 
 import logging
 import json
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -445,3 +445,26 @@ class CarteService:
             total_boundaries=len(features),
             total_offers=total_offers,
         )
+
+    @with_network_retry
+    def get_locations_list(
+        self,
+        db: Session,
+        level: AdminLevel,
+        parent_name: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Récupère une liste légère des lieux (pour les dropdowns).
+        """
+        self.admin_service.postgis_manager.ensure_postgis(db)
+
+        query = db.query(SenegalAdminBoundary.id, SenegalAdminBoundary.name).filter(
+            SenegalAdminBoundary.level == level.value
+        )
+
+        if parent_name:
+             query = query.filter(
+                func.lower(SenegalAdminBoundary.parent_name) == func.lower(parent_name)
+            )
+            
+        return [{"id": r.id, "name": r.name} for r in query.all()]
