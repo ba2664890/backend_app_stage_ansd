@@ -35,7 +35,7 @@ from .models.api_models import (
 )
 
 from .services.job_service import JobService
-from .models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, RecruiterCreate
+from .models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, RecruiterCreate, JobCreate
 from .services.analytics_service import AnalyticsService
 from .services.recommendation_service import RecommendationService
 from .services.user_service import UserService
