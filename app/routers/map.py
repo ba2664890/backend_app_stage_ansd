@@ -54,3 +54,14 @@ async def get_locations(
     carte_service = CarteService(admin_service)
     
     return carte_service.get_locations_list(db, level=admin_level, parent_name=parent_name)
+
+@router.get("/insights", response_model=dict)
+async def get_map_insights(db: Session = Depends(get_db)):
+    """
+    Récupère les insights IA et les alertes de pénurie.
+    """
+    admin_service = AdminBoundaryService()
+    carte_service = CarteService(admin_service)
+    
+    return carte_service.get_map_insights(db)
+

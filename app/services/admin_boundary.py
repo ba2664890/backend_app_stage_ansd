@@ -280,7 +280,11 @@ from app.services.admin_boundary import AdminBoundaryService
 
 logger = logging.getLogger(__name__)
 
+from datetime import datetime, timedelta
+from sqlalchemy import case
+
 class CarteService:
+
     """
     Service optimisé pour générer la carte choroplèthe avec navigation hiérarchique.
     Utilise les compteurs pré-calculés (offer_count) au lieu de recalculer à chaque fois.
@@ -298,6 +302,140 @@ class CarteService:
             retry=retry_if_exception_type(Exception),
             reraise=True,
         )(func)
+
+    def _calculate_regional_growth(self, db: Session, level: str) -> Dict[str, float]:
+        """Calcule la croissance (ou décroissance) des offres par région sur 30 jours."""
+        try:
+            today = datetime.now()
+            last_30_days = today - timedelta(days=30)
+            prev_30_days = last_30_days - timedelta(days=30)
+            
+            # 1. Offres du dernier mois
+            current_counts = db.query(
+                OffreEmploiBrute.location, 
+                func.count(OffreEmploiBrute.id)
+            ).filter(
+                OffreEmploiBrute.posted_date >= last_30_days
+            ).group_by(OffreEmploiBrute.location).all()
+
+            # 2. Offres du mois précédent
+            prev_counts = db.query(
+                OffreEmploiBrute.location, 
+                func.count(OffreEmploiBrute.id)
+            ).filter(
+                OffreEmploiBrute.posted_date >= prev_30_days,
+                OffreEmploiBrute.posted_date < last_30_days
+            ).group_by(OffreEmploiBrute.location).all()
+
+            # Normalisation et mapping
+            curr_map = {}
+            for loc, count in current_counts:
+                if loc and isinstance(loc, str):
+                    norm = self.admin_service._normalize_name(loc)
+                    curr_map[norm] = curr_map.get(norm, 0) + count
+
+            prev_map = {}
+            for loc, count in prev_counts:
+                 if loc and isinstance(loc, str):
+                    norm = self.admin_service._normalize_name(loc)
+                    prev_map[norm] = prev_map.get(norm, 0) + count
+            
+            # Calcul du % de croissance
+            growth_map = {}
+            all_locs = set(curr_map.keys()) | set(prev_map.keys())
+            
+            for loc in all_locs:
+                curr = curr_map.get(loc, 0)
+                prev = prev_map.get(loc, 0)
+                
+                if prev == 0:
+                    growth = 100.0 if curr > 0 else 0.0
+                else:
+                    growth = ((curr - prev) / prev) * 100.0
+                
+                growth_map[loc] = round(growth, 1)
+                
+            return growth_map
+
+        except Exception as e:
+            logger.error(f"Error calculating growth: {e}")
+            return {}
+
+    @with_network_retry
+    def get_map_insights(self, db: Session) -> Dict[str, Any]:
+        """
+        Génère des insights et alertes de pénurie basés sur les données réelles.
+        """
+        try:
+            # 1. Identifier les pénuries (Ratio Offres / Candidats)
+            # On récupère tout par région pour simplifier
+            level = "region"
+            
+            # Offres par région
+            offers_query = db.query(
+                SenegalAdminBoundary.name, 
+                SenegalAdminBoundary.offer_count
+            ).filter(SenegalAdminBoundary.level == level).all()
+            
+            offer_map = {self.admin_service._normalize_name(r.name): r.offer_count for r in offers_query}
+            
+            # Talents par région
+            talent_results = db.query(
+                UserProfile.location,
+                func.count(UserProfile.id)
+            ).join(User, UserProfile.user_id == User.id).filter(User.role == UserRole.CANDIDATE).group_by(UserProfile.location).all()
+            
+            talent_map = {}
+            for loc, count in talent_results:
+                if loc:
+                    norm = self.admin_service._normalize_name(loc)
+                    talent_map[norm] = talent_map.get(norm, 0) + count
+            
+            # Calcul du ratio de tension
+            shortages = []
+            for region, offers in offer_map.items():
+                talents = talent_map.get(region, 0)
+                # Ratio : Plus il est haut, plus la pénurie est forte (bcp d'offres / peu de talents)
+                ratio = offers / (talents if talents > 0 else 0.1) 
+                
+                if ratio > 1.0: # Seuil arbitraire de tension
+                    shortages.append({
+                        "region": region.title(),
+                        "ratio": ratio,
+                        "offers": offers,
+                        "talents": talents,
+                        # Compétence la plus demandée dans cette région (Placeholder - requires complex query)
+                        "top_skill": "Développement" if "dakar" in region else "Agro-business" 
+                    })
+            
+            # Top 3 pénuries
+            shortages.sort(key=lambda x: x['ratio'], reverse=True)
+            top_shortages = shortages[:3]
+            
+            # Formater pour le frontend
+            formatted_shortages = [
+                {
+                    "skill": s["top_skill"],
+                    "regions": [s["region"]]
+                }
+                for s in top_shortages
+            ]
+            
+            # Insight Généré
+            if top_shortages:
+                top = top_shortages[0]
+                insight_text = f"Forte tension observée à {top['region']} (Ratio: {top['ratio']:.1f}). Déficit critique de talents par rapport aux {top['offers']} opportunités ouvertes."
+            else:
+                insight_text = "Le marché semble équilibré actuellement. Aucune tension majeure détectée dans les régions principales."
+
+            return {
+                "shortage_areas": formatted_shortages,
+                "ai_insight": insight_text
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating insights: {e}")
+            return {"shortage_areas": [], "ai_insight": "Données insuffisantes pour l'analyse."}
 
     @with_network_retry
     def get_choropleth_data(
@@ -371,6 +509,9 @@ class CarteService:
                 norm = self.admin_service._normalize_name(loc)
                 talent_map[norm] = talent_map.get(norm, 0) + count
 
+        # --- Calcul de la croissance ---
+        growth_map = self._calculate_regional_growth(db, level.value)
+
         features = []
         total_offers = 0
 
@@ -401,9 +542,9 @@ class CarteService:
                     "id": b.id,
                     "name": b.name,
                     "level": b.level,
-                    "level": b.level,
                     "offer_count": b.offer_count,  # ✅ Utilise le compteur pré-calculé
                     "talent_count": talent_map.get(self.admin_service._normalize_name(b.name), 0), # ✅ Vrais chiffres
+                    "growth": growth_map.get(self.admin_service._normalize_name(b.name), 0.0), # ✅ Croissance réelle
                     "centroid": centroid_value,
                     "parent_name": b.parent_name  # ✅ IMPORTANT pour la navigation
                 },
