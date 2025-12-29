@@ -273,7 +273,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from app.core.constants import AdminLevel
 from app.db.init_postgis import PostGISManager
-from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute
+from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute, UserProfile, User, UserRole
 from app.models.api_models import ChoroplethResponse, OfferGeoJSON
 from app.core.exceptions import AppError, ValidationError
 from app.services.admin_boundary import AdminBoundaryService
@@ -353,6 +353,24 @@ class CarteService:
                 total_offers=0
             )
 
+        # --- Récupération des Talents (Candidats) ---
+        talent_query = db.query(
+            UserProfile.location,
+            func.count(UserProfile.id)
+        ).join(User, UserProfile.user_id == User.id).filter(User.role == UserRole.CANDIDATE)
+        
+        # Filtre approximatif pour talents (basé sur string contain)
+        if parent_name:
+             talent_query = talent_query.filter(UserProfile.location.ilike(f"%{parent_name}%"))
+             
+        talent_results = talent_query.group_by(UserProfile.location).all()
+        # Création d'une map normalisée : "dakar" -> count
+        talent_map = {}
+        for loc, count in talent_results:
+            if loc:
+                norm = self.admin_service._normalize_name(loc)
+                talent_map[norm] = talent_map.get(norm, 0) + count
+
         features = []
         total_offers = 0
 
@@ -383,7 +401,9 @@ class CarteService:
                     "id": b.id,
                     "name": b.name,
                     "level": b.level,
+                    "level": b.level,
                     "offer_count": b.offer_count,  # ✅ Utilise le compteur pré-calculé
+                    "talent_count": talent_map.get(self.admin_service._normalize_name(b.name), 0), # ✅ Vrais chiffres
                     "centroid": centroid_value,
                     "parent_name": b.parent_name  # ✅ IMPORTANT pour la navigation
                 },

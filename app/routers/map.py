@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from typing import Dict, Any, Optional
+from typing import Optional
 
 from ..database import get_db
-from ..models.database_models import OffreEmploiBrute
+from ..core.constants import AdminLevel
+from ..services.admin_boundary import AdminBoundaryService, CarteService
+from ..models.api_models import ChoroplethResponse
 
 router = APIRouter(prefix="/api/v1/carte", tags=["map"])
 
-@router.get("/{level}", response_model=Dict[str, Any])
+@router.get("/{level}", response_model=ChoroplethResponse)
 async def get_choropleth_data(
     level: str,
     min_offers: int = 0,
@@ -17,51 +18,20 @@ async def get_choropleth_data(
 ):
     """
     Récupère les données pour la carte choroplèthe.
-    Groupe les offres par localisation.
+    Utilise le service optimisé avec PostGIS et compteurs pré-calculés.
     """
-    # Simplification: On groupe par 'location' brute.
-    # Idéalement il faudrait mapper vers les régions/départements selon 'level'
+    try:
+        # Conversion du string level en Enum
+        admin_level = AdminLevel(level)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid level: {level}. Must be one of {[l.value for l in AdminLevel]}")
+
+    admin_service = AdminBoundaryService()
+    carte_service = CarteService(admin_service)
     
-    query = db.query(
-        OffreEmploiBrute.location, 
-        func.count(OffreEmploiBrute.id)
+    return carte_service.get_choropleth_data(
+        db, 
+        level=admin_level, 
+        min_offers=min_offers, 
+        parent_name=parent_name
     )
-    
-    # Filtres optionnels basiques si nécessaire
-    if parent_name:
-         # Supposons que location contient "Region, Pays"
-         query = query.filter(OffreEmploiBrute.location.contains(parent_name))
-
-    results = query.group_by(OffreEmploiBrute.location).all()
-    
-    # Query pour les talents (Candidats)
-    from ..models.database_models import UserProfile, User, UserRole
-    
-    talent_query = db.query(
-        UserProfile.location,
-        func.count(UserProfile.id)
-    ).join(User, UserProfile.user_id == User.id).filter(User.role == UserRole.CANDIDATE)
-    
-    if parent_name:
-        talent_query = talent_query.filter(UserProfile.location.contains(parent_name))
-        
-    talent_results = talent_query.group_by(UserProfile.location).all()
-    talent_map = {loc.strip(): count for loc, count in talent_results if loc}
-
-    data = {}
-    
-    # Fusion des résultats (Offres + Talents)
-    all_locations = set([r[0].strip() for r in results if r[0]] + [t[0].strip() for t in talent_results if t[0]])
-    
-    for loc in all_locations:
-        offer_count = next((count for l, count in results if l and l.strip() == loc), 0)
-        talent_count = talent_map.get(loc, 0)
-        
-        if offer_count >= min_offers or talent_count > 0:
-            data[loc] = {
-                "value": offer_count,
-                "label": loc,
-                "talent_count": talent_count
-            }
-            
-    return data
