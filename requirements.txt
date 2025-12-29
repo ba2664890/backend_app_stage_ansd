@@ -63,3 +63,4 @@ argon2-cffi
 geoalchemy2
 tenacity
 geopandas
+openpyxl
