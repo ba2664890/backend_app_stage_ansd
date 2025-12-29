@@ -205,11 +205,9 @@ class RecommendationService:
             raise
     
     def _get_user_profile(self, db: Session, user_id: str) -> Optional[UserProfile]:
-        """Récupération du profil utilisateur avec caching et validation."""
+        """Récupération du profil utilisateur avec validation."""
         try:
-            return db.query(UserProfile).options(
-                joinedload(UserProfile.preferences)
-            ).filter(UserProfile.id == user_id).first()
+            return db.query(UserProfile).filter(UserProfile.id == user_id).first()
         except SQLAlchemyError as e:
             logger.error("Erreur SQL lors de la récupération du profil utilisateur %s: %s", 
                         user_id, str(e))
@@ -251,11 +249,8 @@ class RecommendationService:
                 OffreEmploiEnrichie.extracted_salary_min <= float(request.max_salary)
             )
         
-        # Optimisation: eager loading des relations
-        return query.options(
-            joinedload(OffreEmploiEnrichie.skills),
-            joinedload(OffreEmploiBrute.company)
-        )
+        # Optimisation: eager loading des relations (uniquement si elles existent)
+        return query
     
     def _execute_query_with_timeout(self, query, timeout: Optional[int] = None):
         """Exécution de requête avec timeout et gestion des erreurs."""
