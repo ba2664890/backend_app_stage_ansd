@@ -499,3 +499,24 @@ class JobService:
             logger.error(f"Error fetching recruiter jobs: {e}")
             raise
 
+    def delete_job(self, db: Session, job_id: UUID, recruiter_id: UUID) -> bool:
+        """
+        Supprime physiquement une offre d'emploi si elle appartient au recruteur.
+        """
+        try:
+            job = db.query(OffreEmploiBrute).filter(
+                OffreEmploiBrute.id == job_id,
+                OffreEmploiBrute.recruiter_id == recruiter_id
+            ).first()
+            
+            if not job:
+                return False
+                
+            db.delete(job)
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error deleting job {job_id}: {e}")
+            raise
+

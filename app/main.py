@@ -714,6 +714,29 @@ async def remove_saved_job(
         logger.error(f"Error removing saved job: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la suppression du favori")
 
+@app.delete("/api/v1/jobs/{job_id}")
+async def delete_job(
+    job_id: str,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Supprime une offre d'emploi (réservé au recruteur propriétaire)."""
+    try:
+        from uuid import UUID
+        job_uuid = UUID(job_id)
+        
+        # Le recruteur ne peut supprimer que SES offres
+        success = job_servic.delete_job(db, job_uuid, user.user_id)
+        if success:
+            return {"message": "Job deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Job not found or unauthorized")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid job ID format")
+    except Exception as e:
+        logger.error(f"Error deleting job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/v1/jobs/stats/summary", response_model=Dict[str, Any])
 async def get_jobs_summary(db=Depends(get_db)):
     """Récupère un résumé des statistiques des offres d'emploi."""
