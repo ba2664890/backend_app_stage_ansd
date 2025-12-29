@@ -37,6 +37,29 @@ class JobOfferBase(BaseModel):
     benefits: Optional[List[str]] = Field(None, description="Avantages proposés")
 
 
+class JobCreate(BaseModel):
+    """Modèle pour créer une offre d'emploi."""
+    title: str = Field(..., description="Titre du poste")
+    company_name: str = Field(..., description="Nom de l'entreprise")
+    location: str = Field(..., description="Localisation")
+    contract_type: str = Field(..., description="Type de contrat")
+    description: str = Field(..., description="Description du poste")
+    url: Optional[str] = Field(None, description="URL de candidature")
+    
+    # Champs enrichis
+    sector: Optional[str] = Field(None, description="Secteur d'activité")
+    min_salary: Optional[int] = Field(None, description="Salaire minimum")
+    max_salary: Optional[int] = Field(None, description="Salaire maximum")
+    experience_years: Optional[int] = Field(None, description="Années d'expérience requises")
+    education_level: Optional[str] = Field(None, description="Niveau d'études requis")
+    skills: Optional[List[str]] = Field(None, description="Compétences requises")
+    remote_type: Optional[str] = Field(None, description="Type de télétravail")
+    is_urgent: bool = Field(False, description="Urgent")
+    expiration_date: Optional[datetime] = Field(None, description="Date d'expiration")
+    languages: Optional[List[str]] = Field(None, description="Langues requises")
+    benefits: Optional[List[str]] = Field(None, description="Avantages")
+    nb_positions: Optional[int] = Field(1, description="Nombre de postes")
+
 class JobOfferResponse(JobOfferBase):
     """Modèle de réponse pour une offre d'emploi enrichie."""
     id: UUID

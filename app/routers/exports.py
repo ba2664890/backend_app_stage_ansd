@@ -37,7 +37,7 @@ async def export_applications_excel(
         "company_name": app.company.name,
         "status": app.status,
         "rating": app.rating,
-        "applied_at": app.applied_at.strftime("%Y-%m-%d %H:%M"),
+        "applied_at": app.applied_at.strftime("%Y-%m-%d %H:%M") if app.applied_at else "N/A",
         "reviewed_at": app.reviewed_at.strftime("%Y-%m-%d %H:%M") if app.reviewed_at else "",
         "decision_date": app.decision_date.strftime("%Y-%m-%d") if app.decision_date else "",
     } for app in applications]
@@ -79,7 +79,7 @@ async def export_recruitment_report_pdf(
         "candidate_name": f"{app.user.profile.first_name} {app.user.profile.last_name}" if app.user.profile else "N/A",
         "job_title": app.job.offre_brute.title if app.job.offre_brute else "N/A",
         "status": app.status,
-        "applied_at": app.applied_at.strftime("%d/%m/%Y"),
+        "applied_at": app.applied_at.strftime("%d/%m/%Y") if app.applied_at else "N/A",
     } for app in applications]
     
     pdf_data = export_service.generate_recruitment_report_pdf(

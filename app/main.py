@@ -633,7 +633,7 @@ async def get_jobs(
 
 @app.post("/api/v1/jobs", response_model=JobOfferResponse)
 async def create_job(
-    job_data: Dict[str, Any],
+    job_data: JobCreate,
     user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

@@ -141,12 +141,16 @@ class ExportService:
             story.append(stats_title)
             story.append(Spacer(1, 0.2*inch))
             
+            # Utilitaire pour formater les valeurs numériques (gestion des None)
+            def safe_float(val):
+                return float(val) if val is not None else 0.0
+
             stats_data = [
                 ['Métrique', 'Valeur'],
                 ['Total candidatures', str(stats.get('total', 0))],
-                ['Temps moyen de review', f"{stats.get('avg_time_to_review', 0):.1f}h"],
-                ['Temps moyen d\'embauche', f"{stats.get('avg_time_to_hire', 0):.1f} jours"],
-                ['Taux de conversion', f"{stats.get('conversion_rate', 0):.1f}%"],
+                ['Temps moyen de review', f"{safe_float(stats.get('avg_time_to_review')): .1f}h"],
+                ['Temps moyen d\'embauche', f"{safe_float(stats.get('avg_time_to_hire')): .1f} jours"],
+                ['Taux de conversion', f"{safe_float(stats.get('conversion_rate')): .1f}%"],
             ]
             
             stats_table = Table(stats_data, colWidths=[3*inch, 2*inch])

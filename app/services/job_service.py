@@ -2,15 +2,16 @@
 Service pour la gestion des offres d'emploi.
 """
 
-from typing import List, Optional, Dict, Any, Tuple, TYPE_CHECKING
+from typing import List, Optional, Dict, Any, Tuple, Union, TYPE_CHECKING
 from sqlalchemy.orm import Session, Query
 from sqlalchemy import and_, or_, func, desc, text
+import uuid
 from uuid import UUID
 import logging
 from datetime import datetime, timedelta
 
 from ..models.database_models import OffreEmploiBrute, OffreEmploiEnrichie, UserSavedJob
-from ..models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse
+from ..models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, JobCreate
 from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
@@ -421,34 +422,40 @@ class JobService:
         db.commit()
         return True
 
-    def create_job(self, db: Session, job_data: Dict[str, Any], recruiter_id: UUID, company_id: UUID) -> JobOfferResponse:
+    def create_job(self, db: Session, job_data: Union[Dict[str, Any], JobCreate], recruiter_id: UUID, company_id: UUID) -> JobOfferResponse:
         """
         Crée une nouvelle offre d'emploi postée par un recruteur.
         """
         try:
+            # Normaliser en dictionnaire si c'est un objet Pydantic
+            if hasattr(job_data, "model_dump"):
+                data = job_data.model_dump()
+            else:
+                data = job_data
+
             # 1. Créer l'offre brute
             brute = OffreEmploiBrute(
                 spider_source="platform",
                 original_id=f"PLAT-{uuid.uuid4().hex[:8]}",
-                title=job_data.get("title"),
-                company_name=job_data.get("company_name"),
-                location=job_data.get("location"),
-                contract_type=job_data.get("contract_type"),
-                description=job_data.get("description"),
-                url=job_data.get("url", ""),
+                title=data.get("title"),
+                company_name=data.get("company_name"),
+                location=data.get("location"),
+                contract_type=data.get("contract_type"),
+                description=data.get("description"),
+                url=data.get("url", ""),
                 source="Internal Platform",
                 posted_date=datetime.utcnow(),
                 recruiter_id=recruiter_id,
                 company_id=company_id,
                 
                 # Nouveaux champs
-                education_level=job_data.get("education_level"),
-                nb_positions=job_data.get("nb_positions", 1),
-                expiration_date=datetime.fromisoformat(job_data.get("expiration_date")) if job_data.get("expiration_date") else None,
-                remote_type=job_data.get("remote_type"),
-                is_urgent=job_data.get("is_urgent", False),
-                languages=job_data.get("languages", []),
-                benefits=job_data.get("benefits", [])
+                education_level=data.get("education_level"),
+                nb_positions=data.get("nb_positions", 1),
+                expiration_date=data.get("expiration_date"),  # Déjà datetime si Pydantic
+                remote_type=data.get("remote_type"),
+                is_urgent=data.get("is_urgent", False),
+                languages=data.get("languages", []),
+                benefits=data.get("benefits", [])
             )
             db.add(brute)
             db.flush() # Récupérer l'ID pour l'enrichissement
@@ -457,10 +464,11 @@ class JobService:
             enrichie = OffreEmploiEnrichie(
                 offre_id=brute.id,
                 extracted_contract_type=brute.contract_type,
-                extracted_sector=job_data.get("sector"),
-                extracted_salary_min=job_data.get("min_salary"),
-                extracted_salary_max=job_data.get("max_salary"),
-                extracted_skills=job_data.get("skills", []),
+                extracted_sector=data.get("sector"),
+                extracted_salary_min=data.get("min_salary"),
+                extracted_salary_max=data.get("max_salary"),
+                extracted_skills=data.get("skills", []),
+                extracted_experience_years=data.get("experience_years"),
                 confidence_score=1.0, # Donnée manuelle = 100% confiance
                 processed_at=datetime.utcnow()
             )

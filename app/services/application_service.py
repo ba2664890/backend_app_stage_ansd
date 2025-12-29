@@ -142,14 +142,18 @@ class ApplicationService:
             query = query.filter(Application.status == status)
         
         total = query.count()
-        applications = query.order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
+        applications = query.options(
+            joinedload(Application.user).joinedload(User.profile),
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+        ).order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
         
         # Enriches applications with basic details if needed (or rely on relationship loading)
         # However, for ApplicationWithDetailsResponse, we need specific fields.
         # Ensure relationships are loaded
         for app in applications:
             if app.user:
-                app.user_name = f"{app.user.first_name} {app.user.last_name}"
+                profile = app.user.profile
+                app.user_name = f"{profile.first_name} {profile.last_name}" if profile else "Candidat"
                 app.user_email = app.user.email
             if app.job and app.job.offre_brute:
                 app.job_title = app.job.offre_brute.title
@@ -167,11 +171,15 @@ class ApplicationService:
         """Récupère toutes les candidatures pour une offre avec détails."""
         query = db.query(Application).filter(Application.job_id == job_id)
         total = query.count()
-        applications = query.order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
+        applications = query.options(
+            joinedload(Application.user).joinedload(User.profile),
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+        ).order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
         
         for app in applications:
             if app.user:
-                app.user_name = f"{app.user.first_name or ''} {app.user.last_name or ''}".strip() or "Candidat"
+                profile = app.user.profile
+                app.user_name = f"{profile.first_name if profile else ''} {profile.last_name if profile else ''}".strip() or "Candidat"
                 app.user_email = app.user.email
             if app.job and app.job.offre_brute:
                 app.job_title = app.job.offre_brute.title
@@ -330,7 +338,7 @@ class ApplicationService:
         # Activités récentes
         recent_activities = []
         if include_history:
-            history_query = db.query(ApplicationStatusHistory).join(Application)
+            history_query = db.query(ApplicationStatusHistory).join(Application).join(User).outerjoin(UserProfile)
             if company_id:
                 history_query = history_query.filter(Application.company_id == company_id)
             if job_id:
@@ -352,7 +360,8 @@ class ApplicationService:
             for act in activities:
                 # Récupérer l'utilisateur (candidat) lié à la candidature
                 candidate = act.application.user
-                candidate_name = f"{candidate.first_name} {candidate.last_name}" if candidate else "Candidat"
+                profile = candidate.profile if candidate else None
+                candidate_name = f"{profile.first_name} {profile.last_name}" if profile else (candidate.email if candidate else "Candidat")
                 
                 recent_activities.append({
                     "id": act.id,
