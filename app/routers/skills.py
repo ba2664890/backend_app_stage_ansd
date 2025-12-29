@@ -8,7 +8,7 @@ from typing import List, Dict, Any
 from uuid import UUID
 
 from ..database import get_db
-from ..models.api_models import CompanySkillNeedCreate, CompanySkillNeedResponse
+from ..models.api_models import CompanySkillNeedCreate, CompanySkillNeedResponse, SkillGapResponse
 from ..services.skill_gap_service import SkillGapService
 from ..utils.auth import get_current_user
 
@@ -51,18 +51,14 @@ async def analyze_company_skill_gaps(
     analysis = skill_service.analyze_skill_gaps(db, company_id)
     return analysis
 
-@router.get("/gaps/{company_id}", response_model=List[Dict[str, Any]]) # Frontend expect array ? service returns dict/analysis ? Let's allow flexible return for now or check service
+@router.get("/gaps/{company_id}", response_model=List[SkillGapResponse])
 async def analyze_skill_gaps_alias(
     company_id: UUID,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """Alias pour l'analyse des écarts (Frontend compatibility)."""
-    # Attention: frontend service expects SkillGap[]
-    # Si analyze_skill_gaps retourne un dict global, ça va coincer.
-    # On assume que le service retourne le bon format ou que le frontend gère.
-    # Pour l'instant on route vers le même service.
-    return skill_service.analyze_skill_gaps(db, company_id)
+    return skill_service.get_skill_gaps_list(db, company_id)
 
 
 @router.get("/companies/{company_id}/training-recommendations", response_model=List[Dict[str, Any]])

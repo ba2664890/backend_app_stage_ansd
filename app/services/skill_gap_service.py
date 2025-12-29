@@ -124,6 +124,30 @@ class SkillGapService:
             "skill_availability": skill_availability,
             "recommendations": recommendations
         }
+
+    def get_skill_gaps_list(self, db: Session, company_id: UUID) -> List[Dict]:
+        """Retourne une liste d'écarts de compétences au format attendu par le frontend."""
+        analysis = self.analyze_skill_gaps(db, company_id)
+        availability = analysis.get("skill_availability", {})
+        
+        gaps = []
+        for skill_name, data in availability.items():
+            # Conversion status -> difficulty_level
+            status = data.get("status", "balanced")
+            diff_level = "hard" if status == "scarce" else "medium" if status == "balanced" else "easy"
+            
+            # Calcul du pourcentage de gap
+            ratio = data.get("availability_ratio", 1.0)
+            gap_pct = max(0, 100 * (1 - ratio)) if ratio < 1 else 0
+            
+            gaps.append({
+                "skill": skill_name,
+                "needed_count": data.get("jobs_requiring", 0),
+                "gap_percentage": round(gap_pct, 1),
+                "difficulty_level": diff_level
+            })
+            
+        return sorted(gaps, key=lambda x: x["gap_percentage"], reverse=True)
     
     def _generate_recommendations(
         self,

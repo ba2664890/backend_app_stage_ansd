@@ -467,6 +467,13 @@ class CompanySkillNeedResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class SkillGapResponse(BaseModel):
+    """Modèle de réponse pour un écart de compétence (Frontend compatibility)."""
+    skill: str
+    needed_count: int
+    gap_percentage: float
+    difficulty_level: str # 'easy', 'medium', 'hard'
+
 # ==================== MODULE 4: ATS (APPLICANT TRACKING SYSTEM) ====================
 
 class ApplicationBase(BaseModel):
