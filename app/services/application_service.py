@@ -3,13 +3,13 @@ Service pour la gestion des candidatures (ATS - Applicant Tracking System).
 """
 
 from typing import List, Optional, Dict
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, and_
 from uuid import UUID
 from datetime import datetime, timedelta
 import logging
 
-from ..models.database_models import Application, ApplicationStatusHistory, User, OffreEmploiEnrichie, Company
+from ..models.database_models import Application, ApplicationStatusHistory, User, UserProfile, OffreEmploiEnrichie, Company
 from ..models.api_models import ApplicationCreate, ApplicationUpdateStatus, ApplicationUpdateNotes
 
 logger = logging.getLogger(__name__)
