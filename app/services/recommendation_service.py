@@ -219,8 +219,7 @@ class RecommendationService:
             OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id
         ).filter(
             OffreEmploiBrute.posted_date >= datetime.now() - timedelta(days=60),
-            OffreEmploiBrute.is_active.is_(True),  # Supposer qu'on a un flag is_active
-            OffreEmploiEnrichie.is_processed.is_(True)
+            or_(OffreEmploiBrute.expiration_date.is_(None), OffreEmploiBrute.expiration_date >= datetime.now())
         )
         
         # Filtres avec protection contre les listes vides
@@ -829,7 +828,7 @@ class RecommendationService:
                 OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id
             ).filter(
                 OffreEmploiBrute.posted_date >= cutoff_date,
-                OffreEmploiBrute.is_active.is_(True)
+                or_(OffreEmploiBrute.expiration_date.is_(None), OffreEmploiBrute.expiration_date >= datetime.now())
             ).order_by(OffreEmploiBrute.posted_date.desc()).limit(batch_size).all()
         except Exception as e:
             logger.error("Erreur récupération jobs paginés: %s", str(e))
