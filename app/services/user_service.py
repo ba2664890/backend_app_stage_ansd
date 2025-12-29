@@ -319,7 +319,7 @@ class UserService:
         Recherche des utilisateurs avec filtres.
         """
         try:
-            query = db.query(User)
+            query = db.query(User).outerjoin(UserProfile)
             
             if role:
                 query = query.filter(User.role == role)
@@ -327,8 +327,8 @@ class UserService:
             if search:
                 query = query.filter(or_(
                     User.email.ilike(f"%{search}%"),
-                    User.first_name.ilike(f"%{search}%"),
-                    User.last_name.ilike(f"%{search}%")
+                    UserProfile.first_name.ilike(f"%{search}%"),
+                    UserProfile.last_name.ilike(f"%{search}%")
                 ))
             
             total = query.count()
