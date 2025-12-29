@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 router = APIRouter(
-    prefix="/documents",
+    prefix="/api/v1/documents",
     tags=["documents"]
 )
 
@@ -36,7 +36,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def upload_document(
     file: UploadFile = File(...),
     category: str = Form(...),
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     # Validate file type
@@ -68,7 +68,7 @@ async def upload_document(
 
     # Create DB entry
     new_doc = Document(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         name=file.filename,
         file_path=file_path,
         file_type=file.content_type,
@@ -92,12 +92,12 @@ async def upload_document(
         "url": f"/static/uploads/{unique_filename}"
     }
 
-@router.get("/", response_model=List[DocumentResponse])
+@router.get("", response_model=List[DocumentResponse])
 def get_documents(
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    docs = db.query(Document).filter(Document.user_id == current_user.id).all()
+    docs = db.query(Document).filter(Document.user_id == current_user.user_id).all()
     
     return [
         {
@@ -116,10 +116,10 @@ def get_documents(
 @router.delete("/{document_id}")
 def delete_document(
     document_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == current_user.id).first()
+    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == current_user.user_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document non trouvé.")
     
