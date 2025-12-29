@@ -244,7 +244,7 @@ app.include_router(webhooks.router)
 app.include_router(users.router)
 app.include_router(documents.router)
 app.include_router(government.router)
-# app.include_router(map.router)
+app.include_router(map.router)
 
 
 @app.post("/import", status_code=201)
@@ -517,30 +517,7 @@ async def root():
 
 
 
-@app.get("/api/v1/carte/{level}", response_model=ChoroplethResponse)
-def get_choropleth_map(
-    level: AdminLevel,
-    min_offers: int = Query(0, ge=0, description="Nombre minimum d'offres"),
-    parent_name: Optional[str] = Query(None, description="Filtrer par parent (ex: 'Dakar')"),
-    db: Session = Depends(get_db),
-):
-    """
-    Récupère les données choroplèthe pour un niveau administratif avec navigation hiérarchique.
-    
-    - **level**: Niveau administratif (region, departement, commune, etc.)
-    - **min_offers**: Nombre minimum d'offres pour afficher une zone
-    - **parent_name**: Optionnel, filtre par parent pour navigation hiérarchique
-    """
-    try:
-        service = CarteService(AdminBoundaryService())
-        return service.get_choropleth_data(
-            db=db,
-            level=level,
-            min_offers=min_offers,
-            parent_name=parent_name
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.post("/refresh-offer-counts")
