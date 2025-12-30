@@ -16,11 +16,17 @@ from ..models.api_models import (
     GenerateJobDescriptionResponse
 )
 from ..services.rh_assistant_service import RHAssistantService
+from ..services.llm_client import LLMClient
+from ..services.rag_service import RAGService
 from ..services.recruiter_service import RecruiterService
 from ..utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/assistant", tags=["ai-assistant"])
-assistant_service = RHAssistantService()
+
+# Initialisation des services avec leurs dépendances
+llm_client = LLMClient()
+rag_service = RAGService()
+assistant_service = RHAssistantService(llm_client=llm_client, rag_service=rag_service)
 recruiter_service = RecruiterService()
 
 

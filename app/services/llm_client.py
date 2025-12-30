@@ -8,15 +8,21 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     """Client pour interagir avec les LLM (OpenAI, Groq, etc)."""
     
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: str = "gpt-3.5-turbo"):
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        self.base_url = base_url or os.getenv("OPENAI_BASE_URL") # Utile pour Groq ou local LLM
-        self.model = model
-        
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: str = "grok-beta"):
+        self.api_key = api_key or os.getenv("XAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        # Si on a une clé xAI, on utilise l'URL xAI par défaut sauf si spécifié
+        if self.api_key and self.api_key.startswith("xai-"):
+            self.base_url = base_url or os.getenv("XAI_BASE_URL") or "https://api.x.ai/v1"
+            self.model = model if model != "gpt-3.5-turbo" else "grok-beta"
+        else:
+            self.base_url = base_url or os.getenv("OPENAI_BASE_URL")
+            self.model = model if model != "grok-beta" else "gpt-3.5-turbo"
+            
         if not self.api_key:
-            logger.warning("OPENAI_API_KEY non définie. Le mode simulation sera utilisé.")
+            logger.warning("Aucune clé API LLM (XAI_API_KEY ou OPENAI_API_KEY) définie. Le mode simulation sera utilisé.")
             self.client = None
         else:
+            logger.info(f"Initialisation du client LLM avec le modèle: {self.model} sur {self.base_url}")
             self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
     async def generate_response(

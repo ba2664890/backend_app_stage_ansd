@@ -4,6 +4,9 @@ Configuration settings for the Emploi Dakar backend.
 
 import os
 from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Settings:
     """Application settings."""
@@ -27,6 +30,9 @@ class Settings:
     
     # External API Keys
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+    XAI_API_KEY: Optional[str] = os.getenv("XAI_API_KEY")
+    XAI_MODEL: str = os.getenv("XAI_MODEL", "grok-beta")
+    XAI_BASE_URL: str = os.getenv("XAI_BASE_URL", "https://api.x.ai/v1")
     HUGGINGFACE_API_TOKEN: Optional[str] = os.getenv("HUGGINGFACE_API_TOKEN")
     
     # File Upload Configuration
