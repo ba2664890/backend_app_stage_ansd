@@ -3,6 +3,7 @@ import chromadb
 from chromadb.config import Settings
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
+from chromadb.utils import embedding_functions
 import os
 from ..models.database_models import OffreEmploiBrute
 
@@ -12,12 +13,25 @@ class RAGService:
     """Service pour l'indexation et la recherche de documents (RAG)."""
     
     def __init__(self, persist_directory: str = "./chroma_db"):
-        # Initialisation de ChromaDB (Vector DB locale)
+        # Initialisation de ChromaDB
         os.makedirs(persist_directory, exist_ok=True)
         self.client = chromadb.PersistentClient(path=persist_directory)
-        self.collection_name = "rh_knowledge_base"
+        
+        # Utilisation des embeddings OpenAI (via proxy) pour économiser la RAM
+        # On utilise les mêmes clés que le LLM
+        api_key = os.getenv("XAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("XAI_BASE_URL", "https://api.openai.com/v1")
+        
+        self.embedding_fn = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=api_key,
+            api_base=base_url,
+            model_name="text-embedding-3-small"
+        )
+        
+        self.collection_name = "rh_knowledge_base_v2" # Nouveau nom car dimension différente
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
+            embedding_function=self.embedding_fn,
             metadata={"hnsw:space": "cosine"}
         )
         

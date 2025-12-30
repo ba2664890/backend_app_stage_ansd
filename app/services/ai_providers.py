@@ -2,7 +2,7 @@ import os
 from typing import List
 from groq import Groq
 import logging
-from sentence_transformers import SentenceTransformer # Pour une solution 100% locale et gratuite
+from openai import OpenAI
 
 # Configuration
 logging.basicConfig(level=logging.INFO)
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class LLMProvider:
     """
-    Client pour la génération de texte via Groq (Llama3 / Mixtral).
+    Client pour la génération de texte via Groaq (Llama3 / Mixtral).
     Très rapide et gratuit pour l'instant.
     """
     def __init__(self):
@@ -52,15 +52,27 @@ class LLMProvider:
 
 class EmbeddingProvider:
     """
-    Client pour transformer le texte en vecteurs.
-    Utilise 'all-MiniLM-L6-v2' en local pour être 100% gratuit et rapide.
+    Client pour transformer le texte en vecteurs via OpenAI API.
+    Beaucoup plus léger en RAM que la solution locale.
     """
     def __init__(self):
-        logger.info("Chargement du modèle d'embedding local...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        api_key = os.getenv("XAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("XAI_BASE_URL", "https://api.openai.com/v1")
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.model = "text-embedding-3-small"
         
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        return self.model.encode(texts).tolist()
+        try:
+            response = self.client.embeddings.create(input=texts, model=self.model)
+            return [data.embedding for data in response.data]
+        except Exception as e:
+            logger.error(f"Erreur embedding documents: {e}")
+            return []
 
     def embed_query(self, text: str) -> List[float]:
-        return self.model.encode(text).tolist()
+        try:
+            response = self.client.embeddings.create(input=[text], model=self.model)
+            return response.data[0].embedding
+        except Exception as e:
+            logger.error(f"Erreur embedding query: {e}")
+            return []
