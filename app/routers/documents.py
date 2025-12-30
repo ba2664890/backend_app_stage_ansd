@@ -27,7 +27,7 @@ class DocumentResponse(BaseModel):
     url: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 UPLOAD_DIR = "app/static/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)

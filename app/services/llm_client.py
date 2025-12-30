@@ -59,8 +59,15 @@ class LLMClient:
             )
             return response.choices[0].message.content
         except Exception as e:
-            logger.error(f"Erreur LLM: {e}")
-            return "Désolé, je rencontre une difficulté technique pour répondre actuellement."
+            error_msg = str(e)
+            logger.error(f"Erreur LLM ({self.model}): {error_msg}")
+            
+            if "Incorrect API key" in error_msg:
+                return "Erreur d'authentification avec le service IA. Veuillez vérifier la clé API."
+            elif "rate_limit" in error_msg:
+                return "Le service IA est actuellement surchargé. Veuillez réessayer dans quelques instants."
+            
+            return "Désolé, je rencontre une difficulté technique pour répondre actuellement. Essayez de reformuler votre question."
 
     async def generate_json_response(self, system_prompt: str, user_message: str) -> Dict:
         """Génère une réponse structurée en JSON."""

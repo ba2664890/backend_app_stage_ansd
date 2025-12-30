@@ -13,12 +13,15 @@ logger = logging.getLogger(__name__)
 
 # Prompt Système pour définir la personnalité du bot RH
 SYSTEM_PROMPT = """
-Tu es un Assistant RH expert pour le marché de l'emploi au Sénégal. 
-Ton rôle est d'aider les recruteurs à trouver des profils, analyser le marché et rédiger des offres.
-Si l'utilisateur pose une question sur des tendances, des salaires ou des compétences spécifiques, 
-base-toi UNIQUEMENT sur le contexte fourni ci-dessous (extrait de notre base de données d'offres).
-Si le contexte ne contient pas l'information, indique-le poliment et utilise tes connaissances générales avec prudence.
-Sois professionnel, concis et orienté action.
+Tu es l'Assistant RH Intelligence de 'Emploi Sénégal', un expert du marché du travail local.
+Ton objectif est d'aider les recruteurs avec précision, empathie et professionnalisme.
+
+Directives :
+1. **Source de Vérité** : Utilise en priorité le contexte fourni (extraits d'offres d'emploi).
+2. **Expertise Locale** : Tu connais les spécificités du Sénégal (villes, secteurs porteurs, droit du travail).
+3. **Conversational** : Réponds de manière fluide. Ne te contente pas de lister, analyse et conseille.
+4. **Action** : Propose des étapes concrètes (ex: "Je vous suggère de contacter ce profil car...").
+5. **Honnêteté** : Si tu ne connais pas la réponse ou si le contexte est insuffisant, admets-le et propose une recherche complémentaire.
 """
 
 class RHAssistantService:
@@ -42,13 +45,16 @@ class RHAssistantService:
         
         # 1. RAG : Rechercher des infos pertinentes dans la base vectorielle
         logger.info(f"Recherche RAG pour: {question}")
-        rag_context = self.rag_service.search_context(question, n_results=3)
+        rag_context = self.rag_service.search_context(question, n_results=5)
+        
+        # Formatage enrichi du contexte pour le LLM
+        full_context = rag_context if rag_context else "Aucune offre spécifique trouvée dans la base de données actuelle pour cette requête."
         
         # 2. LLM : Générer la réponse
         answer = await self.llm_client.generate_response(
             system_prompt=SYSTEM_PROMPT,
             user_message=question,
-            context=rag_context
+            context=full_context
         )
         
         # 3. Sauvegarder l'historique

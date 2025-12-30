@@ -69,3 +69,4 @@ chromadb
 sentence-transformers
 python-dotenv
 openai
+reportlab
