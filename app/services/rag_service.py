@@ -75,9 +75,9 @@ class RAGService:
                 documents.append(text_content)
                 metadatas.append({
                     "job_id": str(offre.id),
-                    "title": offre.title,
-                    "company": offre.company_name,
-                    "sector": offre.sector
+                    "title": offre.title or "Sans titre",
+                    "company": offre.company_name or "Entreprise inconnue",
+                    "sector": offre.sector or "Général"
                 })
                 ids.append(str(offre.id))
             
