@@ -1,26 +1,32 @@
-"""
-Service pour l'assistant RH IA.
-"""
-
 from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from uuid import UUID
 import logging
 import json
 
-from ..models.database_models import RHChatHistory, Recruiter
+from ..models.database_models import RHChatHistory, Recruiter, OffreEmploiBrute
 from ..models.api_models import ChatRequest, GenerateJobDescriptionRequest
+from .llm_client import LLMClient
+from .rag_service import RAGService
 
 logger = logging.getLogger(__name__)
 
+# Prompt Système pour définir la personnalité du bot RH
+SYSTEM_PROMPT = """
+Tu es un Assistant RH expert pour le marché de l'emploi au Sénégal. 
+Ton rôle est d'aider les recruteurs à trouver des profils, analyser le marché et rédiger des offres.
+Si l'utilisateur pose une question sur des tendances, des salaires ou des compétences spécifiques, 
+base-toi UNIQUEMENT sur le contexte fourni ci-dessous (extrait de notre base de données d'offres).
+Si le contexte ne contient pas l'information, indique-le poliment et utilise tes connaissances générales avec prudence.
+Sois professionnel, concis et orienté action.
+"""
 
 class RHAssistantService:
-    """Service pour l'assistant RH basé sur l'IA."""
+    """Service pour l'assistant RH basé sur l'IA et RAG."""
     
-    def __init__(self):
-        # Configuration LLM (à adapter selon votre provider)
-        self.model_name = "gpt-3.5-turbo"  # ou "groq/mixtral-8x7b-32768"
-        self.max_tokens = 1000
+    def __init__(self, llm_client: LLMClient, rag_service: RAGService):
+        self.llm_client = llm_client
+        self.rag_service = rag_service
     
     async def chat(
         self,
@@ -29,67 +35,51 @@ class RHAssistantService:
         chat_request: ChatRequest
     ) -> Dict:
         """
-        Traite une question du recruteur et retourne une réponse.
-        
-        Args:
-            db: Session de base de données
-            recruiter_id: ID du recruteur
-            chat_request: Requête de chat
-            
-        Returns:
-            Dict: Réponse avec answer, sources, suggestions
+        Traite une question du recruteur.
         """
         question = chat_request.question
-        context = chat_request.context or {}
+        context_data = chat_request.context or {}
         
-        # TODO: Intégrer avec un vrai LLM (OpenAI, Groq, etc.)
-        # Pour l'instant, réponse simulée
-        answer = self._generate_mock_answer(question, context)
+        # 1. RAG : Rechercher des infos pertinentes dans la base vectorielle
+        logger.info(f"Recherche RAG pour: {question}")
+        rag_context = self.rag_service.search_context(question, n_results=3)
         
-        # Sauvegarder l'historique
+        # 2. LLM : Générer la réponse
+        answer = await self.llm_client.generate_response(
+            system_prompt=SYSTEM_PROMPT,
+            user_message=question,
+            context=rag_context
+        )
+        
+        # 3. Sauvegarder l'historique
         chat_history = RHChatHistory(
             recruiter_id=recruiter_id,
             question=question,
             answer=answer,
-            context=context,
-            model_used=self.model_name,
-            tokens_used=len(question) + len(answer)  # Approximation
+            context={**context_data, "rag_sources_used": bool(rag_context)},
+            model_used=self.llm_client.model,
+            tokens_used=len(question) + len(answer) # Approximation simple
         )
         db.add(chat_history)
         db.commit()
         
         return {
             "answer": answer,
-            "sources": ["Base de données interne", "Statistiques du marché"],
-            "suggestions": [
-                "Quels sont les candidats les plus qualifiés ?",
-                "Analyse des compétences manquantes",
-                "Tendances salariales pour ce poste"
-            ]
+            "sources": "Base de données interne (Offres d'emploi)",
+            "suggestions": self._generate_dynamic_suggestions(question)
         }
     
-    def _generate_mock_answer(self, question: str, context: Dict) -> str:
-        """Génère une réponse simulée (à remplacer par un vrai LLM)."""
-        question_lower = question.lower()
-        
-        if "candidat" in question_lower or "profil" in question_lower:
-            return ("Basé sur les données actuelles, je recommande de prioriser les candidats "
-                   "avec 3-5 ans d'expérience dans le secteur. Les compétences clés à rechercher "
-                   "sont Python, FastAPI, et PostgreSQL.")
-        
-        elif "salaire" in question_lower or "rémunération" in question_lower:
-            return ("Pour ce type de poste au Sénégal, la fourchette salariale médiane est "
-                   "entre 800 000 et 1 500 000 FCFA/mois selon l'expérience.")
-        
-        elif "compétence" in question_lower or "skill" in question_lower:
-            return ("Les compétences les plus demandées actuellement sont : "
-                   "1) Développement web (React, Vue.js), "
-                   "2) Data Science (Python, ML), "
-                   "3) Cloud (AWS, Azure).")
-        
-        else:
-            return ("Je suis votre assistant RH. Je peux vous aider avec l'analyse des candidatures, "
-                   "les recommandations de recrutement, les tendances du marché, et bien plus.")
+    def _generate_dynamic_suggestions(self, last_question: str) -> List[str]:
+        """Génère des suggestions basées sur le contexte."""
+        suggestions = [
+            "Générer une description de poste pour un développeur Python",
+            "Quelles sont les compétences les plus demandées en ce moment ?",
+            "Analyser le profil d'un candidat"
+        ]
+        # Logique simple pour varier les suggestions
+        if "salaire" in last_question.lower():
+            suggestions.insert(0, "Comparer les salaires par secteur d'activité")
+        return suggestions
     
     async def generate_job_description(
         self,
@@ -98,102 +88,95 @@ class RHAssistantService:
         request: GenerateJobDescriptionRequest
     ) -> Dict:
         """
-        Génère une description de poste basée sur les paramètres.
-        
-        Args:
-            db: Session de base de données
-            recruiter_id: ID du recruteur
-            request: Paramètres de génération
-            
-        Returns:
-            Dict: Description générée avec compétences et salaire suggérés
+        Génère une description de poste via LLM.
         """
-        # TODO: Utiliser un vrai LLM pour générer la description
-        job_description = self._generate_mock_job_description(request)
+        # Construction du prompt pour la génération
+        prompt = f"""
+        Rédige une offre d'emploi complète pour le poste de : {request.job_title}.
+        Secteur : {request.sector or 'Non spécifié'}.
+        Niveau d'expérience : {request.experience_level or 'Non spécifié'}.
+        Contexte additionnel : {request.additional_context or ''}.
         
-        suggested_skills = self._suggest_skills(request.job_title, request.sector)
-        suggested_salary = self._suggest_salary_range(request.job_title, request.experience_level)
+        Inclus les sections suivantes :
+        1. Titre du poste
+        2. À propos de nous
+        3. Mission principale
+        4. Responsabilités
+        5. Compétences requises (Hard & Soft skills)
+        6. Avantages
+        """
         
-        # Sauvegarder dans l'historique
+        # Appel direct au LLM (Pas besoin de RAG ici, c'est de la création)
+        job_description = await self.llm_client.generate_response(
+            system_prompt="Tu es un expert en rédaction de RH.",
+            user_message=prompt
+        )
+        
+        # Ici, on pourrait appeler une méthode LLM forçant le JSON pour extraire skills et salaire
+        # Pour l'exemple, on garde une structure simple ou simulée pour les suggestions
+        
+        # Sauvegarde
         chat_history = RHChatHistory(
             recruiter_id=recruiter_id,
             question=f"Générer description pour: {request.job_title}",
             answer=job_description,
             context=request.model_dump(),
-            model_used=self.model_name,
-            tokens_used=len(job_description)
+            model_used=self.llm_client.model
         )
         db.add(chat_history)
         db.commit()
         
         return {
             "job_description": job_description,
-            "suggested_skills": suggested_skills,
-            "suggested_salary_range": suggested_salary
+            "suggested_skills": [], # Pourrait être rempli par un appel parse_llm_output(job_description)
+            "suggested_salary_range": None
         }
-    
-    def _generate_mock_job_description(self, request: GenerateJobDescriptionRequest) -> str:
-        """Génère une description de poste simulée."""
-        return f"""**{request.job_title}**
 
-**À propos du poste:**
-Nous recherchons un(e) {request.job_title} talentueux(se) pour rejoindre notre équipe dynamique.
-
-**Responsabilités:**
-- Participer activement au développement et à l'amélioration de nos solutions
-- Collaborer avec les équipes techniques et métier
-- Assurer la qualité et la performance des livrables
-- Contribuer à l'innovation et aux bonnes pratiques
-
-**Profil recherché:**
-- Expérience: {request.experience_level or '2-5 ans'}
-- Secteur: {request.sector or 'Technologie'}
-- Compétences techniques solides
-- Excellentes capacités de communication
-- Esprit d'équipe et autonomie
-
-**Ce que nous offrons:**
-- Environnement de travail stimulant
-- Opportunités de développement professionnel
-- Rémunération attractive
-- Avantages sociaux compétitifs
-
-{request.additional_context or ''}
-"""
-    
-    def _suggest_skills(self, job_title: str, sector: Optional[str]) -> List[str]:
-        """Suggère des compétences basées sur le titre et secteur."""
-        # Mapping simplifié (à améliorer avec ML/LLM)
-        skills_map = {
-            "développeur": ["Python", "JavaScript", "SQL", "Git", "API REST"],
-            "data": ["Python", "SQL", "Machine Learning", "Pandas", "Visualization"],
-            "rh": ["Recrutement", "Gestion des talents", "SIRH", "Droit du travail"],
-            "commercial": ["Négociation", "CRM", "Prospection", "Closing"],
-        }
-        
-        job_lower = job_title.lower()
-        for key, skills in skills_map.items():
-            if key in job_lower:
-                return skills
-        
-        return ["Communication", "Travail d'équipe", "Autonomie", "Adaptabilité"]
-    
-    def _suggest_salary_range(
+    async def analyze_candidate(
         self,
-        job_title: str,
-        experience_level: Optional[str]
-    ) -> Optional[Dict[str, int]]:
-        """Suggère une fourchette salariale."""
-        # Données simplifiées pour le Sénégal (FCFA/mois)
-        base_salary = 500000
+        db: Session,
+        recruiter_id: UUID,
+        candidate_id: UUID,
+        job_id: UUID
+    ) -> Dict:
+        """
+        Analyse un candidat par rapport à une offre en utilisant le LLM.
+        """
+        # 1. Récupérer les données (Mock simplifié pour l'exemple, à adapter avec vos models)
+        # candidate = db.query(UserProfile).filter(UserProfile.id == candidate_id).first()
+        # job = db.query(OffreEmploiEnrichie).filter(OffreEmploiEnrichie.id == job_id).first()
         
-        if "senior" in (experience_level or "").lower() or "lead" in job_title.lower():
-            return {"min": 1200000, "max": 2500000}
-        elif "junior" in (experience_level or "").lower():
-            return {"min": 400000, "max": 800000}
-        else:
-            return {"min": 700000, "max": 1500000}
-    
+        # Pour l'exemple, on simule le texte à envoyer au LLM
+        candidate_text = "Candidat avec 3 ans d'expérience en Python, Django et PostgreSQL."
+        job_text = "Nous cherchons un Dev Python Senior avec 5 ans d'expérience. Django requis."
+        
+        prompt = f"""
+        Analyse ce matching :
+        Candidat : {candidate_text}
+        Offre : {job_text}
+        
+        Donne :
+        1. Un score de matching (0-100).
+        2. Les points forts.
+        3. Les points faibles.
+        4. 3 questions d'entretien suggérées.
+        """
+        
+        # Utilisation de la méthode JSON pour structurer la réponse
+        analysis_dict = await self.llm_client.generate_json_response(
+            system_prompt="Tu es un expert en recrutement technique.",
+            user_message=prompt
+        )
+        
+        # Fallback si la réponse JSON échoue
+        if not analysis_dict:
+            return {
+                "match_score": 0,
+                "error": "Impossible d'analyser le profil actuellement."
+            }
+            
+        return analysis_dict
+
     def get_chat_history(
         self,
         db: Session,
@@ -204,40 +187,3 @@ Nous recherchons un(e) {request.job_title} talentueux(se) pour rejoindre notre �
         return db.query(RHChatHistory).filter(
             RHChatHistory.recruiter_id == recruiter_id
         ).order_by(RHChatHistory.created_at.desc()).limit(limit).all()
-    
-    async def analyze_candidate(
-        self,
-        db: Session,
-        recruiter_id: UUID,
-        candidate_id: UUID,
-        job_id: UUID
-    ) -> Dict:
-        """
-        Analyse un candidat par rapport à une offre.
-        
-        Returns:
-            Dict: Analyse avec points forts, points faibles, recommandations
-        """
-        # TODO: Implémenter analyse IA réelle
-        return {
-            "match_score": 0.85,
-            "strengths": [
-                "Expérience pertinente de 4 ans",
-                "Compétences techniques alignées",
-                "Formation adaptée"
-            ],
-            "weaknesses": [
-                "Manque d'expérience en leadership",
-                "Pas de certification spécifique"
-            ],
-            "recommendations": [
-                "Planifier un entretien technique",
-                "Vérifier les références professionnelles",
-                "Discuter des attentes salariales"
-            ],
-            "interview_questions": [
-                "Pouvez-vous décrire votre projet le plus complexe ?",
-                "Comment gérez-vous les deadlines serrés ?",
-                "Quelles sont vos attentes pour ce poste ?"
-            ]
-        }

@@ -64,3 +64,7 @@ geoalchemy2
 tenacity
 geopandas
 openpyxl
+grok
+chromadb
+sentence-transformers
+python-dotenv
