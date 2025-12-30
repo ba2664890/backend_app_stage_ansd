@@ -71,7 +71,7 @@ class RHAssistantService:
         
         return {
             "answer": answer,
-            "sources": "Base de données interne (Offres d'emploi)",
+            "sources": ["Base de données interne (Offres d'emploi)"],
             "suggestions": self._generate_dynamic_suggestions(question)
         }
     
