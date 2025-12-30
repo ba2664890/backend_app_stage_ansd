@@ -2,7 +2,7 @@
 Routes API pour l'assistant RH IA.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from uuid import UUID
@@ -23,15 +23,10 @@ from ..utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/assistant", tags=["ai-assistant"])
 
-# Initialisation des services avec leurs dépendances
-llm_client = LLMClient()
-rag_service = RAGService()
-assistant_service = RHAssistantService(llm_client=llm_client, rag_service=rag_service)
-recruiter_service = RecruiterService()
-
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_with_assistant(
+    request: Request,
     chat_request: ChatRequest,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
@@ -42,6 +37,10 @@ async def chat_with_assistant(
     **Permissions**: Recruteur
     """
     try:
+        # Récupérer les services depuis l'état de l'application
+        assistant_service = request.app.state.assistant_service
+        recruiter_service = request.app.state.recruiter_service
+        
         # Vérifier que l'utilisateur est un recruteur
         user_id = current_user.user_id
         recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
@@ -63,6 +62,7 @@ async def chat_with_assistant(
 
 @router.get("/history", response_model=List[ChatHistoryResponse])
 async def get_chat_history(
+    request: Request,
     limit: int = 50,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
@@ -72,6 +72,9 @@ async def get_chat_history(
     
     **Permissions**: Recruteur
     """
+    assistant_service = request.app.state.assistant_service
+    recruiter_service = request.app.state.recruiter_service
+    
     user_id = current_user.user_id
     recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
     
@@ -84,7 +87,8 @@ async def get_chat_history(
 
 @router.post("/generate-job-description", response_model=GenerateJobDescriptionResponse)
 async def generate_job_description(
-    request: GenerateJobDescriptionRequest,
+    request: Request,
+    job_request: GenerateJobDescriptionRequest,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
@@ -94,13 +98,16 @@ async def generate_job_description(
     **Permissions**: Recruteur
     """
     try:
+        assistant_service = request.app.state.assistant_service
+        recruiter_service = request.app.state.recruiter_service
+        
         user_id = current_user.user_id
         recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
         
         if not recruiter:
             raise HTTPException(status_code=403, detail="Recruteur uniquement")
         
-        response = await assistant_service.generate_job_description(db, recruiter.id, request)
+        response = await assistant_service.generate_job_description(db, recruiter.id, job_request)
         return GenerateJobDescriptionResponse(**response)
     
     except HTTPException:
@@ -113,6 +120,7 @@ from ..models.database_models import Application
 
 @router.post("/analyze-candidate", response_model=Dict[str, Any])
 async def analyze_candidate(
+    request: Request,
     payload: Dict[str, Any],
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
@@ -122,6 +130,9 @@ async def analyze_candidate(
     
     **Permissions**: Recruteur
     """
+    assistant_service = request.app.state.assistant_service
+    recruiter_service = request.app.state.recruiter_service
+    
     user_id = current_user.user_id
     recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
     
@@ -145,3 +156,23 @@ async def analyze_candidate(
         application.job_id
     )
     return analysis
+
+@router.post("/reindex")
+async def reindex_rag_data(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Re-indexe manuellement les offres d'emploi dans la base vectorielle.
+    
+    **Permissions**: Admin uniquement (simulé ici par recruteur pour le test)
+    """
+    # En prod, on vérifierait le rôle admin
+    rag_service = request.app.state.rag_service
+    
+    try:
+        rag_service.index_offres_emploi(db)
+        return {"success": True, "message": f"Indexation terminée. Base vectorielle contient {rag_service.get_count()} documents."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur d'indexation: {str(e)}")

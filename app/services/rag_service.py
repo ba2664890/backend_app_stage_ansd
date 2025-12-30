@@ -1,8 +1,9 @@
 import logging
 import chromadb
 from chromadb.config import Settings
-from typing import List, Optional
+from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
+import os
 from ..models.database_models import OffreEmploiBrute
 
 logger = logging.getLogger(__name__)
@@ -12,12 +13,17 @@ class RAGService:
     
     def __init__(self, persist_directory: str = "./chroma_db"):
         # Initialisation de ChromaDB (Vector DB locale)
+        os.makedirs(persist_directory, exist_ok=True)
         self.client = chromadb.PersistentClient(path=persist_directory)
         self.collection_name = "rh_knowledge_base"
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
             metadata={"hnsw:space": "cosine"}
         )
+        
+    def get_count(self) -> int:
+        """Retourne le nombre de documents indexés."""
+        return self.collection.count()
         
     def index_offres_emploi(self, db: Session, limit: int = 1000):
         """Indexe les offres de la base SQL dans la base vectorielle."""

@@ -43,6 +43,9 @@ from .services.admin_boundary import AdminBoundaryService, CarteService
 from .models.api_models import AdminBoundaryOut
 from .services.file_service import FileService
 from .services.recruiter_service import RecruiterService
+from .services.llm_client import LLMClient
+from .services.rag_service import RAGService
+from .services.rh_assistant_service import RHAssistantService
 
 from .utils.auth import create_access_token, get_current_user, verify_password
 from .utils.permissions import PermissionService
@@ -113,12 +116,29 @@ async def lifespan(app: FastAPI):
         # ÉTAPE 3 : Initialisation des services
         logger.info("Étape 3/3 : Initialisation des services...")
         try:
+            # Core Services
             app.state.job_service = JobService()
             app.state.analytics_service = AnalyticsService()
             app.state.recommendation_service = RecommendationService()
             app.state.user_service = UserService()
             app.state.file_service = FileService()
             app.state.recruiter_service = RecruiterService()
+            
+            # Module 9: AI Assistant
+            app.state.llm_client = LLMClient()
+            app.state.rag_service = RAGService()
+            app.state.assistant_service = RHAssistantService(
+                llm_client=app.state.llm_client, 
+                rag_service=app.state.rag_service
+            )
+            
+            # ÉTAPE 3.6 : Indexation RAG initiale si nécessaire
+            logger.info("Étape 3.6 : Vérification de l'index RAG...")
+            if app.state.rag_service.get_count() == 0:
+                logger.info("Base vectorielle vide, lancement de l'indexation initiale...")
+                app.state.rag_service.index_offres_emploi(db)
+            else:
+                logger.info(f"Base vectorielle déjà indexée ({app.state.rag_service.get_count()} documents)")
             
             # Initialisation des rôles par défaut
             logger.info("Étape 3.5 : Initialisation des rôles par défaut...")
