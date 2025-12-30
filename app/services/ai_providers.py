@@ -56,8 +56,8 @@ class EmbeddingProvider:
     Beaucoup plus léger en RAM que la solution locale.
     """
     def __init__(self):
-        api_key = os.getenv("XAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-        base_url = os.getenv("XAI_BASE_URL", "https://api.openai.com/v1")
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("XAI_API_KEY")
+        base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("XAI_BASE_URL") or "https://api.openai.com/v1"
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = "text-embedding-3-small"
         

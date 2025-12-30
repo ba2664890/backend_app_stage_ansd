@@ -17,10 +17,11 @@ class RAGService:
         os.makedirs(persist_directory, exist_ok=True)
         self.client = chromadb.PersistentClient(path=persist_directory)
         
-        # Utilisation des embeddings OpenAI (via proxy) pour économiser la RAM
-        # On utilise les mêmes clés que le LLM
-        api_key = os.getenv("XAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-        base_url = os.getenv("XAI_BASE_URL", "https://api.openai.com/v1")
+        # Utilisation des mêmes clés et URL que le LLM (priorité aux proxys configurés)
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("XAI_API_KEY")
+        base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("XAI_BASE_URL") or "https://api.openai.com/v1"
+        
+        logger.info(f"RAGService: Utilisation de l'API embedding sur {base_url}")
         
         self.embedding_fn = embedding_functions.OpenAIEmbeddingFunction(
             api_key=api_key,
