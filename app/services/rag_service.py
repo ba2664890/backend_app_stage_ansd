@@ -38,11 +38,14 @@ class RAGService:
         
         for offre in offres:
             # Création d'un texte enrichi pour la recherche
+            # Accès aux compétences via la relation enrichie si elle existe
+            skills = offre.enrichie.extracted_skills if offre.enrichie and offre.enrichie.extracted_skills else []
+            
             text_content = f"""
             Titre: {offre.title}
             Entreprise: {offre.company_name}
             Description: {offre.description or ''}
-            Compétences: {', '.join(offre.extracted_skills) if offre.extracted_skills else 'N/A'}
+            Compétences: {', '.join(skills) if skills else 'N/A'}
             Secteur: {offre.sector or 'Général'}
             Lieu: {offre.location or 'Sénégal'}
             Salaire: {offre.salary or 'Non spécifié'}
