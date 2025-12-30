@@ -8,18 +8,23 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     """Client pour interagir avec les LLM (OpenAI, Groq, etc)."""
     
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: str = "grok-beta"):
-        self.api_key = api_key or os.getenv("XAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-        # Si on a une clé xAI, on utilise l'URL xAI par défaut sauf si spécifié
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None):
+        # Priorité : Argument -> OPENAI_API_KEY -> XAI_API_KEY
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY") or os.getenv("XAI_API_KEY")
+        
+        # Configuration de l'URL et du modèle
+        env_base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("XAI_BASE_URL")
+        env_model = os.getenv("OPENAI_MODEL") or os.getenv("XAI_MODEL")
+        
         if self.api_key and self.api_key.startswith("xai-"):
-            self.base_url = base_url or os.getenv("XAI_BASE_URL") or "https://api.x.ai/v1"
-            self.model = model if model != "gpt-3.5-turbo" else "grok-beta"
+            self.base_url = base_url or env_base_url or "https://api.x.ai/v1"
+            self.model = model or env_model or "grok-beta"
         else:
-            self.base_url = base_url or os.getenv("OPENAI_BASE_URL")
-            self.model = model if model != "grok-beta" else "gpt-3.5-turbo"
+            self.base_url = base_url or env_base_url
+            self.model = model or env_model or "gpt-4o-mini"
             
         if not self.api_key:
-            logger.warning("Aucune clé API LLM (XAI_API_KEY ou OPENAI_API_KEY) définie. Le mode simulation sera utilisé.")
+            logger.warning("Aucune clé API LLM définie. Le mode simulation sera utilisé.")
             self.client = None
         else:
             logger.info(f"Initialisation du client LLM avec le modèle: {self.model} sur {self.base_url}")
