@@ -172,7 +172,8 @@ async def reindex_rag_data(
     rag_service = request.app.state.rag_service
     
     try:
-        rag_service.index_offres_emploi(db)
-        return {"success": True, "message": f"Indexation terminée. Base vectorielle contient {rag_service.get_count()} documents."}
+        # Limite à 300 pour Railway Free
+        rag_service.index_offres_emploi(db, limit=300, batch_size=30)
+        return {"success": True, "message": f"Indexation terminée. Base vectorielle contient {rag_service.get_count()} documents (limité à 300)."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur d'indexation: {str(e)}")

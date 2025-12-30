@@ -143,7 +143,7 @@ async def lifespan(app: FastAPI):
                     # Utilisation d'une nouvelle session pour la tâche de fond
                     with SessionLocal() as background_db:
                         logger.info("🚀 Lancement de l'indexation RAG en arrière-plan...")
-                        app.state.rag_service.index_offres_emploi(background_db)
+                        app.state.rag_service.index_offres_emploi(background_db, limit=300, batch_size=30)
                         logger.info(f"✅ Indexation RAG terminée : {app.state.rag_service.get_count()} documents.")
                 except Exception as ex:
                     logger.error(f"❌ Erreur lors de l'indexation RAG : {ex}")
