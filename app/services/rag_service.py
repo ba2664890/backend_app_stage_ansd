@@ -25,50 +25,56 @@ class RAGService:
         """Retourne le nombre de documents indexés."""
         return self.collection.count()
         
-    def index_offres_emploi(self, db: Session, limit: int = 1000):
-        """Indexe les offres de la base SQL dans la base vectorielle."""
-        logger.info("Début de l'indexation des offres...")
+    def index_offres_emploi(self, db: Session, limit: int = 1000, batch_size: int = 50):
+        """Indexe les offres de la base SQL dans la base vectorielle par lots."""
+        logger.info(f"Début de l'indexation des offres (limite: {limit}, lot: {batch_size})...")
         
         # Récupération des offres
         offres = db.query(OffreEmploiBrute).limit(limit).all()
+        total_offres = len(offres)
         
-        documents = []
-        metadatas = []
-        ids = []
-        
-        for offre in offres:
-            # Création d'un texte enrichi pour la recherche
-            # Accès aux compétences via la relation enrichie si elle existe
-            skills = offre.enrichie.extracted_skills if offre.enrichie and offre.enrichie.extracted_skills else []
-            
-            text_content = f"""
-            Titre: {offre.title}
-            Entreprise: {offre.company_name}
-            Description: {offre.description or ''}
-            Compétences: {', '.join(skills) if skills else 'N/A'}
-            Secteur: {offre.sector or 'Général'}
-            Lieu: {offre.location or 'Sénégal'}
-            Salaire: {offre.salary or 'Non spécifié'}
-            """
-            
-            documents.append(text_content)
-            metadatas.append({
-                "job_id": str(offre.id),
-                "title": offre.title,
-                "company": offre.company_name,
-                "sector": offre.sector
-            })
-            ids.append(str(offre.id))
-            
-        if documents:
-            self.collection.add(
-                documents=documents,
-                metadatas=metadatas,
-                ids=ids
-            )
-            logger.info(f"Indexation de {len(documents)} offres terminée.")
-        else:
+        if total_offres == 0:
             logger.warning("Aucune offre à indexer.")
+            return
+
+        for i in range(0, total_offres, batch_size):
+            batch = offres[i : i + batch_size]
+            documents = []
+            metadatas = []
+            ids = []
+            
+            for offre in batch:
+                # Accès aux compétences via la relation enrichie si elle existe
+                skills = offre.enrichie.extracted_skills if offre.enrichie and offre.enrichie.extracted_skills else []
+                
+                text_content = f"""
+                Titre: {offre.title}
+                Entreprise: {offre.company_name}
+                Description: {offre.description or ''}
+                Compétences: {', '.join(skills) if skills else 'N/A'}
+                Secteur: {offre.sector or 'Général'}
+                Lieu: {offre.location or 'Sénégal'}
+                Salaire: {offre.salary or 'Non spécifié'}
+                """
+                
+                documents.append(text_content)
+                metadatas.append({
+                    "job_id": str(offre.id),
+                    "title": offre.title,
+                    "company": offre.company_name,
+                    "sector": offre.sector
+                })
+                ids.append(str(offre.id))
+            
+            if documents:
+                self.collection.add(
+                    documents=documents,
+                    metadatas=metadatas,
+                    ids=ids
+                )
+                logger.info(f"Lot indexé: {min(i + batch_size, total_offres)}/{total_offres}")
+        
+        logger.info(f"Indexation de {total_offres} offres terminée.")
 
     def search_context(self, query: str, n_results: int = 3) -> str:
         """Recherche des documents pertinents pour la requête."""

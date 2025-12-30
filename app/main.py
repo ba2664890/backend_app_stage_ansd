@@ -8,6 +8,7 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, Response
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 import os
 from typing import List, Optional, Dict, Any, cast
@@ -134,9 +135,22 @@ async def lifespan(app: FastAPI):
             
             # ÉTAPE 3.6 : Indexation RAG initiale si nécessaire
             logger.info("Étape 3.6 : Vérification de l'index RAG...")
+            
+            async def run_initial_indexing():
+                try:
+                    # On attend un peu pour laisser le serveur uvicorn démarrer proprement
+                    await asyncio.sleep(5)
+                    # Utilisation d'une nouvelle session pour la tâche de fond
+                    with SessionLocal() as background_db:
+                        logger.info("🚀 Lancement de l'indexation RAG en arrière-plan...")
+                        app.state.rag_service.index_offres_emploi(background_db)
+                        logger.info(f"✅ Indexation RAG terminée : {app.state.rag_service.get_count()} documents.")
+                except Exception as ex:
+                    logger.error(f"❌ Erreur lors de l'indexation RAG : {ex}")
+
             if app.state.rag_service.get_count() == 0:
-                logger.info("Base vectorielle vide, lancement de l'indexation initiale...")
-                app.state.rag_service.index_offres_emploi(db)
+                logger.info("Base vectorielle vide, planification de l'indexation en arrière-plan...")
+                asyncio.create_task(run_initial_indexing())
             else:
                 logger.info(f"Base vectorielle déjà indexée ({app.state.rag_service.get_count()} documents)")
             
