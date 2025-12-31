@@ -21,7 +21,7 @@ try:
 except Exception as e:
     print(f"UserRole('CANDIDATE') Error: {e}")
 
-print("\n--- DB CONTENT ---")
+print("\n--- DB CONTENT ----")
 db = SessionLocal()
 try:
     # Check actual string values in DB
