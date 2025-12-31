@@ -101,7 +101,6 @@ async def get_company_recruiters(
         
         pages = (total + limit - 1) // limit
         page = (skip // limit) + 1
-        
         return PaginatedResponse(
             items=recruiters,
             total=total,
@@ -113,3 +112,57 @@ async def get_company_recruiters(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des recruteurs: {str(e)}")
+
+# Import pour le matching (placé ici pour éviter les cycles si possible, ou en haut)
+from fastapi import Request
+from ..models.database_models import OffreEmploiBrute, OffreEmploiEnrichie, UserProfile
+
+@router.post("/match-candidates")
+async def find_candidates_for_job(
+    request: Request,
+    job_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Pour un job donné, trouve les candidats (CVs) les plus pertinents.
+    Utilise la recherche vectorielle Qdrant (embedding CV vs embedding Job).
+    """
+    try:
+        # 1. Récupérer le job et ses détails enrichis
+        job = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_id).first()
+        if not job:
+            raise HTTPException(status_code=404, detail="Job non trouvé")
+            
+        enrichie = db.query(OffreEmploiEnrichie).filter(OffreEmploiEnrichie.offre_id == job_id).first()
+        skills = enrichie.extracted_skills if enrichie and enrichie.extracted_skills else []
+        
+        # 2. Accéder au service d'embedding via l'état de l'app
+        if not hasattr(request.app.state, 'cv_pipeline_service'):
+             raise HTTPException(status_code=503, detail="Service de pipeline CV non disponible")
+             
+        embedding_service = request.app.state.cv_pipeline_service.cv_embedding_service
+        
+        # 3. Générer embedding du job (Titre + Skills + Desc)
+        # Note: on utilise await car embed_job est async
+        job_embedding = await embedding_service.embed_job(
+            title=job.title,
+            skills=skills,
+            description=job.description
+        )
+        
+        # 4. Chercher dans Qdrant les CVs similaires
+        candidate_ids = await embedding_service.find_similar_cvs(job_embedding, limit=20)
+        
+        if not candidate_ids:
+            return {"candidates": [], "count": 0}
+            
+        # 5. Récupérer les profils complets depuis Postgres
+        candidates = db.query(UserProfile).filter(UserProfile.id.in_(candidate_ids)).all()
+        
+        # TODO: Retourner un modèle Pydantic propre, ici on retourne les objets ORM (FastAPI convertira si possible)
+        # Mais id, user_id, title, etc.
+        return {"candidates": candidates, "count": len(candidates)}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur matching candidats: {str(e)}")

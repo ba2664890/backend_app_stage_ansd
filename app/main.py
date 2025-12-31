@@ -39,6 +39,7 @@ from .services.job_service import JobService
 from .models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, RecruiterCreate, JobCreate
 from .services.analytics_service import AnalyticsService
 from .services.recommendation_service import RecommendationService
+from .services.cv_pipeline_service import CVPipelineService
 from .services.user_service import UserService
 from .services.admin_boundary import AdminBoundaryService, CarteService
 from .models.api_models import AdminBoundaryOut
@@ -121,6 +122,7 @@ async def lifespan(app: FastAPI):
             app.state.job_service = JobService()
             app.state.analytics_service = AnalyticsService()
             app.state.recommendation_service = RecommendationService()
+            app.state.cv_pipeline_service = CVPipelineService()
             app.state.user_service = UserService()
             app.state.file_service = FileService()
             app.state.recruiter_service = RecruiterService()
@@ -997,30 +999,62 @@ async def get_job_recommendations(
         logger.error(f"Error fetching recommendations: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la génération des recommandations")
 
-@app.post("/api/v1/recommendations/cv-match", response_model=RecommendationResponse)
+@app.post("/api/v1/recommendations/cv-match")
 async def match_cv_with_jobs(
     file: UploadFile = File(...),
+    user_id: Optional[str] = None,
+    generate_ai_explanations: bool = True,
     user=Depends(get_current_user),
     db=Depends(get_db)
 ):
-    """Match un CV avec les offres d'emploi disponibles."""
+    """
+    Upload CV et retourne les meilleures recommandations avec explications IA.
+    Pipeline Unifié V2 (Embedding + NLP + RAG).
+    """
     try:
-        if not file.content_type or file.content_type not in ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
-            raise HTTPException(status_code=400, detail="Format de fichier non supporté")
+        # Utiliser l'ID utilisateur authentifié si non fourni
+        actual_user_id = user_id or str(user.id)
         
+        # 1. Sauvegarde
         file_path = await app.state.file_service.save_upload_file(file)
-        cv_text = await app.state.file_service.extract_text_from_file(file_path)
-        recommendations = app.state.recommendation_service.match_cv_with_jobs(db, cv_text, str(user.id))
-        await app.state.file_service.cleanup_file(file_path)
         
-        # Retournez l'objet Pydantic DIRECTEMENT
-        return recommendations
-        
-    except HTTPException:
-        raise
+        try:
+            # 2. Pipeline unifié
+            result = await app.state.cv_pipeline_service.process_cv_from_upload(
+                file_path=file_path,
+                user_id=actual_user_id,
+                generate_explanations=generate_ai_explanations
+            )
+            
+            # 3. Formater la réponse
+            return {
+                "user_id": actual_user_id,
+                "cv_analysis": {
+                    "experience_years": result.cv_data.experience_years,
+                    "skills_detected": result.cv_data.skills,
+                    "sectors_detected": result.cv_data.sectors,
+                    "job_titles_detected": result.cv_data.job_titles
+                },
+                "recommendations": [
+                    {
+                        "job_id": str(rec["job"][0].id),
+                        "title": rec["job"][0].title,
+                        "company": rec["job"][0].company_name,
+                        "match_score": rec["score"],
+                        "reasons": rec["reasons"],
+                        "embedding_similarity": rec.get("embedding_similarity", 0)
+                    }
+                    for rec in result.recommendations[:10]
+                ],
+                "ai_explanations": result.explanations
+            }
+        finally:
+            # Nettoyage
+            await app.state.file_service.cleanup_file(file_path)
+            
     except Exception as e:
-        logger.error(f"Error matching CV: {e}")
-        raise HTTPException(status_code=500, detail="Erreur lors du matching du CV")
+        logger.error(f"Error in CV pipeline: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 
