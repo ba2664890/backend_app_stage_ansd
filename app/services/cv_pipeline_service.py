@@ -10,7 +10,7 @@ from .cv_intelligent_extractor import CVIntelligentExtractor, CVExtractedData
 from .rag_service import RAGService
 from .cv_embedding_service import CVEmbeddingService
 from .llm_client import LLMClient
-from .models.database_models import OffreEmploiBrute, OffreEmploiEnrichie
+from ..models.database_models import OffreEmploiBrute, OffreEmploiEnrichie
 from .recommendation_service import RecommendationService
 
 logger = logging.getLogger(__name__)
