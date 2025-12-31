@@ -325,7 +325,12 @@ class RecommendationService:
                     ).first()
                     
                     if existing:
-                        logger.debug("Recommandation existante ignorée pour le job %s", enrichie.id)
+                        logger.debug("Recommandation existante incluse pour le job %s", enrichie.id)
+                        # On l'ajoute quand même à la réponse pour l'affichage
+                        job_recommendation = self._create_job_recommendation_response(
+                            brute, enrichie, rec, user_profile
+                        )
+                        recommendations.append(job_recommendation)
                         continue
                     
                     # Création recommendation
