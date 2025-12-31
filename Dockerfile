@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir torch==2.3.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
 RUN pip install --no-cache-dir nltk==3.8.1
 RUN python -m nltk.downloader punkt stopwords wordnet averaged_perceptron_tagger
 RUN pip install --no-cache-dir "pydantic[email]"
