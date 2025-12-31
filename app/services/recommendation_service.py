@@ -333,8 +333,7 @@ class RecommendationService:
                         user_id=self._get_valid_uuid(user_id),
                         job_id=enrichie.id,
                         match_score=float(rec["score"]),
-                        match_reasons=json.dumps(rec["reasons"], ensure_ascii=False)[:1000],  # Limite taille
-                        status='pending'
+                        match_reasons=rec["reasons"][:10]  # Array of strings, limited to 10 items
                     )
                     db.add(recommendation)
                     
