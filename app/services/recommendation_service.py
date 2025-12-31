@@ -19,9 +19,6 @@ from functools import lru_cache
 import hashlib
 from contextlib import contextmanager
 import time
-from .cv_intelligent_extractor import CVIntelligentExtractor, CVExtractedData
-from .cv_embedding_service import CVEmbeddingService
-
 
 from ..models.database_models import (
     OffreEmploiBrute, OffreEmploiEnrichie, UserProfile, 
@@ -45,8 +42,6 @@ class RecommendationService:
         self.max_retries = max_retries
         self.timeout_seconds = timeout_seconds
         self._vectorizer_cache = {}
-        self.cv_extractor = CVIntelligentExtractor()
-        self.embedding_service = CVEmbeddingService()
         logger.info("RecommendationService initialisé avec max_retries=%d, timeout=%ds", 
                    max_retries, timeout_seconds)
     
@@ -154,77 +149,60 @@ class RecommendationService:
             # Nettoyage des ressources
             self._cleanup_resources()
     
-    async def match_cv_with_jobs_enhanced(
+    def match_cv_with_jobs(
         self, 
         db: Session, 
         cv_text: str, 
         user_id: Optional[str] = None
     ) -> RecommendationResponse:
-        """Nouvelle version avec embeddings."""
+        """
+        Match robuste d'un CV avec les offres d'emploi avec validation et gestion de mémoire.
+        """
+        start_time = time.time()
         
-        # 1. Extraire intelligemment (remplace _extract_cv_info_robust)
-        cv_data = self.cv_extractor.extract(cv_text)
-        
-        # 2. Générer embedding
-        cv_vector = await self.embedding_service.embed_cv(cv_data)
-        
-        # 3. Recherche rapide dans Qdrant
-        job_ids = await self.embedding_service.find_similar_jobs(cv_vector, limit=100)
-        
-        # 4. Post-filtrage dans PostgreSQL (votre logique existante)
-        candidate_jobs = db.query(OffreEmploiBrute, OffreEmploiEnrichie).filter(
-            OffreEmploiEnrichie.id.in_(job_ids)
-        ).all()
-        
-        # 5. Scoring fin (votre _calculate_match_score avec ajustements)
-        scored_jobs = self._score_with_embeddings(cv_data, candidate_jobs, cv_vector)
-        
-        # 6. Créer les recommandations (votre logique existante)
-        recommendations = self._create_recommendations_batch(db, user_id, scored_jobs, cv_data)
-        
-        return RecommendationResponse(...)
-    
-    def _score_with_embeddings(
-        self, 
-        cv_data: CVExtractedData, 
-        candidate_jobs: List[Any], 
-        cv_vector: np.ndarray
-    ) -> List[Dict]:
-        """Combine l'embedding similarity avec votre scoring existant."""
-        scored = []
-        
-        for brute, enrichie in candidate_jobs:
-            # Récupérer l'embedding pré-calculé du job
-            job_vector = np.array(enrichie.embedding_vector) if enrichie.embedding_vector else None
+        try:
+            # Validation du CV
+            if not cv_text or not isinstance(cv_text, str) or len(cv_text.strip()) < 50:
+                raise ValueError("CV text invalide: doit contenir au moins 50 caractères")
             
-            if job_vector is not None:
-                # Cosine similarity
-                similarity = np.dot(cv_vector, job_vector) / (
-                    np.linalg.norm(cv_vector) * np.linalg.norm(job_vector)
-                )
-            else:
-                # Fallback si pas d'embedding (job pas encore processé)
-                similarity = 0.5
+            if len(cv_text) > 500000:  # Limite de 500KB
+                raise ValueError("CV text trop volumineux: maximum 500KB")
             
-            # Votre scoring existant
-            base_score, reasons = self._calculate_match_score(
-                user_profile=None,  # À adapter
-                brute=brute,
-                enrichie=enrichie,
-                user_skills=cv_data.skills
+            # Extraction robuste des informations
+            cv_skills, cv_experience, cv_sectors = self._extract_cv_info_robust(cv_text)
+            
+            # Récupération des offres avec pagination
+            recent_jobs = self._get_recent_jobs_paginated(db, days=30, batch_size=500)
+            
+            if not recent_jobs:
+                logger.warning("Aucune offre récente disponible pour le matching CV")
+                return self._empty_recommendation_response(user_id)
+            
+            # Vectorisation avec gestion de mémoire
+            recommendations = self._vectorized_cv_matching(
+                cv_text, cv_skills, cv_experience, cv_sectors, recent_jobs
             )
             
-            # Combiner (embedding 60%, scoring classique 40%)
-            final_score = similarity * 0.6 + base_score * 0.4
+            # Tri et limitation
+            recommendations.sort(key=lambda x: x.match_score, reverse=True)
+            recommendations = recommendations[:20]
             
-            scored.append({
-                "job": (brute, enrichie),
-                "score": final_score,
-                "reasons": reasons + [f"Similarité sémantique: {similarity:.2f}"]
-            })
-        
-        return sorted(scored, key=lambda x: x["score"], reverse=True)[:20]
-
+            execution_time = time.time() - start_time
+            logger.info("Matching CV terminé en %.2fs: %d recommandations", 
+                       execution_time, len(recommendations))
+            
+            return RecommendationResponse(
+                user_id=str(self._get_valid_uuid(user_id)),
+                recommendations=recommendations,
+                total_recommendations=len(recommendations),
+                average_match_score=float(np.mean([r.match_score for r in recommendations])) if recommendations else 0.0,
+                generated_at=datetime.now(),
+                execution_time_seconds=execution_time
+            )
+            
+        except Exception as e:
+            logger.error("Erreur dans match_cv_with_jobs: %s", str(e), exc_info=True)
+            raise
     
     def _get_user_profile(self, db: Session, user_id: str) -> Optional[UserProfile]:
         """Récupération du profil utilisateur avec validation."""

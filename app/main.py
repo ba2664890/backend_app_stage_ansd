@@ -39,7 +39,7 @@ from .services.job_service import JobService
 from .models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, RecruiterCreate, JobCreate
 from .services.analytics_service import AnalyticsService
 from .services.recommendation_service import RecommendationService
-from .services.cv_pipeline_service import CVPipelineService
+# from .services.cv_pipeline_service import CVPipelineService
 from .services.user_service import UserService
 from .services.admin_boundary import AdminBoundaryService, CarteService
 from .models.api_models import AdminBoundaryOut
@@ -122,7 +122,7 @@ async def lifespan(app: FastAPI):
             app.state.job_service = JobService()
             app.state.analytics_service = AnalyticsService()
             app.state.recommendation_service = RecommendationService()
-            app.state.cv_pipeline_service = CVPipelineService()
+            # app.state.cv_pipeline_service = CVPipelineService() # Desactivé modules lourds
             app.state.user_service = UserService()
             app.state.file_service = FileService()
             app.state.recruiter_service = RecruiterService()
@@ -1008,8 +1008,7 @@ async def match_cv_with_jobs(
     db=Depends(get_db)
 ):
     """
-    Upload CV et retourne les meilleures recommandations avec explications IA.
-    Pipeline Unifié V2 (Embedding + NLP + RAG).
+    Upload CV et retourne les meilleures recommandations (Mode léger / TF-IDF).
     """
     try:
         # Utiliser l'ID utilisateur authentifié si non fourni
@@ -1019,42 +1018,56 @@ async def match_cv_with_jobs(
         file_path = await app.state.file_service.save_upload_file(file)
         
         try:
-            # 2. Pipeline unifié
-            result = await app.state.cv_pipeline_service.process_cv_from_upload(
-                file_path=file_path,
-                user_id=actual_user_id,
-                generate_explanations=generate_ai_explanations
+            # 2. Extraction du texte (Lecture fichier)
+            raw_text = await app.state.file_service.extract_text_from_file(file_path)
+            
+            if len(raw_text.strip()) < 50:
+                 raise HTTPException(status_code=400, detail="CV illisible ou trop court (min 50 chars).")
+
+            # 3. Matching via TF-IDF (RecommendationService)
+            # On utilise le service restauré qui n'utilise PLUS Qdrant/Torch
+            rec_response = app.state.recommendation_service.match_cv_with_jobs(
+                db, 
+                raw_text, 
+                user_id=actual_user_id
             )
             
-            # 3. Formater la réponse
+            # 4. Extraction infos pour l'affichage (réutilisation de la logique du service)
+            # C'est un appel à une méthode "interne" (_extract...) mais c'est le plus simple pour garder l'API compatible
+            cv_skills, cv_experience, cv_sectors = app.state.recommendation_service._extract_cv_info_robust(raw_text)
+            
+            # 5. Formater la réponse comme attendu par le frontend
             return {
                 "user_id": actual_user_id,
                 "cv_analysis": {
-                    "experience_years": result.cv_data.experience_years,
-                    "skills_detected": result.cv_data.skills,
-                    "sectors_detected": result.cv_data.sectors,
-                    "job_titles_detected": result.cv_data.job_titles
+                    "experience_years": cv_experience,
+                    "skills_detected": cv_skills,
+                    "sectors_detected": cv_sectors,
+                    "job_titles_detected": [] # Non extrait par le mode léger
                 },
                 "recommendations": [
                     {
-                        "job_id": str(rec["job"][0].id),
-                        "title": rec["job"][0].title,
-                        "company": rec["job"][0].company_name,
-                        "match_score": rec["score"],
-                        "reasons": rec["reasons"],
-                        "embedding_similarity": rec.get("embedding_similarity", 0)
+                        "job_id": rec.job_id,
+                        "title": rec.title,
+                        "company": rec.company_name,
+                        "match_score": rec.match_score,
+                        "reasons": rec.match_reasons,
+                        "embedding_similarity": 0 # Non disponible en mode TF-IDF
                     }
-                    for rec in result.recommendations[:10]
+                    for rec in rec_response.recommendations[:10]
                 ],
-                "ai_explanations": result.explanations
+                "ai_explanations": ["Le mode IA générative est désactivé pour optimiser les performances."]
             }
+            
         finally:
             # Nettoyage
             await app.state.file_service.cleanup_file(file_path)
             
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error in CV pipeline: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in lightweight CV matching: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur lors du traitement du CV: {str(e)}")
 
 
 
