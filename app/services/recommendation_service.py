@@ -409,43 +409,65 @@ class RecommendationService:
         user_skills = pre_normalized_user_skills or self._normalize_skill_list(user_profile.skills)
         job_skills = self._normalize_skill_list(enrichie.extracted_skills)
         
-        # 1. Matching des compétences (40%)
+        # Configuration des poids
+        if user_skills:
+            # Poids standard si compétences présentes
+            w_skills = 0.4
+            w_sector = 0.2
+            w_contract = 0.15
+            w_salary = 0.15
+            w_exp = 0.1
+        else:
+            # Poids redistribués si pas de compétences (profil sans CV)
+            # On ignore Skills et Sector (qui dépend de skills)
+            w_skills = 0.0
+            w_sector = 0.0
+            w_contract = 0.35
+            w_salary = 0.35
+            w_exp = 0.30
+            
+            # Bonus pour le titre si disponible
+            if getattr(user_profile, 'current_title', None):
+                 # On pourrait ajouter une logique ici, mais restons simples pour l'instant
+                 pass
+
+        # 1. Matching des compétences
         if user_skills and job_skills:
             skill_matches = self._find_skill_matches(tuple(user_skills), tuple(job_skills))
             skill_score = len(skill_matches) / max(len(set(user_skills)), len(set(job_skills)))
-            score += skill_score * 0.4
+            score += skill_score * w_skills
             if skill_matches:
                 reasons.append(f"✓ Compétences: {', '.join(skill_matches[:3])}")
         
-        # 2. Matching du secteur (20%) - case insensitive
+        # 2. Matching du secteur
         user_sectors = self._normalize_list(getattr(user_profile, 'skills', None))
         job_sector = getattr(enrichie, 'extracted_sector', None)
-        if user_sectors and job_sector:
+        if user_sectors and job_sector and w_sector > 0:
             if job_sector.lower() in [s.lower() for s in user_sectors]:
-                score += 0.2
+                score += w_sector
                 reasons.append(f"✓ Secteur: {job_sector}")
         
-        # 3. Matching du type de contrat (15%)
+        # 3. Matching du type de contrat
         user_contracts = self._normalize_list(getattr(user_profile, 'preferred_contract_type', None))
         job_contract = getattr(enrichie, 'extracted_contract_type', None)
         if user_contracts and job_contract:
             if job_contract.lower() in [c.lower() for c in user_contracts]:
-                score += 0.15
+                score += w_contract
                 reasons.append(f"✓ Contrat: {job_contract}")
         
-        # 4. Matching du salaire (15%) avec marge de sécurité
+        # 4. Matching du salaire avec marge de sécurité
         user_min_salary = getattr(user_profile, "preferred_salary_min", None)
         job_max_salary = getattr(enrichie, "extracted_salary_max", None)
         
         if self._is_valid_number(user_min_salary) and self._is_valid_number(job_max_salary):
             try:
                 if float(job_max_salary) >= float(user_min_salary) * 0.9:  # 10% marge
-                    score += 0.15
+                    score += w_salary
                     reasons.append("✓ Salaire compatible")
             except (ValueError, TypeError):
                 logger.debug("Erreur comparaison salaire pour le job %s", getattr(enrichie, 'id', 'N/A'))
         
-        # 5. Matching de l'expérience (10%) avec tolérance
+        # 5. Matching de l'expérience avec tolérance
         user_exp = getattr(user_profile, "experience_years", None)
         job_exp = getattr(enrichie, "extracted_experience_years", None)
         
@@ -453,10 +475,10 @@ class RecommendationService:
             try:
                 exp_diff = abs(float(user_exp) - float(job_exp))
                 if exp_diff <= 1:
-                    score += 0.1
+                    score += w_exp
                     reasons.append("✓ Expérience compatible")
                 elif exp_diff <= 2:
-                    score += 0.05
+                    score += w_exp * 0.5
                     reasons.append("~ Expérience partiellement compatible")
             except (ValueError, TypeError):
                 logger.debug("Erreur comparaison expérience pour le job %s", getattr(enrichie, 'id', 'N/A'))
