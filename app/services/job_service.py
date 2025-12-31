@@ -79,18 +79,24 @@ class JobService:
                 query = query.filter(OffreEmploiEnrichie.extracted_salary_max <= params.max_salary)
             
             if params.search:
-                search_term = f"%{params.search.lower()}%"
-                # Pour ARRAY, utiliser un cast en texte avec ILIKE
-                query = query.filter(
-                    or_(
-                        func.lower(OffreEmploiBrute.title).like(search_term),
-                        func.lower(OffreEmploiBrute.description).like(search_term),
-                        func.lower(OffreEmploiBrute.company_name).like(search_term),
-                        text("offres_emploi_enrichies.extracted_skills::text ILIKE :search").params(
-                            search=f"%{params.search}%"
+                # Nettoyer et séparer les termes de recherche
+                search_terms = params.search.strip().split()
+                if search_terms:
+                    # Créer une liste de conditions pour chaque terme
+                    search_conditions = []
+                    for term in search_terms:
+                        term_pattern = f"%{term.lower()}%"
+                        term_condition = or_(
+                            func.lower(OffreEmploiBrute.title).like(term_pattern),
+                            func.lower(OffreEmploiBrute.description).like(term_pattern),
+                            func.lower(OffreEmploiBrute.company_name).like(term_pattern),
+                            text("offres_emploi_enrichies.extracted_skills::text ILIKE :term").params(term=term_pattern)
                         )
-                    )
-                )
+                        search_conditions.append(term_condition)
+                    
+                    # Combiner avec OR : au moins un terme doit matcher
+                    # (Pour une recherche plus stricte, utiliser and_(*search_conditions))
+                    query = query.filter(or_(*search_conditions))
             
             # Trier par date de publication (les plus récentes en premier)
             query = query.order_by(desc(OffreEmploiBrute.posted_date))
