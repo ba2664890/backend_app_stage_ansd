@@ -18,19 +18,26 @@ class CVEmbeddingService:
     _model_instance = None
     _model_lock = asyncio.Lock()
     
+    
     def __init__(self, 
                  model_name: str = "dangvantuan/sentence-camembert-base",
                  qdrant_url: str = None,
                  collection_prefix: str = "cv_jobs"):
         self.model_name = model_name
         self.qdrant_url = qdrant_url or os.getenv("QDRANT_URL", "http://localhost:6333")
-        self.qdrant = QdrantClient(self.qdrant_url)
         self.collection_prefix = collection_prefix
         self.job_collection = f"{collection_prefix}_jobs"
         self.cv_collection = f"{collection_prefix}_cvs"
+        self.enabled = False
         
-        # S'assurer que les collections existent
-        self._setup_collections()
+        try:
+            self.qdrant = QdrantClient(self.qdrant_url)
+            # S'assurer que les collections existent
+            self._setup_collections()
+            self.enabled = True
+        except Exception as e:
+            print(f"⚠️ AVERTISSEMENT: Impossible de se connecter à Qdrant à {self.qdrant_url}. Le service d'embedding sera désactivé. Erreur: {e}")
+            self.qdrant = None
     
     def _setup_collections(self):
         """Crée les collections Qdrant si elles n'existent pas."""
@@ -92,8 +99,13 @@ class CVEmbeddingService:
         
         return " | ".join(parts)[:1000]  # Truncate pour performance
     
+        return " | ".join(parts)[:1000]  # Truncate pour performance
+    
     async def add_job_embedding(self, job_id: UUID, title: str, skills: List[str], description: str):
         """Pré-calcul et stockage de l'embedding job (appelé par vos spiders)."""
+        if not self.enabled:
+            return
+            
         model = await self.get_model()
         
         # Construire texte job
@@ -117,6 +129,9 @@ class CVEmbeddingService:
     
     async def find_similar_jobs(self, cv_vector: np.ndarray, limit: int = 50) -> List[UUID]:
         """Recherche les jobs similaires en <10ms."""
+        if not self.enabled:
+            return []
+            
         search_result = self.qdrant.search(
             collection_name=self.job_collection,
             query_vector=cv_vector.tolist(),
@@ -128,6 +143,9 @@ class CVEmbeddingService:
     
     async def find_similar_cvs(self, job_embedding: np.ndarray, limit: int = 100) -> List[UUID]:
         """Pour le côté recruteur: trouver des candidats pour un job."""
+        if not self.enabled:
+            return []
+            
         search_result = self.qdrant.search(
             collection_name=self.cv_collection,
             query_vector=job_embedding.tolist(),
