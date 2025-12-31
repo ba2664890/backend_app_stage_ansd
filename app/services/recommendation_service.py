@@ -366,8 +366,8 @@ class RecommendationService:
                 match_reasons=rec["reasons"][:10],  # Limiter le nombre de raisons
                 salary_range=self._format_salary_range(enrichie),
                 skills_match=self._find_skill_matches(
-                    self._normalize_skill_list(user_profile.skills),
-                    self._normalize_skill_list(enrichie.extracted_skills)
+                    tuple(self._normalize_skill_list(user_profile.skills)),
+                    tuple(self._normalize_skill_list(enrichie.extracted_skills))
                 ),
                 sector_match=self._safe_sector_match(user_profile, enrichie),
                 contract_type_match=self._safe_contract_match(user_profile, enrichie),
@@ -412,7 +412,7 @@ class RecommendationService:
         
         # 1. Matching des compétences (40%)
         if user_skills and job_skills:
-            skill_matches = self._find_skill_matches(user_skills, job_skills)
+            skill_matches = self._find_skill_matches(tuple(user_skills), tuple(job_skills))
             skill_score = len(skill_matches) / max(len(set(user_skills)), len(set(job_skills)))
             score += skill_score * 0.4
             if skill_matches:
