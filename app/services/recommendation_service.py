@@ -19,8 +19,8 @@ from functools import lru_cache
 import hashlib
 from contextlib import contextmanager
 import time
-from cv_intelligent_extractor import CVIntelligentExtractor, CVExtractedData
-from cv_embedding_service import CVEmbeddingService
+from .cv_intelligent_extractor import CVIntelligentExtractor, CVExtractedData
+from .cv_embedding_service import CVEmbeddingService
 
 
 from ..models.database_models import (
