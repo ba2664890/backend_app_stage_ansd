@@ -20,7 +20,7 @@ async def get_map_insights(db: Session = Depends(get_db)):
     admin_service = AdminBoundaryService()
     carte_service = CarteService(admin_service)
     
-    return carte_service.get_map_insights(db)
+    return await carte_service.get_map_insights(db)
 
 @router.get("/locations/{level}", response_model=list[dict])
 async def get_locations(

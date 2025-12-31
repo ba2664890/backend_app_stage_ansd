@@ -19,6 +19,7 @@ from app.db.init_postgis import PostGISManager
 from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute
 from app.models.api_models import AdminBoundaryOut
 from app.core.exceptions import AppError, NotFoundError, ValidationError
+from app.services.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -361,14 +362,12 @@ class CarteService:
             logger.error(f"Error calculating growth: {e}")
             return {}
 
-    @with_network_retry
-    def get_map_insights(self, db: Session) -> Dict[str, Any]:
+    async def get_map_insights(self, db: Session) -> Dict[str, Any]:
         """
-        Génère des insights et alertes de pénurie basés sur les données réelles.
+        Génère des insights et alertes de pénurie basés sur les données réelles et l'IA.
         """
         try:
             # 1. Identifier les pénuries (Ratio Offres / Candidats)
-            # On récupère tout par région pour simplifier
             level = "region"
             
             # Offres par région
@@ -398,14 +397,13 @@ class CarteService:
                 # Ratio : Plus il est haut, plus la pénurie est forte (bcp d'offres / peu de talents)
                 ratio = offers / (talents if talents > 0 else 0.1) 
                 
-                if ratio > 1.0: # Seuil arbitraire de tension
+                if ratio > 0.5: # Seuil abaissé pour détecter plus de tensions
                     shortages.append({
                         "region": region.title(),
                         "ratio": ratio,
                         "offers": offers,
                         "talents": talents,
-                        # Compétence la plus demandée dans cette région (Placeholder - requires complex query)
-                        "top_skill": "Développement" if "dakar" in region else "Agro-business" 
+                        "top_skill": "Multi-secteur" # Placeholder, improved by LLM later
                     })
             
             # Top 3 pénuries
@@ -420,22 +418,37 @@ class CarteService:
                 }
                 for s in top_shortages
             ]
+
+            # 2. Génération de l'Insight IA
+            llm = LLMClient()
             
-            # Insight Généré
             if top_shortages:
-                top = top_shortages[0]
-                insight_text = f"Forte tension observée à {top['region']} (Ratio: {top['ratio']:.1f}). Déficit critique de talents par rapport aux {top['offers']} opportunités ouvertes."
+                context_str = "\n".join([f"- {s['region']}: {s['offers']} offres vs {s['talents']} talents (Ratio: {s['ratio']:.1f})" for s in top_shortages])
+                prompt = (
+                    f"Analyse ces zones de tension sur le marché de l'emploi au Sénégal :\n{context_str}\n"
+                    "Génère une alerte stratégique courte (max 2 phrases) pour un décideur RH, expliquant où recruter est difficile et pourquoi."
+                    "Ne mentionne pas 'ratio' explicitement, parle de tension."
+                )
+                insight_text = await llm.generate_response(
+                    system_prompt="Tu es un expert en intelligence économique et marché du travail sénégalais.",
+                    user_message=prompt,
+                    temperature=0.7
+                )
             else:
-                insight_text = "Le marché semble équilibré actuellement. Aucune tension majeure détectée dans les régions principales."
+                insight_text = await llm.generate_response(
+                    system_prompt="Tu es un expert RH.",
+                    user_message="Le marché de l'emploi sénégalais semble équilibré sans régions en forte tension actuellement. Écris une courte observation positive pour un tableau de bord (1 phrase).",
+                    temperature=0.7
+                )
 
             return {
                 "shortage_areas": formatted_shortages,
-                "ai_insight": insight_text
+                "ai_insight": insight_text.replace('"', '').strip()
             }
 
         except Exception as e:
             logger.error(f"Error generating insights: {e}")
-            return {"shortage_areas": [], "ai_insight": "Données insuffisantes pour l'analyse."}
+            return {"shortage_areas": [], "ai_insight": "Analyse IA temporairement indisponible."}
 
     @with_network_retry
     def get_choropleth_data(
