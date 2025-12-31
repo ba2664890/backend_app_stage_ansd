@@ -9,6 +9,8 @@ import asyncio
 from datetime import datetime
 from .cv_intelligent_extractor import CVExtractedData
 
+import os
+
 class CVEmbeddingService:
     """Service d'embedding avec Qdrant pour stockage et recherche."""
     
@@ -18,10 +20,11 @@ class CVEmbeddingService:
     
     def __init__(self, 
                  model_name: str = "dangvantuan/sentence-camembert-base",
-                 qdrant_url: str = "http://localhost:6333",
+                 qdrant_url: str = None,
                  collection_prefix: str = "cv_jobs"):
         self.model_name = model_name
-        self.qdrant = QdrantClient(qdrant_url)
+        self.qdrant_url = qdrant_url or os.getenv("QDRANT_URL", "http://localhost:6333")
+        self.qdrant = QdrantClient(self.qdrant_url)
         self.collection_prefix = collection_prefix
         self.job_collection = f"{collection_prefix}_jobs"
         self.cv_collection = f"{collection_prefix}_cvs"
