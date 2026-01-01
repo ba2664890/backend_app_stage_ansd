@@ -413,7 +413,7 @@ class RecommendationService:
                 ),
                 applicants_count=getattr(brute, 'applicants_count', 0) or 0,
                 views_count=getattr(brute, 'views_count', 0) or 0,
-                remote_option=getattr(brute, 'remote_type', '').lower() in ['remote', 'hybrid'],
+                remote_option=(getattr(brute, 'remote_type', '') or '').lower() in ['remote', 'hybrid'],
                 is_favorited=str(brute.id) in (saved_job_ids or set()),
                 company_size=getattr(brute.company, 'size', None) if getattr(brute, 'company', None) else None,
                 status="pending"
