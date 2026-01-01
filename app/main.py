@@ -1423,6 +1423,46 @@ async def compare_sectors(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== ANALYSES DE MÉTIERS (EXTRACTED_JOB_TITLE) ====================
+
+@app.get("/api/v1/analytics/jobs/by-contract-type")
+async def get_jobs_by_type(
+    limit_per_type: int = Query(5, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
+    """🔝 Top des métiers pour chaque type de contrat."""
+    try:
+        return app.state.analytics_service.get_jobs_by_contract_type(db, limit_per_type)
+    except Exception as e:
+        logger.error(f"Erreur jobs par type: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/analytics/jobs/by-sector")
+async def get_jobs_by_sector(
+    limit_per_sector: int = Query(5, ge=1, le=20),
+    db: Session = Depends(get_db)
+):
+    """🏢 Ventilation des métiers les plus demandés par secteur."""
+    try:
+        return app.state.analytics_service.get_jobs_by_sector_breakdown(db, limit_per_sector)
+    except Exception as e:
+        logger.error(f"Erreur jobs par secteur: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/analytics/jobs/skills-mapping")
+async def get_skills_by_job(
+    job_title: Optional[str] = Query(None),
+    limit: int = Query(15, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    """🛠️ Mapping des compétences pour un métier spécifique ou globalement."""
+    try:
+        return app.state.analytics_service.get_skills_by_job_title(db, job_title, limit)
+    except Exception as e:
+        logger.error(f"Erreur compétences par job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ==================== ANALYSES DE COMPÉTENCES ====================
 
 @app.get("/api/v1/analytics/skills", response_model=List[Dict[str, Any]])

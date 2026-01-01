@@ -312,6 +312,9 @@ class DashboardStats(BaseModel):
     contract_type_distribution: List[Dict[str, Any]]
     experience_level_distribution: List[Dict[str, Any]]
     monthly_trend: List[Dict[str, Any]]
+    # Métiers (Nouveaux)
+    jobs_by_type: Optional[Dict[str, List[Dict[str, Any]]]] = None
+    jobs_by_sector: Optional[Dict[str, List[Dict[str, Any]]]] = None
 
 class GeographicStats(BaseModel):
     """Statistiques géographiques."""
@@ -368,6 +371,10 @@ class FullAnalyticsResponse(BaseModel):
     top_companies: List[CompanyHiringStats]
     contract_evolution: List[ContractTypeEvolution]
     evolution_rates: Dict[str, Any]
+    # Nouveaux champs pour les métiers
+    jobs_by_type: Optional[Dict[str, List[Dict[str, Any]]]] = None
+    jobs_by_sector: Optional[Dict[str, List[Dict[str, Any]]]] = None
+    skills_by_job: Optional[List[Dict[str, Any]]] = None
     generated_at: datetime
 
 

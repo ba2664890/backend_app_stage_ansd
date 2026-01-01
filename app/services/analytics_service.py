@@ -736,9 +736,81 @@ class AnalyticsService:
                     sector_node["children"].append(job_node)
                 
                 treemap_data["children"].append(sector_node)
-            
-            return treemap_data
-            
         except Exception as e:
             logger.error(f"Erreur lors de la génération des données hiérarchiques: {str(e)}")
             raise
+
+    def get_jobs_by_contract_type(self, db: Session, limit_per_type: int = 5) -> Dict[str, Any]:
+        """Récupération du top des métiers pour chaque type de contrat."""
+        try:
+            contract_types = db.query(OffreEmploiEnrichie.extracted_contract_type).filter(
+                OffreEmploiEnrichie.extracted_contract_type.isnot(None)
+            ).distinct().all()
+            
+            result = {}
+            for ct in contract_types:
+                c_type = ct[0]
+                top_jobs = db.query(
+                    OffreEmploiEnrichie.extracted_job_title,
+                    func.count(OffreEmploiEnrichie.id).label('count')
+                ).filter(
+                    OffreEmploiEnrichie.extracted_contract_type == c_type,
+                    OffreEmploiEnrichie.extracted_job_title.isnot(None)
+                ).group_by(
+                    OffreEmploiEnrichie.extracted_job_title
+                ).order_by(desc('count')).limit(limit_per_type).all()
+                
+                result[c_type] = [{"job": j[0], "count": j[1]} for j in top_jobs]
+                
+            return result
+        except Exception as e:
+            logger.error(f"Error in get_jobs_by_contract_type: {e}")
+            return {}
+
+    def get_jobs_by_sector_breakdown(self, db: Session, limit_per_sector: int = 5) -> Dict[str, Any]:
+        """Ventilation des métiers par secteur d'activité."""
+        try:
+            top_sectors = db.query(
+                OffreEmploiEnrichie.extracted_sector,
+                func.count(OffreEmploiEnrichie.id).label('count')
+            ).filter(
+                OffreEmploiEnrichie.extracted_sector.isnot(None)
+            ).group_by(OffreEmploiEnrichie.extracted_sector).order_by(desc('count')).limit(10).all()
+            
+            result = {}
+            for sector_row in top_sectors:
+                sector = sector_row[0]
+                top_jobs = db.query(
+                    OffreEmploiEnrichie.extracted_job_title,
+                    func.count(OffreEmploiEnrichie.id).label('count')
+                ).filter(
+                    OffreEmploiEnrichie.extracted_sector == sector,
+                    OffreEmploiEnrichie.extracted_job_title.isnot(None)
+                ).group_by(
+                    OffreEmploiEnrichie.extracted_job_title
+                ).order_by(desc('count')).limit(limit_per_sector).all()
+                
+                result[sector] = [{"job": j[0], "count": j[1]} for j in top_jobs]
+                
+            return result
+        except Exception as e:
+            logger.error(f"Error in get_jobs_by_sector_breakdown: {e}")
+            return {}
+
+    def get_skills_by_job_title(self, db: Session, job_title: str = None, limit: int = 15) -> List[Dict[str, Any]]:
+        """Analyse des compétences pour un métier spécifique ou globalement."""
+        try:
+            query = db.query(
+                func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
+                func.count(OffreEmploiEnrichie.id).label('count')
+            ).filter(OffreEmploiEnrichie.extracted_skills.isnot(None))
+            
+            if job_title:
+                query = query.filter(OffreEmploiEnrichie.extracted_job_title.ilike(f"%{job_title}%"))
+                
+            skills = query.group_by('skill').order_by(desc('count')).limit(limit).all()
+            
+            return [{"skill": s[0], "count": s[1]} for s in skills]
+        except Exception as e:
+            logger.error(f"Error in get_skills_by_job_title: {e}")
+            return []
