@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 
 from ..models.database_models import OffreEmploiBrute, OffreEmploiEnrichie, UserSavedJob
 from ..models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, JobCreate
+from ..utils.job_title_extraction import extract_job_title
 from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
@@ -289,6 +290,7 @@ class JobService:
                 "extracted_skills": enrichie.extracted_skills or [],  # Gérer NULL
                 "extracted_sector": enrichie.extracted_sector,
                 "extracted_job_category": enrichie.extracted_job_category,
+                "extracted_job_title": enrichie.extracted_job_title,
                 "sentiment_score": enrichie.sentiment_score,
                 "key_phrases": enrichie.key_phrases or [],  # Gérer NULL
                 "job_level": enrichie.job_level,
@@ -475,6 +477,7 @@ class JobService:
                 extracted_salary_max=data.get("max_salary"),
                 extracted_skills=data.get("skills", []),
                 extracted_experience_years=data.get("experience_years"),
+                extracted_job_title=extract_job_title(brute.title),
                 confidence_score=1.0, # Donnée manuelle = 100% confiance
                 processed_at=datetime.utcnow()
             )
@@ -524,5 +527,69 @@ class JobService:
         except Exception as e:
             db.rollback()
             logger.error(f"Error deleting job {job_id}: {e}")
+            raise
+
+    def enrich_job_title(self, db: Session, job_id: UUID) -> bool:
+        """
+        Enrichit le titre du poste pour une offre existante.
+        """
+        try:
+            # Récupérer l'offre brute
+            brute = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_id).first()
+            if not brute:
+                return False
+            
+            # Récupérer ou créer l'enrichissement
+            enrichie = db.query(OffreEmploiEnrichie).filter(OffreEmploiEnrichie.offre_id == job_id).first()
+            if not enrichie:
+                # Créer un enrichissement basique
+                enrichie = OffreEmploiEnrichie(
+                    offre_id=job_id,
+                    extracted_job_title=extract_job_title(brute.title),
+                    confidence_score=0.8,  # Score par défaut pour extraction automatique
+                    processed_at=datetime.utcnow()
+                )
+                db.add(enrichie)
+            else:
+                # Mettre à jour le titre extrait
+                enrichie.extracted_job_title = extract_job_title(brute.title)
+                enrichie.processed_at = datetime.utcnow()
+            
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error enriching job title for {job_id}: {e}")
+            return False
+
+    def enrich_all_jobs_titles(self, db: Session) -> int:
+        """
+        Enrichit les titres de poste pour toutes les offres sans titre extrait.
+        Retourne le nombre d'offres enrichies.
+        """
+        try:
+            # Récupérer les offres sans titre extrait
+            jobs_to_enrich = db.query(OffreEmploiBrute).join(
+                OffreEmploiEnrichie, 
+                OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id,
+                isouter=True
+            ).filter(
+                or_(
+                    OffreEmploiEnrichie.extracted_job_title.is_(None),
+                    OffreEmploiEnrichie.id.is_(None)
+                )
+            ).all()
+            
+            enriched_count = 0
+            for brute in jobs_to_enrich:
+                success = self.enrich_job_title(db, brute.id)
+                if success:
+                    enriched_count += 1
+            
+            logger.info(f"Enriched {enriched_count} job titles")
+            return enriched_count
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error enriching all job titles: {e}")
             raise
 

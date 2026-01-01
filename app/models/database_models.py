@@ -85,6 +85,7 @@ class OffreEmploiEnrichie(Base):
     extracted_skills = Column(ARRAY(String))
     extracted_sector = Column(String(100))
     extracted_job_category = Column(String(100))
+    extracted_job_title = Column(String(255))
     
     # Analyse sémantique
     sentiment_score = Column(Float)

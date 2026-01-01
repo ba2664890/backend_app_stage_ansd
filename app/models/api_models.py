@@ -75,6 +75,7 @@ class JobOfferResponse(JobOfferBase):
     extracted_skills: Optional[List[str]] = Field(None, description="Compétences extraites")
     extracted_sector: Optional[str] = Field(None, description="Secteur d'activité")
     extracted_job_category: Optional[str] = Field(None, description="Catégorie du poste")
+    extracted_job_title: Optional[str] = Field(None, description="Titre du poste extrait")
     
     # Analyse sémantique
     sentiment_score: Optional[float] = Field(None, description="Score de sentiment")
