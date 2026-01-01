@@ -15,5 +15,7 @@ def check_table(table_name):
 if __name__ == "__main__":
     try:
         check_table("offres_emploi_brutes")
+        print("-" * 30)
+        check_table("offres_emploi_enrichies")
     except Exception as e:
         print(f"Error: {e}")
