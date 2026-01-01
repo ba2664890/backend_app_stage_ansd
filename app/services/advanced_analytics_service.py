@@ -211,6 +211,7 @@ class AdvancedAnalyticsService:
 
         except Exception as e:
             logger.error(f"Erreur évolution contrats: {e}")
+            db.rollback()
             return []
 
     # ==================== TAUX D'ÉVOLUTION DU MARCHÉ ====================
@@ -318,6 +319,7 @@ class AdvancedAnalyticsService:
             }
         except Exception as e:
             logger.error(f"Erreur taux d'évolution: {e}")
+            db.rollback()
             return {}
 
     def _calculate_growth(self, current: int, previous: int) -> float:
@@ -329,16 +331,21 @@ class AdvancedAnalyticsService:
     def _count_unique_skills(self, db: Session, start_date: datetime, end_date: datetime) -> int:
         """Compte le nombre de compétences uniques."""
         try:
-            result = db.query(
-                func.count(distinct(func.unnest(OffreEmploiEnrichie.extracted_skills)))
+            # Utilisation d'une sous-requête pour plus de robustesse avec unnest
+            subquery = db.query(
+                func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiEnrichie.extracted_skills.isnot(None)
-            ).scalar()
+            ).subquery()
+            
+            result = db.query(func.count(distinct(subquery.c.skill))).scalar()
             return result or 0
-        except:
+        except Exception as e:
+            logger.error(f"Erreur compte compétences: {e}")
+            db.rollback()
             return 0
 
     def _calculate_market_health(self, offers_growth: float, companies_growth: float, sectors_growth: float) -> str:
@@ -2442,6 +2449,7 @@ class AdvancedAnalyticsService:
             return result
         except Exception as e:
             logger.error(f"Error in get_jobs_by_contract_type: {e}")
+            db.rollback()
             return {}
 
     def get_jobs_by_sector_breakdown(self, db: Session, limit_per_sector: int = 5) -> Dict[str, Any]:
@@ -2472,6 +2480,7 @@ class AdvancedAnalyticsService:
             return result
         except Exception as e:
             logger.error(f"Error in get_jobs_by_sector_breakdown: {e}")
+            db.rollback()
             return {}
 
     def get_skills_by_job_title(self, db: Session, job_title: str = None, limit: int = 15) -> List[Dict[str, Any]]:
@@ -2490,5 +2499,6 @@ class AdvancedAnalyticsService:
             return [{"skill": s[0], "count": s[1]} for s in skills]
         except Exception as e:
             logger.error(f"Error in get_skills_by_job_title: {e}")
+            db.rollback()
             return []
     
