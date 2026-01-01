@@ -20,6 +20,7 @@ class SalaryBenchmarkService:
         self,
         db: Session,
         job_category: Optional[str] = None,
+        job_title: Optional[str] = None,
         sector: Optional[str] = None,
         location: Optional[str] = None,
         experience_years: Optional[int] = None
@@ -38,6 +39,11 @@ class SalaryBenchmarkService:
         # Appliquer les filtres
         if job_category:
             query = query.filter(OffreEmploiEnrichie.extracted_job_category == job_category)
+        
+        if job_title:
+            query = query.filter(
+                func.lower(OffreEmploiEnrichie.extracted_job_title).contains(func.lower(job_title))
+            )
         
         if sector:
             query = query.filter(OffreEmploiEnrichie.extracted_sector == sector)
@@ -76,17 +82,30 @@ class SalaryBenchmarkService:
                 "p75": values[3 * n // 4]
             }
         
-        return {
+        stats_min = calculate_stats(salary_mins)
+        stats_max = calculate_stats(salary_maxs)
+        
+        # Consolidation pour le frontend (moyenne des mins et maxs pour une vision globale)
+        res = {
             "count": len(offers),
-            "salary_min": calculate_stats(salary_mins),
-            "salary_max": calculate_stats(salary_maxs),
+            "sample_size": len(offers),
+            "min_salary": stats_min["p25"] or 0,
+            "max_salary": stats_max["p75"] or 0,
+            "median_salary": (stats_min["median"] + stats_max["median"]) // 2 if stats_min["median"] and stats_max["median"] else 0,
+            "avg_salary": (stats_min["avg"] + stats_max["avg"]) // 2 if stats_min["avg"] and stats_max["avg"] else 0,
+            "job_category": job_category or "Général",
+            "job_title": job_title,
+            "salary_min": stats_min,
+            "salary_max": stats_max,
             "filters_applied": {
                 "job_category": job_category,
+                "job_title": job_title,
                 "sector": sector,
                 "location": location,
                 "experience_years": experience_years
             }
         }
+        return res
     
     def analyze_salary_equity(
         self,

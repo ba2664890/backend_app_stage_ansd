@@ -18,6 +18,7 @@ salary_service = SalaryBenchmarkService()
 @router.get("/benchmark", response_model=Dict[str, Any])
 async def get_salary_benchmark(
     job_category: Optional[str] = Query(None, description="Catégorie de poste"),
+    job_title: Optional[str] = Query(None, description="Titre du poste spécifique"),
     sector: Optional[str] = Query(None, description="Secteur d'activité"),
     location: Optional[str] = Query(None, description="Localisation"),
     experience_years: Optional[int] = Query(None, description="Années d'expérience"),
@@ -25,7 +26,7 @@ async def get_salary_benchmark(
 ):
     """Récupère le benchmark salarial selon les critères."""
     benchmark = salary_service.get_salary_benchmark(
-        db, job_category, sector, location, experience_years
+        db, job_category, job_title, sector, location, experience_years
     )
     return benchmark
 

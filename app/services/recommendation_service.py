@@ -248,6 +248,14 @@ class RecommendationService:
                 OffreEmploiEnrichie.extracted_salary_min <= float(request.max_salary)
             )
         
+        if hasattr(request, 'preferred_job_titles') and request.preferred_job_titles:
+            title_conditions = [
+                func.lower(OffreEmploiEnrichie.extracted_job_title).contains(t.lower().strip())
+                for t in request.preferred_job_titles if t.strip()
+            ]
+            if title_conditions:
+                query = query.filter(or_(*title_conditions))
+        
         # Optimisation: eager loading des relations (uniquement si elles existent)
         return query
     
@@ -435,6 +443,30 @@ class RecommendationService:
             if getattr(user_profile, 'current_title', None):
                  # On pourrait ajouter une logique ici, mais restons simples pour l'instant
                  pass
+
+        # 0. Matching du titre du poste (Nouveau)
+        # On compare le titre actuel de l'utilisateur avec le titre extrait de l'offre
+        user_title = getattr(user_profile, 'current_title', None)
+        job_title = getattr(enrichie, 'extracted_job_title', None)
+        
+        w_title = 0.25 # On donne un poids significatif au titre
+        if user_title and job_title:
+            # Nettoyage simple pour la comparaison
+            u_title_norm = user_title.lower().strip()
+            j_title_norm = job_title.lower().strip()
+            
+            # Match exact ou contenu
+            if u_title_norm == j_title_norm or u_title_norm in j_title_norm or j_title_norm in u_title_norm:
+                score += w_title
+                reasons.append(f"✓ Titre correspondant: {job_title}")
+            else:
+                # On ajuste les autres poids si le titre ne matche pas mais est présent
+                # Pour l'instant, on laisse tel quel pour ne pas trop complexifier
+                pass
+
+        # Ajustement des poids restants (0.75 restants si match titre, ou redistribution)
+        # On va simplifier en gardant le reste sur 1.0 au total possible
+        # Nouveau total théorique max: 1.0 + 0.25 = 1.25, on min(score, 1.0) à la fin
 
         # 1. Matching des compétences
         if user_skills and job_skills:

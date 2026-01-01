@@ -79,6 +79,11 @@ class JobService:
             if params.max_salary:
                 query = query.filter(OffreEmploiEnrichie.extracted_salary_max <= params.max_salary)
             
+            if hasattr(params, 'job_title') and params.job_title:
+                query = query.filter(
+                    func.lower(OffreEmploiEnrichie.extracted_job_title).contains(func.lower(params.job_title))
+                )
+            
             if params.search:
                 # Nettoyer et séparer les termes de recherche
                 search_terms = params.search.strip().split()

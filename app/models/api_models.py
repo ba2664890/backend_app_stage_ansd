@@ -116,6 +116,7 @@ class JobSearchParams(BaseModel):
     sector: Optional[str] = Field(None, description="Filtrer par secteur")
     min_salary: Optional[int] = Field(None, ge=0, description="Salaire minimum")
     max_salary: Optional[int] = Field(None, ge=0, description="Salaire maximum")
+    job_title: Optional[str] = Field(None, description="Filtrer par titre de poste extrait")
     search: Optional[str] = Field(None, description="Recherche textuelle")
 
 # Modèles pour l'analytics
@@ -176,6 +177,7 @@ class RecommendationRequest(BaseModel):
     preferred_contract_types: Optional[List[str]] = Field(None, description="Types de contrat préférés")
     min_salary: Optional[int] = Field(None, ge=0, description="Salaire minimum souhaité")
     max_salary: Optional[int] = Field(None, ge=0, description="Salaire maximum souhaité")
+    preferred_job_titles: Optional[List[str]] = Field(None, description="Titres de poste préférés")
     location_radius: Optional[int] = Field(None, description="Rayon de recherche géographique (km)")
 
 

@@ -620,6 +620,7 @@ async def get_jobs(
     sector: Optional[str] = Query(None, description="Filtrer par secteur"),
     min_salary: Optional[int] = Query(None, ge=0, description="Salaire minimum"),
     max_salary: Optional[int] = Query(None, ge=0, description="Salaire maximum"),
+    job_title: Optional[str] = Query(None, description="Filtrer par titre de poste extrait"),
     search: Optional[str] = Query(None, description="Recherche textuelle"),
     db=Depends(get_db)
 ):
@@ -633,6 +634,7 @@ async def get_jobs(
             sector=sector,
             min_salary=min_salary,
             max_salary=max_salary,
+            job_title=job_title,
             search=search
         )
         
