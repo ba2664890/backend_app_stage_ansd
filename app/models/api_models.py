@@ -171,7 +171,7 @@ class JobAnalyticsResponse(BaseModel):
 # Modèles pour les recommandations
 class RecommendationRequest(BaseModel):
     """Requête pour obtenir des recommandations."""
-    max_results: int = Field(10, ge=1, le=50, description="Nombre maximum de recommandations")
+    max_results: int = Field(10, ge=1, le=200, description="Nombre maximum de recommandations")
     min_match_score: float = Field(0.5, ge=0.0, le=1.0, description="Score de matching minimum")
     preferred_sectors: Optional[List[str]] = Field(None, description="Secteurs préférés")
     preferred_contract_types: Optional[List[str]] = Field(None, description="Types de contrat préférés")
