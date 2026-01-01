@@ -22,7 +22,7 @@ import time
 
 from ..models.database_models import (
     OffreEmploiBrute, OffreEmploiEnrichie, UserProfile, 
-    JobRecommendation
+    JobRecommendation, UserSavedJob
 )
 from ..models.api_models import RecommendationRequest, RecommendationResponse, JobRecommendationResponse
 
@@ -122,9 +122,15 @@ class RecommendationService:
             # Calcul des scores avec parallel processing possible
             scored_jobs = self._score_jobs_batch(user_profile, candidate_jobs, request)
             
+            # Récupération des jobs sauvegardés pour marquer les favoris
+            saved_job_ids = {
+                str(sj.job_id) 
+                for sj in db.query(UserSavedJob.job_id).filter(UserSavedJob.user_id == user_profile.user_id).all()
+            }
+            
             # Création des recommandations avec transaction robuste
             recommendations = self._create_recommendations_batch(
-                db, user_id, scored_jobs, user_profile
+                db, user_id, scored_jobs, user_profile, saved_job_ids
             )
             
             # Métriques de performance
@@ -177,10 +183,21 @@ class RecommendationService:
             if not recent_jobs:
                 logger.warning("Aucune offre récente disponible pour le matching CV")
                 return self._empty_recommendation_response(user_id)
-            
+
+            # Récupération des jobs sauvegardés si l'utilisateur est connecté
+            saved_job_ids = set()
+            if user_id:
+                # On essaie de trouver l'ID de l'utilisateur (peut être User.id ou UserProfile.id)
+                # Mais UserSavedJob utilise User.id
+                actual_user_id = self._get_valid_uuid(user_id)
+                saved_job_ids = {
+                    str(sj.job_id) 
+                    for sj in db.query(UserSavedJob.job_id).filter(UserSavedJob.user_id == actual_user_id).all()
+                }
+
             # Vectorisation avec gestion de mémoire
             recommendations = self._vectorized_cv_matching(
-                cv_text, cv_skills, cv_experience, cv_sectors, recent_jobs
+                cv_text, cv_skills, cv_experience, cv_sectors, recent_jobs, saved_job_ids
             )
             
             # Tri et limitation
@@ -316,7 +333,8 @@ class RecommendationService:
         return scored_jobs[:request.max_results]
     
     def _create_recommendations_batch(self, db: Session, user_id: str, 
-                                    scored_jobs: List[Dict], user_profile: UserProfile):
+                                    scored_jobs: List[Dict], user_profile: UserProfile,
+                                    saved_job_ids: Set[str]):
         """Création batch des recommandations avec transaction robuste."""
         recommendations = []
         
@@ -336,7 +354,7 @@ class RecommendationService:
                         logger.debug("Recommandation existante incluse pour le job %s", enrichie.id)
                         # On l'ajoute quand même à la réponse pour l'affichage
                         job_recommendation = self._create_job_recommendation_response(
-                            brute, enrichie, rec, user_profile
+                            brute, enrichie, rec, user_profile, saved_job_ids
                         )
                         recommendations.append(job_recommendation)
                         continue
@@ -352,7 +370,7 @@ class RecommendationService:
                     
                     # Création réponse API
                     job_recommendation = self._create_job_recommendation_response(
-                        brute, enrichie, rec, user_profile
+                        brute, enrichie, rec, user_profile, saved_job_ids
                     )
                     recommendations.append(job_recommendation)
                     
@@ -366,7 +384,7 @@ class RecommendationService:
         
         return recommendations
     
-    def _create_job_recommendation_response(self, brute, enrichie, rec, user_profile):
+    def _create_job_recommendation_response(self, brute, enrichie, rec, user_profile, saved_job_ids: Set[str] = None):
         """Création robuste de l'objet de réponse."""
         try:
             return JobRecommendationResponse(
@@ -375,18 +393,30 @@ class RecommendationService:
                 company_name=str(brute.company_name or "Entreprise non spécifiée")[:200],
                 location=str(brute.location or "Localisation spécifiée")[:100],
                 match_score=float(rec["score"]),
-                match_reasons=rec["reasons"][:10],  # Limiter le nombre de raisons
-                salary_range=self._format_salary_range(enrichie),
-                skills_match=self._find_skill_matches(
+                match_reasons=rec["reasons"][:10],
+                salary_min=enrichie.extracted_salary_min,
+                salary_max=enrichie.extracted_salary_max,
+                contract_type=enrichie.extracted_contract_type or brute.contract_type,
+                experience_required=f"{enrichie.extracted_experience_years} ans" if enrichie.extracted_experience_years else "Non spécifié",
+                posted_date=brute.posted_date,
+                deadline=brute.expiration_date,
+                url=brute.url,
+                skills=list(self._find_skill_matches(
                     tuple(self._normalize_skill_list(user_profile.skills)),
                     tuple(self._normalize_skill_list(enrichie.extracted_skills))
-                ),
+                )),
                 sector_match=self._safe_sector_match(user_profile, enrichie),
                 contract_type_match=self._safe_contract_match(user_profile, enrichie),
                 location_match=self._is_location_match(
                     getattr(user_profile, "location", None), 
                     brute.location
-                )
+                ),
+                applicants_count=getattr(brute, 'applicants_count', 0) or 0,
+                views_count=getattr(brute, 'views_count', 0) or 0,
+                remote_option=getattr(brute, 'remote_type', '').lower() in ['remote', 'hybrid'],
+                is_favorited=str(brute.id) in (saved_job_ids or set()),
+                company_size=getattr(brute.company, 'size', None) if getattr(brute, 'company', None) else None,
+                status="pending"
             )
         except Exception as e:
             logger.error("Erreur création JobRecommendationResponse: %s", str(e))
@@ -398,11 +428,22 @@ class RecommendationService:
                 location="Erreur",
                 match_score=0.0,
                 match_reasons=["Erreur lors de la création de la recommandation"],
-                salary_range=None,
-                skills_match=[],
+                salary_min=None,
+                salary_max=None,
+                contract_type=None,
+                experience_required=None,
+                posted_date=None,
+                deadline=None,
+                url=None,
+                skills=[],
                 sector_match=False,
                 contract_type_match=False,
-                location_match=False
+                location_match=False,
+                applicants_count=0,
+                views_count=0,
+                remote_option=False,
+                company_size=None,
+                status="pending"
             )
     
     def _calculate_match_score(
@@ -893,7 +934,8 @@ class RecommendationService:
             return []
     
     def _vectorized_cv_matching(self, cv_text: str, cv_skills: List[str], cv_experience: int,
-                               cv_sectors: List[str], recent_jobs: List[Any]) -> List[JobRecommendationResponse]:
+                               cv_sectors: List[str], recent_jobs: List[Any], 
+                               saved_job_ids: Set[str] = None) -> List[JobRecommendationResponse]:
         """Matching vectorisé CV avec gestion de mémoire et optimisations."""
         recommendations = []
         
@@ -958,14 +1000,23 @@ class RecommendationService:
                             location=str(getattr(brute, 'location', 'Localisation non spécifiée'))[:100],
                             match_score=final_score,
                             match_reasons=reasons,
-                            salary_range=self._format_salary_range(enrichie),
-                            skills_match=self._find_skill_matches(
+                            salary_min=getattr(enrichie, 'extracted_salary_min', None),
+                            salary_max=getattr(enrichie, 'extracted_salary_max', None),
+                            contract_type=getattr(enrichie, 'extracted_contract_type', None) or getattr(brute, 'contract_type', None),
+                            experience_required=f"{getattr(enrichie, 'extracted_experience_years', '')} ans" if getattr(enrichie, 'extracted_experience_years', None) else "Non spécifié",
+                            posted_date=getattr(brute, 'posted_date', None),
+                            deadline=getattr(brute, 'expiration_date', None),
+                            url=getattr(brute, 'url', None),
+                            skills=list(self._find_skill_matches(
                                 tuple(cv_skills), 
                                 tuple(self._normalize_skill_list(getattr(enrichie, 'extracted_skills', [])))
-                            ),
+                            )),
                             sector_match=bool(getattr(enrichie, 'extracted_sector', None) in cv_sectors),
-                            contract_type_match=True,  # À déterminer selon contexte
-                            location_match=True
+                            contract_type_match=True,
+                            is_favorited=str(brute.id) in (saved_job_ids or set()),
+                            location_match=True,
+                            applicants_count=getattr(brute, 'applicants_count', 0) or 0,
+                            views_count=getattr(brute, 'views_count', 0) or 0
                         )
                         recommendations.append(job_recommendation)
             

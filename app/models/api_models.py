@@ -188,11 +188,23 @@ class JobRecommendationResponse(BaseModel):
     location: str
     match_score: float
     match_reasons: List[str]
-    salary_range: Optional[str] = None
-    skills_match: List[str]
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    contract_type: Optional[str] = None
+    experience_required: Optional[str] = None
+    posted_date: Optional[datetime] = None
+    deadline: Optional[datetime] = None
+    url: Optional[str] = None
+    skills: List[str]
     sector_match: bool
     contract_type_match: bool
     location_match: bool
+    applicants_count: int = 0
+    views_count: int = 0
+    remote_option: bool = False
+    is_favorited: bool = False
+    company_size: Optional[str] = None
+    status: str = "pending"
 
 class RecommendationResponse(BaseModel):
     user_id: str  # Important : str, pas UUID
