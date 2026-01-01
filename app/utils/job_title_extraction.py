@@ -64,3 +64,49 @@ def extract_job_title(title: str) -> Optional[str]:
     """
     raw_title = extraire_metier_ultra_simple(title)
     return normaliser_titre_metier(raw_title)
+
+
+def backfill_job_titles(db):
+    """
+    Parcourt les offres existantes pour remplir extracted_job_title si vide.
+    Conçu pour être lancé en tâche de fond au démarrage.
+    """
+    import logging
+    from ..models.database_models import OffreEmploiEnrichie
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # On ne traite que les records vides
+        enrichies = db.query(OffreEmploiEnrichie).filter(
+            OffreEmploiEnrichie.extracted_job_title.is_(None)
+        ).all()
+        
+        if not enrichies:
+            logger.info("✅ Aucun backfill nécessaire pour les titres de poste.")
+            return
+
+        logger.info(f"⏳ Début du backfill pour {len(enrichies)} titres de poste...")
+        
+        count = 0
+        for enrichie in enrichies:
+            brute = enrichie.offre_brute
+            if brute and brute.title:
+                try:
+                    title = extract_job_title(brute.title)
+                    if title:
+                        enrichie.extracted_job_title = title
+                        count += 1
+                except Exception as e:
+                    logger.error(f"Erreur extraction pour record {enrichie.id} : {e}")
+            
+            # Commit par blocs
+            if count % 50 == 0:
+                db.commit()
+                
+        db.commit()
+        logger.info(f"✨ Backfill terminé : {count} titres mis à jour.")
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"❌ Échec du backfill des titres de poste : {str(e)}")

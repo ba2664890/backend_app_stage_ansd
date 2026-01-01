@@ -59,6 +59,7 @@ from uuid import UUID
 from .db.init_postgis import PostGISManager
 from .core.exceptions import AppError, setup_exception_handlers
 from app.services import job_service
+from .utils.job_title_extraction import backfill_job_titles
 
 # Configuration du logging
 setup_logging()
@@ -135,6 +136,18 @@ async def lifespan(app: FastAPI):
                 rag_service=app.state.rag_service
             )
             
+            # 🔥 Backfill des titres de poste en arrière-plan
+            async def run_backfill():
+                # On utilise un nouveau DB session pour la tâche de fond
+                bg_db = SessionLocal()
+                try:
+                    # Exécuter dans un thread séparé car backfill_job_titles est synchrone (SQLAlchemy)
+                    await asyncio.to_thread(backfill_job_titles, bg_db)
+                finally:
+                    bg_db.close()
+            
+            asyncio.create_task(run_backfill())
+
             # ÉTAPE 3.6 : Indexation RAG initiale si nécessaire
             logger.info("Étape 3.6 : Vérification de l'index RAG...")
             
