@@ -9,40 +9,34 @@ from typing import Optional
 def extraire_metier_ultra_simple(titre: str) -> Optional[str]:
     """
     Extraction métier ultra-simple :
-    - Cherche "recrute [nombre/quantifieur]"
-    - Si trouvé : prend ce qui vient après
-    - Sinon : prend le titre ENTIER
+    - Cherche les patterns de recrutement (recrute, recrutement, avis...)
+    - Nettoie les quantités (01, 10, plusieurs...)
+    - Retourne le métier net
     """
     if not titre or not isinstance(titre, str):
         return None
 
-    # Pattern 1 : "recrute 01/des/plusieurs/un/une MÉTIER"
-    pattern_recrute = re.compile(
-        r'recrute[ds]?\s+(?:0?\d+|plusieurs|des|un|une|massivement)\s+(.+?)(?:\s*[\(\[]|\s+-\s+|\s+[àa]\s+|\s+et\s+|\s+/\s+|\s+h/f|\s+m/f|\s+f/h|\s+bilingue|\s+cdi|\s+cdd|\s+stage|\s+freelance|$)',
+    titre = titre.strip()
+    
+    # 1. Nettoyage des préfixes d'action et quantités
+    # Pattern large pour attraper "Recrutement de 10...", "Recrute plusieurs...", "05 Coordonnateurs..."
+    pattern = re.compile(
+        r'^(?:(?:recrute[ds]?|recrutement|avis de recrutement|recherche)\s+(?:de\s+)?(?:0?\d+|plusieurs|des|un|une|massivement)?\s*|0?\d+\s+)(.+?)(?:\s*[\(\[]|\s+-\s+|\s+[àa]\s+|\s+et\s+|\s+/\s+|\s+h/f|\s+m/f|\s+f/h|\s+bilingue|\s+cdi|\s+cdd|\s+stage|\s+freelance|$)',
         re.IGNORECASE
     )
 
-    match = pattern_recrute.search(titre)
+    match = pattern.search(titre)
     if match:
         metier = match.group(1).strip()
-        # Nettoyage léger : enlever "pour/en/chez..." à la fin
+        # Sécurité supplémentaire : si le métier extrait commence encore par un chiffre (cas complexes)
+        metier = re.sub(r'^\b\d+\b\s*', '', metier)
+        # Nettoyage final : enlever "pour/en/chez..."
         metier = re.split(r'\s+(pour|en|chez|dans|au|à la|de la|dans le secteur)\s+', metier)[0]
-        return metier if len(metier) >= 3 else titre.strip()
+        return metier
 
-    # Pattern 2 : "recrute MÉTIER" (sans nombre)
-    pattern_recrute_sans_nb = re.compile(
-        r'recrute[ds]?\s+(.+?)(?:\s*[\(\[]|\s+-\s+|\s+[àa]\s+|\s+et\s+|\s+/\s+|\s+h/f|\s+m/f|\s+f/h|\s+bilingue|\s+cdi|\s+cdd|\s+freelance|$)',
-        re.IGNORECASE
-    )
-
-    match = pattern_recrute_sans_nb.search(titre)
-    if match:
-        metier = match.group(1).strip()
-        metier = re.split(r'\s+(pour|en|chez|dans|au|à la|de la)\s+', metier)[0]
-        return metier if len(metier) >= 3 else titre.strip()
-
-    # ⚠️ FALLBACK : prendre tout le titre
-    return titre.strip()
+    # ⚠️ FALLBACK FINAL : tout le titre sans chiffres au début
+    clean_title = re.sub(r'^\d+\s+', '', titre)
+    return clean_title
 
 
 def normaliser_titre_metier(metier: str) -> Optional[str]:
