@@ -636,3 +636,52 @@ class WebhookResponse(WebhookBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+# ==================== ADVERTISER & REWARDS ====================
+
+class AdvertiserProfileResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    points: int
+    level: int
+    total_contributions: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class RewardResponse(BaseModel):
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    cost_points: int
+    image_url: Optional[str] = None
+    is_active: bool
+    stock: int
+    
+    class Config:
+        from_attributes = True
+
+class UserRewardResponse(BaseModel):
+    id: UUID
+    reward: RewardResponse
+    status: str
+    claim_code: Optional[str] = None
+    claimed_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class PointTransactionResponse(BaseModel):
+    id: UUID
+    amount: int
+    reason: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class AdvertiserStatsResponse(BaseModel):
+    profile: AdvertiserProfileResponse
+    recent_transactions: List[PointTransactionResponse]
+    available_rewards: List[RewardResponse]

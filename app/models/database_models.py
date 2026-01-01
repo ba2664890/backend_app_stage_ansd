@@ -52,9 +52,11 @@ class OffreEmploiBrute(Base):
     # Liens pour les offres postées via la plateforme
     recruiter_id = Column(UUID(as_uuid=True), ForeignKey("recruiters.id", ondelete="SET NULL"), nullable=True)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="SET NULL"), nullable=True)
+    contributor_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     
     # Relations CORRIGÉES
     recruiter = relationship("Recruiter", backref="posted_jobs")
+    contributor = relationship("User", backref="contributed_jobs", foreign_keys=[contributor_id])
     enrichie = relationship("OffreEmploiEnrichie", back_populates="offre_brute", uselist=False)
     admin_boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"))
     admin_boundary = relationship(
@@ -132,6 +134,7 @@ class UserRole(str, enum.Enum):
     HR_MANAGER = "hr_manager"
     CANDIDATE = "candidate"
     GOVERNMENT = "government"
+    ADVERTISER = "advertiser"
 
 class CandidateCategory(str, enum.Enum):
     PUPIL = "pupil"
@@ -175,6 +178,13 @@ class User(Base):
     # Relation avec Recruiter (1-to-1 optionnel)
     recruiter_profile = relationship(
         "Recruiter",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
+    advertiser_profile = relationship(
+        "AdvertiserProfile",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan"
@@ -630,3 +640,60 @@ class Document(Base):
         Index('idx_documents_user', 'user_id'),
         Index('idx_documents_category', 'category'),
     )
+class AdvertiserProfile(Base):
+    """Profil pour les annonceurs/contributeurs."""
+    __tablename__ = "advertiser_profiles"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    points = Column(Integer, default=0)
+    level = Column(Integer, default=1)
+    total_contributions = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    
+    # Relations
+    user = relationship("User", back_populates="advertiser_profile")
+    claimed_rewards = relationship("UserReward", back_populates="advertiser")
+    transactions = relationship("PointTransaction", back_populates="advertiser")
+
+class PointTransaction(Base):
+    """Historique des transactions de points."""
+    __tablename__ = "point_transactions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    advertiser_id = Column(UUID(as_uuid=True), ForeignKey("advertiser_profiles.id", ondelete="CASCADE"), nullable=False)
+    amount = Column(Integer, nullable=False) # Positif pour ajout, négatif pour dépense
+    reason = Column(String(255), nullable=False) # "job_post_form", "job_post_file", "reward_claim", etc.
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relations
+    advertiser = relationship("AdvertiserProfile", back_populates="transactions")
+
+class Reward(Base):
+    """Catalogue des récompenses."""
+    __tablename__ = "rewards"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    cost_points = Column(Integer, nullable=False)
+    image_url = Column(String(500))
+    is_active = Column(Boolean, default=True)
+    stock = Column(Integer, default=-1) # -1 pour illimité
+    created_at = Column(DateTime, default=func.now())
+
+class UserReward(Base):
+    """Récompenses réclamées par les utilisateurs."""
+    __tablename__ = "user_rewards"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    advertiser_id = Column(UUID(as_uuid=True), ForeignKey("advertiser_profiles.id", ondelete="CASCADE"), nullable=False)
+    reward_id = Column(UUID(as_uuid=True), ForeignKey("rewards.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(50), default="claimed") # "claimed", "used", "expired"
+    claim_code = Column(String(100), unique=True) # Code de validation unique
+    claimed_at = Column(DateTime, default=func.now())
+    
+    # Relations
+    advertiser = relationship("AdvertiserProfile", back_populates="claimed_rewards")
+    reward = relationship("Reward")
