@@ -684,4 +684,4 @@ class PointTransactionResponse(BaseModel):
 class AdvertiserStatsResponse(BaseModel):
     profile: AdvertiserProfileResponse
     recent_transactions: List[PointTransactionResponse]
-    available_rewards: List[RewardResponse]
+    claimed_rewards: List[UserRewardResponse]
