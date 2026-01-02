@@ -70,7 +70,12 @@ class AdvertiserService:
 
     async def post_job_file(self, db: Session, user_id: UUID, file_path: str) -> JobOfferResponse:
         """Extrait les infos d'un fichier, publie l'offre et attribue des points."""
-        text = await self.file_service.extract_text_from_file(file_path)
+        try:
+            text = await self.file_service.extract_text_from_file(file_path)
+            logger.info(f"Texte extrait du fichier ({len(text)} caractères)")
+        except Exception as e:
+            logger.error(f"Erreur extraction texte: {e}")
+            raise ValueError(f"Impossible d'extraire le texte du fichier: {str(e)}")
         
         # Limiter le texte pour éviter les dépassements de tokens
         text_excerpt = text[:6000]
@@ -109,14 +114,22 @@ FORMAT JSON ATTENDU:
 
 Réponds UNIQUEMENT avec le JSON, sans texte additionnel."""
         
-        extracted_data = await self.llm_client.generate_json_response(
-            system_prompt="Tu es un assistant expert en extraction de données d'emploi pour le marché sénégalais. Tu réponds toujours en JSON valide.",
-            user_message=prompt
-        )
+        try:
+            extracted_data = await self.llm_client.generate_json_response(
+                system_prompt="Tu es un assistant expert en extraction de données d'emploi pour le marché sénégalais. Tu réponds toujours en JSON valide.",
+                user_message=prompt
+            )
+        except Exception as e:
+            logger.error(f"Erreur appel LLM: {e}")
+            raise ValueError("Le service d'extraction IA est temporairement indisponible. Veuillez réessayer dans quelques instants.")
         
         # Validation renforcée
-        if not extracted_data:
-            raise ValueError("L'extraction IA a échoué. Aucune donnée n'a pu être extraite du fichier.")
+        if extracted_data is None:
+            raise ValueError("L'extraction IA a échoué. Le service LLM n'a pas pu traiter le document. Vérifiez que le fichier contient du texte lisible.")
+        
+        if not isinstance(extracted_data, dict):
+            logger.error(f"Type de données invalide reçu: {type(extracted_data)}")
+            raise ValueError("L'extraction IA a retourné des données dans un format invalide.")
         
         if not extracted_data.get("title"):
             raise ValueError("Le titre du poste est manquant. Assurez-vous que le document contient un intitulé de poste clair.")
@@ -143,7 +156,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte additionnel."""
             "nb_positions": extracted_data.get("nb_positions", 1)
         }
         
-        logger.info(f"Données extraites et nettoyées: {cleaned_data}")
+        logger.info(f"Données extraites et nettoyées: title={cleaned_data['title']}, company={cleaned_data['company_name']}")
             
         job_create = JobCreate(**cleaned_data)
         job_response = self.job_service.create_job(db, job_create, recruiter_id=None, company_id=None)

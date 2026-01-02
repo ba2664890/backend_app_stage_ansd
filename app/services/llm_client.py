@@ -75,27 +75,42 @@ class LLMClient:
             return "Désolé, je rencontre une difficulté technique pour répondre actuellement. Essayez de reformuler votre question."
 
     async def generate_json_response(self, system_prompt: str, user_message: str) -> Dict:
-        """Génère une réponse structurée en JSON."""
+        """Génère une réponse structurée en JSON avec gestion d'erreur robuste."""
         messages = [
             {"role": "system", "content": f"{system_prompt} Réponds UNIQUEMENT en JSON valide."},
             {"role": "user", "content": user_message}
         ]
         
         if not self.client:
-            return {"error": "Mock mode"}
+            logger.warning("Mode simulation activé - pas de clé API LLM")
+            return None
 
         try:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 response_format={"type": "json_object"},
-                temperature=0.3
+                temperature=0.3,
+                max_tokens=2000
             )
+            
+            content = response.choices[0].message.content
+            logger.info(f"Réponse LLM brute: {content[:200]}...")
+            
             import json
-            return json.loads(response.choices[0].message.content)
+            parsed_data = json.loads(content)
+            logger.info(f"JSON parsé avec succès: {list(parsed_data.keys())}")
+            return parsed_data
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Erreur de parsing JSON: {e}")
+            logger.error(f"Contenu reçu: {content if 'content' in locals() else 'N/A'}")
+            return None
         except Exception as e:
-            logger.error(f"Erreur LLM JSON: {e}")
-            return {}
+            logger.error(f"Erreur LLM JSON: {type(e).__name__}: {str(e)}")
+            if hasattr(e, 'response'):
+                logger.error(f"Détails de la réponse: {e.response}")
+            return None
 
     def _mock_response(self, message: str) -> str:
         """Fallback si pas de clé API."""
