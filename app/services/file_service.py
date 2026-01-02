@@ -121,29 +121,68 @@ class FileService:
             )
     
     async def _extract_text_from_pdf(self, file_path: Path) -> str:
-        """Extrait le texte d'un fichier PDF."""
+        """Extrait le texte d'un fichier PDF avec gestion robuste des erreurs."""
         try:
             text = ""
             with open(file_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
+                
+                # Vérifier si le PDF est chiffré
+                if pdf_reader.is_encrypted:
+                    try:
+                        pdf_reader.decrypt('')
+                    except:
+                        raise ValueError("Le PDF est protégé par mot de passe")
+                
+                # Extraire le texte de chaque page
+                for page_num, page in enumerate(pdf_reader.pages):
+                    try:
+                        page_text = page.extract_text()
+                        if page_text:
+                            text += page_text + "\n"
+                    except Exception as page_error:
+                        logger.warning(f"Erreur extraction page {page_num}: {page_error}")
+                        continue
+            
+            # Vérifier que du texte a été extrait
+            if not text.strip():
+                raise ValueError("Aucun texte n'a pu être extrait du PDF. Le fichier pourrait être scanné ou contenir uniquement des images.")
+            
             return text.strip()
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction du texte PDF: {e}")
-            raise
+            raise ValueError(f"Impossible d'extraire le texte du PDF: {str(e)}")
     
     async def _extract_text_from_docx(self, file_path: Path) -> str:
-        """Extrait le texte d'un fichier DOCX."""
+        """Extrait le texte d'un fichier DOCX avec support des tableaux."""
         try:
             doc = Document(file_path)
             text = ""
+            
+            # Extraire le texte des paragraphes
             for paragraph in doc.paragraphs:
-                text += paragraph.text + "\n"
+                if paragraph.text.strip():
+                    text += paragraph.text + "\n"
+            
+            # Extraire le texte des tableaux
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                    if row_text:
+                        text += row_text + "\n"
+            
+            # Vérifier que du texte a été extrait
+            if not text.strip():
+                raise ValueError("Aucun texte n'a pu être extrait du document Word")
+            
             return text.strip()
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction du texte DOCX: {e}")
-            raise
+            raise ValueError(f"Impossible d'extraire le texte du document Word: {str(e)}")
     
     async def _extract_text_from_doc(self, file_path: Path) -> str:
         """Extrait le texte d'un fichier DOC."""

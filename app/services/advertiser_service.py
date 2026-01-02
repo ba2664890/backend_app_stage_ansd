@@ -72,37 +72,80 @@ class AdvertiserService:
         """Extrait les infos d'un fichier, publie l'offre et attribue des points."""
         text = await self.file_service.extract_text_from_file(file_path)
         
-        # Extraire les infos via LLM
-        prompt = f"""
-        Extrais les informations de cette offre d'emploi au format JSON.
-        Texte : {text[:4000]}
+        # Limiter le texte pour éviter les dépassements de tokens
+        text_excerpt = text[:6000]
         
-        Format attendu :
-        {{
-            "title": "Titre du poste (obligatoire)",
-            "company_name": "Nom de l'entreprise (obligatoire)",
-            "location": "Ville/Région",
-            "contract_type": "CDI/CDD/Stage/etc",
-            "description": "Description complète du poste",
-            "sector": "Secteur d'activité",
-            "min_salary": 0,
-            "max_salary": 0,
-            "experience_years": 0,
-            "skills": ["compétence1", "compétence2"]
-        }}
-        """
+        # Extraire les infos via LLM avec prompt amélioré
+        prompt = f"""Tu es un expert en analyse d'offres d'emploi au Sénégal. Extrais les informations structurées de cette offre d'emploi.
+
+TEXTE DE L'OFFRE:
+{text_excerpt}
+
+INSTRUCTIONS:
+1. Extrais UNIQUEMENT les informations présentes dans le texte
+2. Pour les champs manquants, utilise null
+3. Pour les salaires, convertis en FCFA si nécessaire
+4. Pour les compétences, extrais une liste de 3-10 compétences clés
+5. Pour la localisation, utilise les villes sénégalaises (Dakar, Thiès, Saint-Louis, etc.)
+
+FORMAT JSON ATTENDU:
+{{
+    "title": "Titre exact du poste",
+    "company_name": "Nom exact de l'entreprise",
+    "location": "Ville au Sénégal",
+    "contract_type": "CDI|CDD|Stage|Freelance|Apprentissage",
+    "description": "Description complète du poste et des missions",
+    "sector": "Secteur d'activité (Informatique, Finance, Santé, etc.)",
+    "min_salary": 0,
+    "max_salary": 0,
+    "experience_years": 0,
+    "education_level": "Bac +2|Bac +3|Bac +5|Doctorat|Autodidacte",
+    "skills": ["compétence1", "compétence2", "compétence3"],
+    "languages": ["Français", "Anglais"],
+    "benefits": ["Avantage1", "Avantage2"],
+    "remote_type": "onsite|hybrid|remote",
+    "nb_positions": 1
+}}
+
+Réponds UNIQUEMENT avec le JSON, sans texte additionnel."""
         
         extracted_data = await self.llm_client.generate_json_response(
-            system_prompt="Tu es un assistant expert en extraction de données d'emploi.",
+            system_prompt="Tu es un assistant expert en extraction de données d'emploi pour le marché sénégalais. Tu réponds toujours en JSON valide.",
             user_message=prompt
         )
         
-        # Validation minimale
-        if not extracted_data or not extracted_data.get("title") or not extracted_data.get("company_name"):
-            logger.error(f"Extraction LLM échouée ou incomplète: {extracted_data}")
-            raise ValueError("Impossible d'extraire les informations essentielles du fichier. Assurez-vous que le document contient l'intitulé du poste et le nom de l'entreprise.")
+        # Validation renforcée
+        if not extracted_data:
+            raise ValueError("L'extraction IA a échoué. Aucune donnée n'a pu être extraite du fichier.")
+        
+        if not extracted_data.get("title"):
+            raise ValueError("Le titre du poste est manquant. Assurez-vous que le document contient un intitulé de poste clair.")
+        
+        if not extracted_data.get("company_name"):
+            raise ValueError("Le nom de l'entreprise est manquant. Assurez-vous que le document mentionne l'entreprise.")
+        
+        # Nettoyage et normalisation des données
+        cleaned_data = {
+            "title": extracted_data.get("title", "").strip(),
+            "company_name": extracted_data.get("company_name", "").strip(),
+            "location": extracted_data.get("location", "Dakar").strip(),
+            "contract_type": extracted_data.get("contract_type", "CDI").strip(),
+            "description": extracted_data.get("description", "").strip() or f"Poste de {extracted_data.get('title')} chez {extracted_data.get('company_name')}",
+            "sector": extracted_data.get("sector"),
+            "min_salary": extracted_data.get("min_salary"),
+            "max_salary": extracted_data.get("max_salary"),
+            "experience_years": extracted_data.get("experience_years"),
+            "education_level": extracted_data.get("education_level"),
+            "skills": extracted_data.get("skills", []),
+            "languages": extracted_data.get("languages", []),
+            "benefits": extracted_data.get("benefits", []),
+            "remote_type": extracted_data.get("remote_type", "onsite"),
+            "nb_positions": extracted_data.get("nb_positions", 1)
+        }
+        
+        logger.info(f"Données extraites et nettoyées: {cleaned_data}")
             
-        job_create = JobCreate(**extracted_data)
+        job_create = JobCreate(**cleaned_data)
         job_response = self.job_service.create_job(db, job_create, recruiter_id=None, company_id=None)
         
         # Mettre à jour le contributeur
