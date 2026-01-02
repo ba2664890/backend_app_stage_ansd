@@ -155,7 +155,10 @@ class User(Base):
     last_login = Column(DateTime)
     
     # Champ role avec Enum PostgreSQL
-    role = Column(SQLAlchemyEnum(UserRole, name="user_role_enum", create_type=True), default=UserRole.CANDIDATE)
+    role = Column(
+        SQLAlchemyEnum(UserRole, name="user_role_enum", create_type=True, values_callable=lambda x: [e.value for e in x]), 
+        default=UserRole.CANDIDATE
+    )
     
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
