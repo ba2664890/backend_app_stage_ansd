@@ -918,14 +918,7 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(profile)
 
-    # Convertis ton objet SQLAlchemy en dict
-    user_dict = {
-        "id": str(user.id),  # si UUID
-        "email": user.email,
-        "profile_id": str(user.profile.id) if user.profile else None
-    }
-
-    return UserResponse(**user_dict)
+    return user
 
 
 

@@ -249,7 +249,9 @@ class UserResponse(BaseModel):
     id: UUID
     email: EmailStr
     role: Optional[str] = "candidate"
-    profile: Optional[UserProfileResponses] = None
+    is_active: bool = True
+    created_at: datetime
+    profile: Optional[UserProfileResponse] = None
 
     model_config = {"from_attributes": True}
 
