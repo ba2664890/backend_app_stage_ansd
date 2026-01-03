@@ -888,11 +888,15 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="Email déjà utilisé")
     
+    import secrets
+    verification_token = secrets.token_urlsafe(32)
+    
     # Création de l'utilisateur
     user = User(
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),
-        role=UserRole(user_in.role) if user_in.role else UserRole.CANDIDATE
+        role=UserRole(user_in.role) if user_in.role else UserRole.CANDIDATE,
+        verification_token=verification_token
     )
     db.add(user)
     db.commit()
@@ -907,7 +911,8 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
         location=user_in.location,
         current_title=user_in.current_title,
         experience_years=user_in.experience_years,
-        category=user_in.category
+        category=user_in.category,
+        verification_token=verification_token
     )
     db.add(profile)
     db.commit()
@@ -938,14 +943,22 @@ async def login(username: str, password: str, db: Session = Depends(get_db)):
     
     access_token = create_access_token(data={"sub": user.email})
     
+    # Mise à jour du last_login
+    now = datetime.now()
+    user.last_login = now
+    
     # Récupération du profil
     profile = user.profile
-    if not profile:
+    if profile:
+        profile.last_login = now
+    else:
         # Création d'un profil vide si manquant (fallback)
-        profile = UserProfile(user_id=user.id)
+        profile = UserProfile(user_id=user.id, last_login=now)
         db.add(profile)
-        db.commit()
-        db.refresh(profile)
+    
+    db.commit()
+    db.refresh(profile)
+    db.refresh(user)
     
     # Construction de la réponse utilisateur via l'ORM
     user_response = UserProfileResponse.from_orm(profile)
@@ -957,6 +970,34 @@ async def login(username: str, password: str, db: Session = Depends(get_db)):
         token_type="bearer",
         user=user_response
     )
+
+# ==================== VERIFICATION EMAIL ====================
+@app.get("/verify/{token}")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """
+    Valide l'email d'un utilisateur via un token de vérification.
+    """
+    # Chercher l'utilisateur par son token
+    user = db.query(User).filter(User.verification_token == token).first()
+    if not user:
+        # Chercher dans UserProfile au cas où (fallback)
+        profile = db.query(UserProfile).filter(UserProfile.verification_token == token).first()
+        if not profile:
+            raise HTTPException(status_code=404, detail="Token de vérification invalide ou expiré")
+        user = profile.user
+
+    # Mettre à jour le statut de vérification
+    user.is_verified = True
+    user.verification_token = None
+    
+    # Mettre à jour le profil aussi
+    if user.profile:
+        user.profile.is_verified = True
+        user.profile.verification_token = None
+    
+    db.commit()
+    
+    return {"message": "Email vérifié avec succès. Vous pouvez maintenant vous connecter."}
 
 # ==================== PROFIL UTILISATEUR ====================
 @app.post("/api/v1/users/profile", response_model=UserProfileResponse)
