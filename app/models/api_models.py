@@ -213,7 +213,50 @@ class RecommendationResponse(BaseModel):
     average_match_score: float
     generated_at: datetime
 
-# ==================== Pydantic Models ====================
+# ==================== USER & PROFILE MODELS ====================
+
+class UserProfileBase(BaseModel):
+    """Modèle de base pour le profil utilisateur."""
+    phone: Optional[str] = Field(None, description="Numéro de téléphone")
+    first_name: Optional[str] = Field(None, description="Prénom")
+    last_name: Optional[str] = Field(None, description="Nom")
+    location: Optional[str] = Field(None, description="Localisation")
+    category: Optional[CandidateCategory] = Field(CandidateCategory.STUDENT_PRO, description="Catégorie de profil candidat")
+    current_title: Optional[str] = Field(None, description="Titre du poste actuel")
+    experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
+    education_level: Optional[str] = Field(None, description="Niveau d'éducation")
+    skills: Optional[List[str]] = Field(None, description="Compétences")
+    preferred_contract_type: Optional[List[str]] = Field(None, description="Types de contrat préférés")
+    preferred_salary_min: Optional[int] = Field(None, ge=0, description="Salaire minimum préféré")
+    preferred_salary_max: Optional[int] = Field(None, ge=0, description="Salaire maximum préféré")
+    cv_url: Optional[str] = Field(None, description="URL du CV")
+
+class UserProfileCreate(UserProfileBase):
+    """Modèle pour créer un profil utilisateur."""
+    pass
+
+class UserProfileResponse(UserProfileBase):
+    """Modèle de réponse pour un profil utilisateur."""
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    user_id: UUID
+    role: Optional[str] = Field(None, description="Rôle utilisateur")
+    email: Optional[str] = Field(None, description="Email de l'utilisateur")
+    
+    class Config:
+        from_attributes = True
+
+class UserResponse(BaseModel):
+    id: UUID
+    email: EmailStr
+    role: Optional[str] = "candidate"
+    is_active: bool = True
+    created_at: datetime
+    profile: Optional[UserProfileResponse] = None
+
+    model_config = {"from_attributes": True}
+
 class UserCreate(BaseModel):
     """Modèle pour créer un utilisateur."""
     email: EmailStr = Field(..., description="Email de l'utilisateur")
@@ -236,61 +279,6 @@ class UserCreate(BaseModel):
         if isinstance(v, str):
             return v.lower()
         return v
-
-
-class UserProfileResponses(BaseModel):
-    id: UUID
-    user_id: UUID
-
-    model_config = {"from_attributes": True}
-
-
-class UserResponse(BaseModel):
-    id: UUID
-    email: EmailStr
-    role: Optional[str] = "candidate"
-    is_active: bool = True
-    created_at: datetime
-    profile: Optional[UserProfileResponse] = None
-
-    model_config = {"from_attributes": True}
-
-
-
-# Modèles pour les utilisateurs
-class UserProfileBase(BaseModel):
-    """Modèle de base pour le profil utilisateur."""
-    
-    phone: Optional[str] = Field(None, description="Numéro de téléphone")
-    first_name: Optional[str] = Field(None, description="Prénom")
-    last_name: Optional[str] = Field(None, description="Nom")
-    location: Optional[str] = Field(None, description="Localisation")
-    category: Optional[CandidateCategory] = Field(CandidateCategory.STUDENT_PRO, description="Catégorie de profil candidat")
-    current_title: Optional[str] = Field(None, description="Titre du poste actuel")
-    experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
-    education_level: Optional[str] = Field(None, description="Niveau d'éducation")
-    skills: Optional[List[str]] = Field(None, description="Compétences")
-    preferred_contract_type: Optional[List[str]] = Field(None, description="Types de contrat préférés")
-    preferred_salary_min: Optional[int] = Field(None, ge=0, description="Salaire minimum préféré")
-    preferred_salary_max: Optional[int] = Field(None, ge=0, description="Salaire maximum préféré")
-    cv_url: Optional[str] = Field(None, description="URL du CV")
-    
-
-class UserProfileCreate(UserProfileBase):
-    """Modèle pour créer un profil utilisateur."""
-    pass
-
-class UserProfileResponse(UserProfileBase):
-    """Modèle de réponse pour un profil utilisateur."""
-    id: UUID
-    created_at: datetime
-    updated_at: datetime
-    user_id: UUID
-    role: Optional[str] = Field(None, description="Rôle utilisateur")
-    email: Optional[str] = Field(None, description="Email de l'utilisateur")
-    
-    class Config:
-        from_attributes = True
 
 class AuthResponse(BaseModel):
     """Réponse d'authentification incluant le token et l'utilisateur."""
