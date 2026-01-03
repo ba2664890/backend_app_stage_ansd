@@ -440,6 +440,7 @@ class AnalyticsService:
 
             return {
                 "total_offers": total_offers,
+                "total_jobs": total_offers,
                 "total_companies": total_companies,
                 "total_locations": total_locations,
                 "total_users": total_users,
