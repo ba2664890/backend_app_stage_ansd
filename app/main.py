@@ -3,7 +3,7 @@ Main FastAPI application for the Emploi Dakar platform.
 Provides REST API endpoints for job data, analytics, and recommendations.
 """
 
-from pydoc import text
+# from pydoc import text
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, Response
@@ -256,7 +256,7 @@ ALLOWED_ORIGINS = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow all origins for development
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
