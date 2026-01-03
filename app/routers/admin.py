@@ -5,7 +5,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from ..database import get_db
-from ..models.api_models import UserResponse, PaginatedResponse
+from ..models.api_models import UserResponse, PaginatedResponse, UserStatusUpdate
 from ..utils.auth import get_current_user
 from ..services.user_service import UserService
 from ..services.analytics_service import AnalyticsService
@@ -41,6 +41,27 @@ async def search_users(
         has_next=page < pages,
         has_prev=page > 1
     )
+
+@router.put("/users/{user_id}/status", response_model=UserResponse)
+async def update_user_status(
+    user_id: UUID,
+    status: UserStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Met à jour le statut (is_active) d'un utilisateur.
+    """
+    # TODO: Add proper permission check
+    from ..models.database_models import User
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    user.is_active = status.is_active
+    db.commit()
+    db.refresh(user)
+    return user
 
 @router.get("/stats")
 async def get_admin_stats(

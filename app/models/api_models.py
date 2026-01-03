@@ -280,6 +280,10 @@ class UserCreate(BaseModel):
             return v.lower()
         return v
 
+class UserStatusUpdate(BaseModel):
+    """Modèle pour mettre à jour le statut d'un utilisateur."""
+    is_active: bool
+
 class AuthResponse(BaseModel):
     """Réponse d'authentification incluant le token et l'utilisateur."""
     access_token: str
