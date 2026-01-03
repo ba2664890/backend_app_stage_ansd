@@ -329,9 +329,12 @@ class AnalyticsService:
         """
         try:
             # Statistiques générales
+            from ..models.database_models import User, Application
             total_offers = db.query(OffreEmploiBrute).count()
             total_companies = db.query(OffreEmploiBrute.company_name).distinct().count()
             total_locations = db.query(OffreEmploiBrute.location).distinct().count()
+            total_users = db.query(User).count()
+            total_applications = db.query(Application).count()
             
             # Offres du mois en cours
             current_month = datetime.now().replace(day=1)
@@ -439,6 +442,8 @@ class AnalyticsService:
                 "total_offers": total_offers,
                 "total_companies": total_companies,
                 "total_locations": total_locations,
+                "total_users": total_users,
+                "total_applications": total_applications,
                 "offers_this_month": offers_this_month,
                 "offers_today": offers_today,
                 "avg_salary_min": float(salary_stats.avg_min) if salary_stats.avg_min else None,
