@@ -2442,6 +2442,8 @@ class AdvancedAnalyticsService:
                 top_jobs = db.query(
                     OffreEmploiEnrichie.extracted_job_title,
                     func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
+                ).join(
+                    OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     OffreEmploiEnrichie.extracted_contract_type == c_type,
                     OffreEmploiEnrichie.extracted_job_title.isnot(None)
@@ -2463,6 +2465,8 @@ class AdvancedAnalyticsService:
             top_sectors = db.query(
                 OffreEmploiEnrichie.extracted_sector,
                 func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
+            ).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
                 OffreEmploiEnrichie.extracted_sector.isnot(None)
             ).group_by(OffreEmploiEnrichie.extracted_sector).order_by(desc('count')).limit(10).all()
@@ -2473,6 +2477,8 @@ class AdvancedAnalyticsService:
                 top_jobs = db.query(
                     OffreEmploiEnrichie.extracted_job_title,
                     func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
+                ).join(
+                    OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     OffreEmploiEnrichie.extracted_sector == sector,
                     OffreEmploiEnrichie.extracted_job_title.isnot(None)
@@ -2494,6 +2500,8 @@ class AdvancedAnalyticsService:
             query = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
                 func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
+            ).join(
+                OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(OffreEmploiEnrichie.extracted_skills.isnot(None))
             
             if job_title:
