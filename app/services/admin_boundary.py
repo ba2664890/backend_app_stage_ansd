@@ -197,9 +197,9 @@ class AdminBoundaryService:
 
                 # ---- Calcul du count ----
                 count = (
-                    db.query(OffreEmploiBrute)
+                    db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)))
                     .filter(sql_location_normalized == normalized_boundary_name)
-                    .count()
+                    .scalar() or 0
                 )
 
                 # ---- Mise à jour si différent ----
@@ -314,7 +314,7 @@ class CarteService:
             # 1. Offres du dernier mois
             current_counts = db.query(
                 OffreEmploiBrute.location, 
-                func.count(OffreEmploiBrute.id)
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))
             ).filter(
                 OffreEmploiBrute.posted_date >= last_30_days
             ).group_by(OffreEmploiBrute.location).all()
@@ -322,7 +322,7 @@ class CarteService:
             # 2. Offres du mois précédent
             prev_counts = db.query(
                 OffreEmploiBrute.location, 
-                func.count(OffreEmploiBrute.id)
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))
             ).filter(
                 OffreEmploiBrute.posted_date >= prev_30_days,
                 OffreEmploiBrute.posted_date < last_30_days

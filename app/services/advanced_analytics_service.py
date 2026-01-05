@@ -100,7 +100,7 @@ class AdvancedAnalyticsService:
         try:
             # Statistiques de base
             base_stats = db.query(
-                func.count(distinct(OffreEmploiBrute.id)).label('total_offers'),
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('total_offers'),
                 func.count(distinct(OffreEmploiBrute.company_name)).label('total_companies'),
                 func.count(distinct(OffreEmploiBrute.location)).label('total_locations')
             ).filter(
@@ -109,13 +109,13 @@ class AdvancedAnalyticsService:
 
             # Offres du mois en cours
             current_month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0)
-            offers_this_month = db.query(func.count(OffreEmploiBrute.id)).filter(
+            offers_this_month = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).filter(
                 OffreEmploiBrute.posted_date >= current_month_start
             ).scalar() or 0
 
             # Offres d'aujourd'hui
             today_start = datetime.now().replace(hour=0, minute=0, second=0)
-            offers_today = db.query(func.count(OffreEmploiBrute.id)).filter(
+            offers_today = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).filter(
                 OffreEmploiBrute.created_at >= today_start
             ).scalar() or 0
 
@@ -188,7 +188,7 @@ class AdvancedAnalyticsService:
             # Période actuelle : compter les offres par type de contrat (ex: CDI, CDD, Stage)
             current_counts = db.query(
                 OffreEmploiBrute.contract_type.label("contract_type"),
-                func.count(OffreEmploiBrute.id).label("count")
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label("count")
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiBrute.contract_type.isnot(None)
@@ -226,11 +226,12 @@ class AdvancedAnalyticsService:
             previous_end = start_date
 
             # Offres totales
-            current_offers = db.query(func.count(OffreEmploiBrute.id)).filter(
+            # Offres totales
+            current_offers = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).scalar() or 0
 
-            previous_offers = db.query(func.count(OffreEmploiBrute.id)).filter(
+            previous_offers = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).filter(
                 OffreEmploiBrute.posted_date.between(previous_start, previous_end)
             ).scalar() or 0
 
@@ -458,7 +459,7 @@ class AdvancedAnalyticsService:
             # Par jour
             daily = db.query(
                 func.date(OffreEmploiBrute.posted_date).label('date'),
-                func.count(OffreEmploiBrute.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).group_by(
@@ -472,7 +473,7 @@ class AdvancedAnalyticsService:
             # Par semaine
             weekly = db.query(
                 func.date_trunc('week', OffreEmploiBrute.posted_date).label('week'),
-                func.count(OffreEmploiBrute.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).group_by(
@@ -519,7 +520,7 @@ class AdvancedAnalyticsService:
             # Compétences première moitié
             first_half = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -532,7 +533,7 @@ class AdvancedAnalyticsService:
             # Compétences deuxième moitié
             second_half = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -572,7 +573,7 @@ class AdvancedAnalyticsService:
             data = db.query(
                 OffreEmploiEnrichie.extracted_sector.label('sector'),
                 OffreEmploiEnrichie.extracted_contract_type.label('contract'),
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -623,7 +624,7 @@ class AdvancedAnalyticsService:
             data = db.query(
                 OffreEmploiEnrichie.extracted_sector.label('sector'),
                 OffreEmploiEnrichie.job_level.label('level'),
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -799,7 +800,7 @@ class AdvancedAnalyticsService:
             # Agrégation par mois (tous les janviers ensemble, tous les févriers, etc.)
             monthly_patterns = db.query(
                 func.extract('month', OffreEmploiBrute.posted_date).label('month'),
-                func.count(OffreEmploiBrute.id).label('avg_count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('avg_count')
             ).filter(
                 OffreEmploiBrute.posted_date >= start_date
             ).group_by(
@@ -869,7 +870,7 @@ class AdvancedAnalyticsService:
 
             dow_data = db.query(
                 func.extract('dow', OffreEmploiBrute.posted_date).label('day_of_week'),
-                func.count(OffreEmploiBrute.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).group_by(
@@ -924,7 +925,8 @@ class AdvancedAnalyticsService:
             result = []
             for (sector,) in sectors:
                 # Période 1
-                p1_count = db.query(func.count(OffreEmploiEnrichie.id)).join(
+                # Période 1
+                p1_count = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     OffreEmploiBrute.posted_date.between(start_date, period_1_end),
@@ -932,7 +934,8 @@ class AdvancedAnalyticsService:
                 ).scalar() or 0
 
                 # Période 2
-                p2_count = db.query(func.count(OffreEmploiEnrichie.id)).join(
+                # Période 2
+                p2_count = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     OffreEmploiBrute.posted_date.between(period_1_end, period_2_end),
@@ -940,7 +943,8 @@ class AdvancedAnalyticsService:
                 ).scalar() or 0
 
                 # Période 3
-                p3_count = db.query(func.count(OffreEmploiEnrichie.id)).join(
+                # Période 3
+                p3_count = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     OffreEmploiBrute.posted_date.between(period_2_end, end_date),
@@ -981,14 +985,14 @@ class AdvancedAnalyticsService:
         """
         try:
             # Total d'offres
-            total_offers = db.query(func.count(OffreEmploiBrute.id)).filter(
+            total_offers = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).scalar() or 1
 
             # Compétences avec leur fréquence
             skills = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -1038,7 +1042,7 @@ class AdvancedAnalyticsService:
 
             for sector in sectors:
                 # Nombre d'offres
-                offer_count = db.query(func.count(OffreEmploiEnrichie.id)).join(
+                offer_count = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     OffreEmploiBrute.posted_date.between(start_date, end_date),
@@ -1063,12 +1067,12 @@ class AdvancedAnalyticsService:
                     OffreEmploiBrute.posted_date.between(start_date, end_date),
                     OffreEmploiEnrichie.extracted_sector == sector,
                     OffreEmploiEnrichie.extracted_skills.isnot(None)
-                ).group_by('skill').order_by(func.count(OffreEmploiEnrichie.id).desc()).limit(5).all()
+                ).group_by('skill').order_by(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).desc()).limit(5).all()
 
                 # Types de contrat dominants
                 contract_types = db.query(
                     OffreEmploiEnrichie.extracted_contract_type,
-                    func.count(OffreEmploiEnrichie.id).label('count')
+                    func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
                 ).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
@@ -1190,7 +1194,7 @@ class AdvancedAnalyticsService:
             start_date, end_date = self._get_period_bounds(period)
 
             # Statistiques de base
-            total_offers = db.query(func.count(OffreEmploiBrute.id)).filter(
+            total_offers = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).filter(
                 OffreEmploiBrute.company_name.ilike(f"%{company_name}%"),
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
             ).scalar() or 0
@@ -1201,7 +1205,7 @@ class AdvancedAnalyticsService:
             # Répartition par secteur
             sectors = db.query(
                 OffreEmploiEnrichie.extracted_sector,
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -1215,7 +1219,7 @@ class AdvancedAnalyticsService:
             # Compétences recherchées
             skills = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -1227,7 +1231,7 @@ class AdvancedAnalyticsService:
             # Types de contrat
             contracts = db.query(
                 OffreEmploiEnrichie.extracted_contract_type,
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -1241,7 +1245,7 @@ class AdvancedAnalyticsService:
             # Niveaux d'expérience
             levels = db.query(
                 OffreEmploiEnrichie.job_level,
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).join(
                 OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
@@ -1255,7 +1259,7 @@ class AdvancedAnalyticsService:
             # Tendance de recrutement (mensuelle)
             monthly = db.query(
                 func.date_trunc('month', OffreEmploiBrute.posted_date).label('month'),
-                func.count(OffreEmploiBrute.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).filter(
                 OffreEmploiBrute.company_name.ilike(f"%{company_name}%"),
                 OffreEmploiBrute.posted_date.between(start_date, end_date)
@@ -1506,7 +1510,7 @@ class AdvancedAnalyticsService:
             skill_analysis = []
             for skill in skills:
                 # Demande du marché
-                demand = db.query(func.count(OffreEmploiEnrichie.id)).join(
+                demand = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).join(
                     OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
                 ).filter(
                     OffreEmploiBrute.posted_date.between(start_date, end_date),
@@ -1581,7 +1585,7 @@ class AdvancedAnalyticsService:
                     continue
 
                 # Statistiques par région
-                offers = db.query(func.count(OffreEmploiBrute.id)).filter(
+                offers = db.query(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1))).filter(
                     func.lower(OffreEmploiBrute.location).like(f"%{city_key}%"),
                     OffreEmploiBrute.posted_date.between(start_date, end_date)
                 ).scalar() or 0
@@ -1603,7 +1607,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_sector.isnot(None)
                 ).group_by(
                     OffreEmploiEnrichie.extracted_sector
-                ).order_by(func.count(OffreEmploiEnrichie.id).desc()).first()
+                ).order_by(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).desc()).first()
 
                 if offers > 0:
                     regions[region_name] = {
@@ -2065,7 +2069,7 @@ class AdvancedAnalyticsService:
         try:
             locations = db.query(
                 func.lower(func.trim(OffreEmploiBrute.location)).label('location'),
-                func.count(OffreEmploiBrute.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiBrute.location.isnot(None),
@@ -2089,7 +2093,7 @@ class AdvancedAnalyticsService:
                     OffreEmploiEnrichie.extracted_sector.isnot(None)
                 ).group_by(
                     OffreEmploiEnrichie.extracted_sector
-                ).order_by(func.count(OffreEmploiEnrichie.id).desc()).limit(5).all()
+                ).order_by(func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).desc()).limit(5).all()
 
                 # Salaires (optionnel)
                 salary_stats = self._get_safe_salary_stats_by_location(db, location.location, start_date, end_date)
@@ -2239,7 +2243,7 @@ class AdvancedAnalyticsService:
         try:
             companies = db.query(
                 OffreEmploiBrute.company_name.label('company'),
-                func.count(OffreEmploiBrute.id).label('offers')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('offers')
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
                 OffreEmploiBrute.company_name.isnot(None),
@@ -2325,7 +2329,7 @@ class AdvancedAnalyticsService:
             
             daily_stats = db.query(
                 func.date(OffreEmploiBrute.posted_date).label('date'),
-                func.count(OffreEmploiBrute.id).label('count'),
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count'),
                 func.count(func.distinct(OffreEmploiBrute.company_name)).label('unique_companies'),
                 func.count(func.distinct(OffreEmploiBrute.location)).label('unique_locations')
             ).filter(
@@ -2351,13 +2355,13 @@ class AdvancedAnalyticsService:
             raise
 
     def get_top_job_titles(self, db: Session, period: str = "30d", limit: int = 15) -> List[Dict[str, Any]]:
-        """Récupère les métiers qui recrutent le plus (basé sur le titre normalisé)."""
+        """Récupère les métiers qui recrutent le plus (basé sur le titre normalisé et pondéré par le nombre de postes)."""
         try:
             start_date, end_date = self._get_period_bounds(period)
             
             jobs = db.query(
                 OffreEmploiEnrichie.extracted_job_title.label('job_title'),
-                func.count(OffreEmploiEnrichie.id).label('count'),
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count'),
                 func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min'),
                 func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_salary_max'),
                 func.count(func.distinct(OffreEmploiBrute.company_name)).label('unique_companies'),
@@ -2374,12 +2378,13 @@ class AdvancedAnalyticsService:
                 desc('count')
             ).limit(limit).all()
             
-            total_offers = sum(job.count for job in jobs)
+            # total_offers est la somme des 'count' (qui sont déjà des sommes de nb_positions)
+            total_offers = sum((job.count or 0) for job in jobs)
             
             return [{
                 "job_title": self._safe_get(job, 'job_title'),
-                "count": self._safe_get(job, 'count', 0),
-                "percentage": round((job.count / total_offers * 100), 2) if total_offers > 0 else 0,
+                "count": int(self._safe_get(job, 'count', 0) or 0),
+                "percentage": round(((job.count or 0) / total_offers * 100), 2) if total_offers > 0 else 0,
                 "avg_salary_min": float(self._safe_get(job, 'avg_salary_min')) if self._safe_get(job, 'avg_salary_min') else None,
                 "avg_salary_max": float(self._safe_get(job, 'avg_salary_max')) if self._safe_get(job, 'avg_salary_max') else None,
                 "unique_companies": self._safe_get(job, 'unique_companies', 0),
@@ -2397,7 +2402,7 @@ class AdvancedAnalyticsService:
             
             education_levels = db.query(
                 OffreEmploiBrute.education_level,
-                func.count(OffreEmploiEnrichie.id).label('count'),
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count'),
                 func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min')
             ).join(
                 OffreEmploiBrute,
@@ -2436,7 +2441,7 @@ class AdvancedAnalyticsService:
                 c_type = ct[0]
                 top_jobs = db.query(
                     OffreEmploiEnrichie.extracted_job_title,
-                    func.count(OffreEmploiEnrichie.id).label('count')
+                    func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
                 ).filter(
                     OffreEmploiEnrichie.extracted_contract_type == c_type,
                     OffreEmploiEnrichie.extracted_job_title.isnot(None)
@@ -2457,7 +2462,7 @@ class AdvancedAnalyticsService:
         try:
             top_sectors = db.query(
                 OffreEmploiEnrichie.extracted_sector,
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).filter(
                 OffreEmploiEnrichie.extracted_sector.isnot(None)
             ).group_by(OffreEmploiEnrichie.extracted_sector).order_by(desc('count')).limit(10).all()
@@ -2467,7 +2472,7 @@ class AdvancedAnalyticsService:
                 sector = sector_row[0]
                 top_jobs = db.query(
                     OffreEmploiEnrichie.extracted_job_title,
-                    func.count(OffreEmploiEnrichie.id).label('count')
+                    func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
                 ).filter(
                     OffreEmploiEnrichie.extracted_sector == sector,
                     OffreEmploiEnrichie.extracted_job_title.isnot(None)
@@ -2488,7 +2493,7 @@ class AdvancedAnalyticsService:
         try:
             query = db.query(
                 func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
-                func.count(OffreEmploiEnrichie.id).label('count')
+                func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count')
             ).filter(OffreEmploiEnrichie.extracted_skills.isnot(None))
             
             if job_title:
