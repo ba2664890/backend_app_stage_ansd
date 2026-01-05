@@ -2395,12 +2395,51 @@ class AdvancedAnalyticsService:
             logger.error(f"Erreur lors de la récupération des top métiers: {str(e)}")
             raise
 
+    def _normalize_education_label(self, label: str) -> str:
+        """Normalise les libellés de niveau d'étude."""
+        if not label:
+            return "Non spécifié"
+        l = label.lower().strip()
+        
+        # Patterns Bac+5
+        if any(x in l for x in ["bac+5", "bac +5", "bac + 5", "bac 5", "bac5", "master", "doctorat", "phd", "ingénieur", "dea", "dess"]): 
+            return "Bac+5 / Master / Doctorat"
+            
+        # Patterns Bac+4
+        if any(x in l for x in ["bac+4", "bac +4", "bac + 4", "bac 4", "bac4", "maîtrise", "master 1"]): 
+            return "Bac+4 / Master 1"
+            
+        # Patterns Bac+3
+        if any(x in l for x in ["bac+3", "bac +3", "bac + 3", "bac 3", "bac3", "licence", "bachelor"]): 
+            return "Bac+3 / Licence"
+            
+        # Patterns Bac+2
+        if any(x in l for x in ["bac+2", "bac +2", "bac + 2", "bac 2", "bac2", "bts", "dut", "deug"]): 
+            return "Bac+2 / BTS / DUT"
+            
+        # Patterns Bac
+        if any(x in l for x in ["baccalauréat", "bac", "dtb"]) and not any(c.isdigit() for c in l): 
+            return "Bac"
+            
+        if any(x in l for x in ["bac+1", "bac +1", "bac 1", "bac1"]): 
+            return "Bac+1"
+
+        # Patterns Secondaire/Collège
+        if any(x in l for x in ["bfem", "brevet", "collège", "3ème"]): 
+            return "BFEM / Niveau Collège"
+            
+        if any(x in l for x in ["sans diplôme", "aucun", "autodidacte"]): 
+            return "Sans Diplôme"
+            
+        return "Autre / Certifications"
+
     def get_education_distribution(self, db: Session, period: str = "30d") -> List[Dict[str, Any]]:
-        """Récupère la répartition par niveau d'étude."""
+        """Récupère la répartition par niveau d'étude normalisé."""
         try:
             start_date, end_date = self._get_period_bounds(period)  # ✅ CORRECT
             
-            education_levels = db.query(
+            # Récupérer les données brutes
+            raw_levels = db.query(
                 OffreEmploiBrute.education_level,
                 func.sum(func.coalesce(OffreEmploiBrute.nb_positions, 1)).label('count'),
                 func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min')
@@ -2412,18 +2451,35 @@ class AdvancedAnalyticsService:
                 OffreEmploiBrute.education_level.isnot(None)
             ).group_by(
                 OffreEmploiBrute.education_level
-            ).order_by(
-                desc('count')
             ).all()
+
+            # Normalisation et agrégation Python
+            aggregated = defaultdict(lambda: {"count": 0, "salary_sum": 0.0, "salary_count": 0})
             
-            total = sum(level.count for level in education_levels)
+            for row in raw_levels:
+                norm_label = self._normalize_education_label(row.education_level)
+                count = row.count or 0
+                salary = float(row.avg_salary_min) if row.avg_salary_min else 0.0
+                
+                aggregated[norm_label]["count"] += count
+                if salary > 0:
+                    aggregated[norm_label]["salary_sum"] += (salary * count)
+                    aggregated[norm_label]["salary_count"] += count
+
+            # Calcul des pourcentages et formatage final
+            total_offers = sum(d["count"] for d in aggregated.values())
+            result = []
             
-            return [{
-                "education_level": self._safe_get(level, 'education_level'),
-                "count": self._safe_get(level, 'count', 0),
-                "percentage": round((level.count / total * 100), 2) if total > 0 else 0,
-                "avg_salary": float(self._safe_get(level, 'avg_salary_min')) if self._safe_get(level, 'avg_salary_min') else None
-            } for level in education_levels]
+            for label, data in aggregated.items():
+                avg_salary = (data["salary_sum"] / data["salary_count"]) if data["salary_count"] > 0 else None
+                result.append({
+                    "education_level": label,
+                    "count": data["count"],
+                    "percentage": round((data["count"] / total_offers * 100), 2) if total_offers > 0 else 0,
+                    "avg_salary": avg_salary
+                })
+                
+            return sorted(result, key=lambda x: x['count'], reverse=True)
             
         except Exception as e:
             logger.error(f"Erreur lors de la récupération des niveaux d'étude: {str(e)}")
