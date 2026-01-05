@@ -2351,12 +2351,12 @@ class AdvancedAnalyticsService:
             raise
 
     def get_top_job_titles(self, db: Session, period: str = "30d", limit: int = 15) -> List[Dict[str, Any]]:
-        """Récupère les métiers qui recrutent le plus."""
+        """Récupère les métiers qui recrutent le plus (basé sur le titre normalisé)."""
         try:
-            start_date, end_date = self._get_period_bounds(period)  # ✅ CORRECT
+            start_date, end_date = self._get_period_bounds(period)
             
             jobs = db.query(
-                OffreEmploiBrute.title.label('job_title'),
+                OffreEmploiEnrichie.extracted_job_title.label('job_title'),
                 func.count(OffreEmploiEnrichie.id).label('count'),
                 func.avg(OffreEmploiEnrichie.extracted_salary_min).label('avg_salary_min'),
                 func.avg(OffreEmploiEnrichie.extracted_salary_max).label('avg_salary_max'),
@@ -2367,9 +2367,9 @@ class AdvancedAnalyticsService:
                 OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
             ).filter(
                 OffreEmploiBrute.posted_date.between(start_date, end_date),
-                OffreEmploiBrute.title.isnot(None)
+                OffreEmploiEnrichie.extracted_job_title.isnot(None)
             ).group_by(
-                OffreEmploiBrute.title
+                OffreEmploiEnrichie.extracted_job_title
             ).order_by(
                 desc('count')
             ).limit(limit).all()
