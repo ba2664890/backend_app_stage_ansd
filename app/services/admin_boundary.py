@@ -319,8 +319,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+from app.core.constants import AdminLevel
+from app.db.init_postgis import PostGISManager
 from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute, OffreEmploiEnrichie, UserProfile, User, UserRole
-from app.models.api_models import ChoroplethResponse, OfferGeoJSON, AdminLevel
+from app.models.api_models import ChoroplethResponse, OfferGeoJSON
 from app.core.exceptions import AppError, ValidationError
 from app.services.admin_boundary import AdminBoundaryService
 
