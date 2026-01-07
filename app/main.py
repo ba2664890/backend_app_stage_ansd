@@ -128,6 +128,10 @@ async def lifespan(app: FastAPI):
             app.state.file_service = FileService()
             app.state.recruiter_service = RecruiterService()
             
+            # Geographic Services
+            app.state.admin_service = AdminBoundaryService()
+            app.state.carte_service = CarteService(app.state.admin_service)
+            
             # Module 9: AI Assistant
             app.state.llm_client = LLMClient()
             app.state.rag_service = RAGService()
@@ -459,8 +463,7 @@ def match_offers_to_boundaries(
 @app.get("/senegal/{level}")
 def get_geojson_senegal(level: str, db: Session = Depends(get_db)):
     """Retourne les limites admin et offres au format GeoJSON."""
-    service = CarteService(db)
-    return service.get_choropleth_data(level)
+    return app.state.carte_service.get_choropleth_data(db, AdminLevel(level))
 
 @app.get("/offres")
 def get_offres_geomap(
@@ -1334,6 +1337,29 @@ async def get_geographic_analysis(
         return result
     except Exception as e:
         logger.error(f"Erreur analyse géographique: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/analytics/geographic/boundary-stats", response_model=Dict[str, Any])
+async def get_boundary_stats(
+    name: str = Query(..., description="Nom de la localité"),
+    level: str = Query("region", description="Niveau administratif"),
+    db: Session = Depends(get_db)
+):
+    """
+    🏢 Statistiques détaillées pour une localité (Top recruteurs, Compétences).
+    """
+    try:
+        # Conversion du string level en AdminLevel enum
+        try:
+            admin_level = AdminLevel(level.lower())
+        except ValueError:
+            admin_level = AdminLevel.REGION
+
+        result = app.state.admin_service.get_boundary_analytics_by_name(db, name, admin_level)
+        return result
+    except Exception as e:
+        logger.error(f"Erreur stats localité: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

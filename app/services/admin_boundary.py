@@ -259,6 +259,53 @@ class AdminBoundaryService:
             )
         
         return AdminBoundaryOut.from_orm(boundary)
+
+    @with_network_retry
+    def get_boundary_analytics_by_name(self, db: Session, name: str, level: AdminLevel) -> Dict[str, Any]:
+        """
+        Récupère les statistiques détaillées (entreprises, compétences) pour une localité par son nom.
+        """
+        # Trouver la limite
+        boundary = db.query(SenegalAdminBoundary).filter(
+            func.lower(SenegalAdminBoundary.name) == name.lower(),
+            SenegalAdminBoundary.level == level.value
+        ).first()
+
+        if not boundary:
+            # Fallback : recherche par nom uniquement si level est imprécis
+            boundary = db.query(SenegalAdminBoundary).filter(
+                func.lower(SenegalAdminBoundary.name) == name.lower()
+            ).first()
+
+        if not boundary:
+            return {"top_companies": [], "top_skills": [], "message": "Location not found"}
+
+        # Top Recruteurs
+        top_companies = db.query(
+            OffreEmploiBrute.company_name,
+            func.count(OffreEmploiBrute.id).label('count')
+        ).filter(
+            OffreEmploiBrute.admin_boundary_id == boundary.id,
+            OffreEmploiBrute.company_name.isnot(None)
+        ).group_by(OffreEmploiBrute.company_name).order_by(func.desc('count')).limit(10).all()
+
+        # Écosystème Compétences
+        top_skills = db.query(
+            func.unnest(OffreEmploiEnrichie.extracted_skills).label('skill'),
+            func.count(OffreEmploiEnrichie.id).label('count')
+        ).join(
+            OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
+        ).filter(
+            OffreEmploiBrute.admin_boundary_id == boundary.id,
+            OffreEmploiEnrichie.extracted_skills.isnot(None)
+        ).group_by('skill').order_by(func.desc('count')).limit(15).all()
+
+        return {
+            "location": boundary.name,
+            "level": boundary.level,
+            "top_companies": [{"company": c[0], "offers": c[1]} for c in top_companies],
+            "top_skills": [{"skill": s[0], "count": s[1]} for s in top_skills]
+        }
     
 # backend/app/services/admin_boundary.py
 
@@ -272,10 +319,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from app.core.constants import AdminLevel
-from app.db.init_postgis import PostGISManager
-from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute, UserProfile, User, UserRole
-from app.models.api_models import ChoroplethResponse, OfferGeoJSON
+from app.models.database_models import SenegalAdminBoundary, OffreEmploiBrute, OffreEmploiEnrichie, UserProfile, User, UserRole
+from app.models.api_models import ChoroplethResponse, OfferGeoJSON, AdminLevel
 from app.core.exceptions import AppError, ValidationError
 from app.services.admin_boundary import AdminBoundaryService
 
