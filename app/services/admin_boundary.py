@@ -4,7 +4,7 @@ import logging
 import time
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import text, func
+from sqlalchemy import text, func, desc
 from sqlalchemy.exc import OperationalError, DBAPIError
 from tenacity import (
     retry,
@@ -287,7 +287,7 @@ class AdminBoundaryService:
         ).filter(
             OffreEmploiBrute.admin_boundary_id == boundary.id,
             OffreEmploiBrute.company_name.isnot(None)
-        ).group_by(OffreEmploiBrute.company_name).order_by(func.desc('count')).limit(10).all()
+        ).group_by(OffreEmploiBrute.company_name).order_by(desc('count')).limit(10).all()
 
         # Écosystème Compétences
         top_skills = db.query(
@@ -298,7 +298,7 @@ class AdminBoundaryService:
         ).filter(
             OffreEmploiBrute.admin_boundary_id == boundary.id,
             OffreEmploiEnrichie.extracted_skills.isnot(None)
-        ).group_by('skill').order_by(func.desc('count')).limit(15).all()
+        ).group_by('skill').order_by(desc('count')).limit(15).all()
 
         return {
             "location": boundary.name,
