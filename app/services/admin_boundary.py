@@ -4,7 +4,7 @@ import logging
 import time
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import text, func, desc
+from sqlalchemy import text, func, desc, or_
 from sqlalchemy.exc import OperationalError, DBAPIError
 from tenacity import (
     retry,
@@ -280,12 +280,37 @@ class AdminBoundaryService:
         if not boundary:
             return {"top_companies": [], "top_skills": [], "message": "Location not found"}
 
+        # Hierarchical filtering: find all sub-boundaries IDs
+        sub_boundary_ids = [boundary.id]
+        if boundary.level == "region":
+            # Direct children (departments)
+            depts = db.query(SenegalAdminBoundary.id, SenegalAdminBoundary.name).filter(
+                SenegalAdminBoundary.parent_name == boundary.name
+            ).all()
+            dept_ids = [d[0] for d in depts]
+            dept_names = [d[1] for d in depts]
+            sub_boundary_ids.extend(dept_ids)
+            
+            # Grandchildren (communes)
+            if dept_names:
+                communes = db.query(SenegalAdminBoundary.id).filter(
+                    SenegalAdminBoundary.parent_name.in_(dept_names)
+                ).all()
+                sub_boundary_ids.extend([c[0] for c in communes])
+
+        # Combined filter: by boundary ID (including children) OR by location text match
+        # This handles cases where admin_boundary_id is not yet populated
+        loc_filter = or_(
+            OffreEmploiBrute.admin_boundary_id.in_(sub_boundary_ids),
+            OffreEmploiBrute.location.ilike(f"%{boundary.name}%")
+        )
+
         # Top Recruteurs
         top_companies = db.query(
             OffreEmploiBrute.company_name,
             func.count(OffreEmploiBrute.id).label('count')
         ).filter(
-            OffreEmploiBrute.admin_boundary_id == boundary.id,
+            loc_filter,
             OffreEmploiBrute.company_name.isnot(None)
         ).group_by(OffreEmploiBrute.company_name).order_by(desc('count')).limit(10).all()
 
@@ -296,7 +321,7 @@ class AdminBoundaryService:
         ).join(
             OffreEmploiBrute, OffreEmploiEnrichie.offre_id == OffreEmploiBrute.id
         ).filter(
-            OffreEmploiBrute.admin_boundary_id == boundary.id,
+            loc_filter,
             OffreEmploiEnrichie.extracted_skills.isnot(None)
         ).group_by('skill').order_by(desc('count')).limit(15).all()
 
