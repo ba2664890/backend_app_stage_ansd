@@ -280,28 +280,30 @@ class AdminBoundaryService:
         if not boundary:
             return {"top_companies": [], "top_skills": [], "message": "Location not found"}
 
-        # Hierarchical filtering: find all sub-boundaries IDs
-        sub_boundary_ids = [boundary.id]
+        # 1. Liste des IDs pour filtrage hiérarchique
+        target_boundary_ids = [boundary.id]
         if boundary.level == "region":
-            # Direct children (departments)
+            # Départements
             depts = db.query(SenegalAdminBoundary.id, SenegalAdminBoundary.name).filter(
                 SenegalAdminBoundary.parent_name == boundary.name
             ).all()
-            dept_ids = [d[0] for d in depts]
-            dept_names = [d[1] for d in depts]
-            sub_boundary_ids.extend(dept_ids)
-            
-            # Grandchildren (communes)
-            if dept_names:
+            for d_id, d_name in depts:
+                target_boundary_ids.append(d_id)
+                # Communes
                 communes = db.query(SenegalAdminBoundary.id).filter(
-                    SenegalAdminBoundary.parent_name.in_(dept_names)
+                    SenegalAdminBoundary.parent_name == d_name
                 ).all()
-                sub_boundary_ids.extend([c[0] for c in communes])
+                target_boundary_ids.extend([c[0] for c in communes])
+        elif boundary.level == "departement":
+            # Communes
+            communes = db.query(SenegalAdminBoundary.id).filter(
+                SenegalAdminBoundary.parent_name == boundary.name
+            ).all()
+            target_boundary_ids.extend([c[0] for c in communes])
 
-        # Combined filter: by boundary ID (including children) OR by location text match
-        # This handles cases where admin_boundary_id is not yet populated
+        # Combined filter: par ID (hiérarchie) OU par texte (fallback)
         loc_filter = or_(
-            OffreEmploiBrute.admin_boundary_id.in_(sub_boundary_ids),
+            OffreEmploiBrute.admin_boundary_id.in_(target_boundary_ids),
             OffreEmploiBrute.location.ilike(f"%{boundary.name}%")
         )
 
@@ -577,40 +579,60 @@ class CarteService:
             )
 
         # --- Récupération des Talents (Candidats) ---
-        talent_query = db.query(
+        # On récupère les talents groupés par leur admin_boundary_id OU leur location
+        talent_results = db.query(
+            UserProfile.admin_boundary_id,
             UserProfile.location,
             func.count(UserProfile.id)
-        ).join(User, UserProfile.user_id == User.id).filter(User.role == UserRole.CANDIDATE)
+        ).join(User, UserProfile.user_id == User.id).filter(
+            User.role == UserRole.CANDIDATE
+        ).group_by(UserProfile.admin_boundary_id, UserProfile.location).all()
         
-        # Filtre approximatif pour talents (basé sur string contain)
-        if parent_name:
-             talent_query = talent_query.filter(UserProfile.location.ilike(f"%{parent_name}%"))
-             
-        talent_results = talent_query.group_by(UserProfile.location).all()
-        # Création d'une map normalisée : "dakar" -> count
-        temp_talent_map = {}
-        for loc, count in talent_results:
-            if loc:
-                norm = self.admin_service._normalize_name(loc)
-                temp_talent_map[norm] = temp_talent_map.get(norm, 0) + count
+        # --- Construction de la hiérarchie pour agrégation intelligente ---
+        all_boundaries = db.query(
+            SenegalAdminBoundary.id,
+            SenegalAdminBoundary.name, 
+            SenegalAdminBoundary.parent_name
+        ).all()
+        
+        # Map ID -> parent_name
+        id_to_parent = {b.id: b.parent_name for b in all_boundaries}
+        name_to_id = {self.admin_service._normalize_name(b.name): b.id for b in all_boundaries}
+        id_to_name = {b.id: b.name for b in all_boundaries}
+
+        # Agrégation finale par ID de boundary
+        # On veut que chaque talent compte pour sa zone et tous ses parents
+        final_talent_counts = {} # boundary_id -> total_count
+
+        for b_id, loc, count in talent_results:
+            curr_id = b_id
+            
+            # Si pas d'ID, on essaie de matcher par le nom de la location
+            if curr_id is None and loc:
+                curr_id = name_to_id.get(self.admin_service._normalize_name(loc))
+
+            if curr_id is None:
+                continue
+
+            # Remonter la hiérarchie
+            visited = set()
+            while curr_id and curr_id not in visited:
+                visited.add(curr_id)
+                final_talent_counts[curr_id] = final_talent_counts.get(curr_id, 0) + count
+                
+                parent_name = id_to_parent.get(curr_id)
+                if not parent_name:
+                    break
+                curr_id = name_to_id.get(self.admin_service._normalize_name(parent_name))
 
         # --- Calcul de la croissance ---
         growth_map = self._calculate_regional_growth(db, level.value)
 
         features = []
         total_offers = 0
-
-        # Construction des features GeoJSON
         for b in boundaries:
             total_offers += b.offer_count
-            b_norm = self.admin_service._normalize_name(b.name)
-            
-            # Agrégation intelligente des talents : inclusion du nom
-            # Si le nom de la limite est contenu dans la location du talent, on le compte
-            t_count = 0
-            for loc_norm, count in temp_talent_map.items():
-                if b_norm in loc_norm:
-                    t_count += count
+            t_count = final_talent_counts.get(b.id, 0)
 
             # Convertit geometry
             geometry = b.geojson if isinstance(b.geojson, dict) else {}

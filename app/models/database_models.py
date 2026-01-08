@@ -241,9 +241,13 @@ class UserProfile(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+    # --- Lien Administratif ---
+    admin_boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"), nullable=True, index=True)
+
     # relations
     user = relationship("User", back_populates="profile")
     recommendations = relationship("JobRecommendation", back_populates="user")
+    admin_boundary = relationship("SenegalAdminBoundary")
 
     __table_args__ = (
         Index('idx_user_profiles_skills', 'skills', postgresql_using='gin'),
@@ -338,9 +342,13 @@ class Company(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
+    # --- Lien Administratif ---
+    admin_boundary_id = Column(Integer, ForeignKey("senegal_admin_boundaries.id"), nullable=True, index=True)
+
     # Relations
     recruiters = relationship("Recruiter", back_populates="company", cascade="all, delete-orphan")
     skill_needs = relationship("CompanySkillNeed", back_populates="company", cascade="all, delete-orphan")
+    admin_boundary = relationship("SenegalAdminBoundary")
     
     # Index
     __table_args__ = (

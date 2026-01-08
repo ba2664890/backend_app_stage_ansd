@@ -8,7 +8,7 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 import logging
 
-from ..models.database_models import OffreEmploiEnrichie, OffreEmploiBrute, Application
+from ..models.database_models import OffreEmploiEnrichie, OffreEmploiBrute, SenegalAdminBoundary, Application
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +58,37 @@ class SalaryBenchmarkService:
         
         offers = query.all()
         
+        # --- Lancement du Fallback Hiérarchique si pas de données ---
+        if not offers and location:
+            logger.info(f"Pas de données salaires pour {location}, tentative de fallback...")
+            
+            # 1. Chercher si la localisation courante a un parent dans SenegalAdminBoundary
+            boundary = db.query(SenegalAdminBoundary).filter(
+                func.lower(SenegalAdminBoundary.name) == location.lower()
+            ).first()
+            
+            if boundary and boundary.parent_name and boundary.parent_name != location:
+                return self.get_salary_benchmark(
+                    db, job_category, job_title, sector, 
+                    location=boundary.parent_name, 
+                    experience_years=experience_years
+                )
+            
+            # 2. Si on est déjà au niveau région ou si pas de boundary, fallback national
+            if location.lower() != "senegal":
+                 return self.get_salary_benchmark(
+                    db, job_category, job_title, sector, 
+                    location="Senegal", 
+                    experience_years=experience_years
+                )
+
         if not offers:
             return {
                 "count": 0,
                 "salary_min": {"avg": None, "median": None, "p25": None, "p75": None},
                 "salary_max": {"avg": None, "median": None, "p25": None, "p75": None},
-                "message": "Pas de données disponibles pour ces critères"
+                "message": "Pas de données disponibles pour ces critères (même avec fallback)",
+                "location_applied": location
             }
         
         # Calculer les statistiques
@@ -97,6 +122,7 @@ class SalaryBenchmarkService:
             "job_title": job_title,
             "salary_min": stats_min,
             "salary_max": stats_max,
+            "location_applied": location,
             "filters_applied": {
                 "job_category": job_category,
                 "job_title": job_title,

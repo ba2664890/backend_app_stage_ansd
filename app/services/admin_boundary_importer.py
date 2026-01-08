@@ -2,17 +2,16 @@ import os
 import logging
 from pathlib import Path
 import pandas as pd
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 import geopandas as gpd
 from sqlalchemy.orm import Session
-from sqlalchemy import delete, func
+from sqlalchemy import delete, func, or_
 from app.services.admin_boundary import AdminBoundaryService
 from geoalchemy2.shape import from_shape
 from shapely.geometry import shape
 from difflib import get_close_matches
-from sqlalchemy import or_, func
 
-from app.models.database_models import OffreEmploiBrute, SenegalAdminBoundary
+from app.models.database_models import OffreEmploiBrute, SenegalAdminBoundary, UserProfile, Company
 
 logger = logging.getLogger(__name__)
 
@@ -85,21 +84,16 @@ class AdminBoundaryImporterService:
 
             # Détermination du parent selon le niveau (UNIQUEMENT pour region/departement)
             if level == "region":
-                # Le parent d'une région est le Sénégal
                 parent_name = "Senegal"
             elif level == "departement":
-                # Utilisation du CSV pour mapper département -> région
                 parent_name = self.dept_to_region.get(name)
                 if not parent_name:
                     logger.warning(f"⚠️ Département '{name}' non trouvé dans le CSV")
-                    # Fallback sur les données du shapefile si disponible
                     parent_name = row.get("NAME_1")
             else:
-                # Conservation de la logique originale pour les autres niveaux
                 parent_col = parent_map.get(level)
                 parent_name = row.get(parent_col) if parent_col else None
 
-            # Validation du nom
             if not name:
                 logger.warning(f"⚠️ Nom manquant pour une entité {level} dans {shp_path}")
                 continue
@@ -119,10 +113,6 @@ class AdminBoundaryImporterService:
         logger.info(f"✅ {len(records)} limites importées ({level})")
         return len(records)
 
-
-    # ------------------------------------------------------------
-    # Import complet
-    # ------------------------------------------------------------
     def import_all(self, db: Session, clean: bool = True):
         logger.info(f"🚀 DÉBUT IMPORT depuis {self.data_dir}")
 
@@ -162,151 +152,107 @@ class AdminBoundaryImporterService:
     # ------------------------------------------------------------
     # Matching
     # ------------------------------------------------------------
-    def match_offers_to_boundaries(
-        self,
-        db: Session,
-        level: str = None,
-        similarity_threshold: int = 85,
-    ) -> Dict[str, Any]:
+    def match_offers_to_boundaries(self, db: Session, similarity_threshold: int = 85) -> Dict[str, Any]:
+        logger.info("🔄 Matching offres ↔ limites administratives")
+        return self._match_entities_to_boundaries(db, OffreEmploiBrute, similarity_threshold)
 
-        logger.info("🔄 Matching offres ↔ limites administratives (texte)")
+    def match_talents_to_boundaries(self, db: Session, similarity_threshold: int = 85) -> Dict[str, Any]:
+        logger.info("🔄 Matching talents ↔ limites administratives")
+        return self._match_entities_to_boundaries(db, UserProfile, similarity_threshold)
 
+    def match_companies_to_boundaries(self, db: Session, similarity_threshold: int = 85) -> Dict[str, Any]:
+        logger.info("🔄 Matching entreprises ↔ limites administratives")
+        return self._match_entities_to_boundaries(db, Company, similarity_threshold)
+
+    def _match_entities_to_boundaries(self, db: Session, model_class: Any, similarity_threshold: int = 85) -> Dict[str, Any]:
+        """Méthode générique pour matcher n'importe quel modèle ayant 'location' et 'admin_boundary_id'."""
         boundaries = db.query(SenegalAdminBoundary).all()
         if not boundaries:
             return {"status": "success", "matched": 0}
 
-        # 🔥 Cast pour éviter Column[str] → str
         boundary_map = {
             self._normalize_name(str(b.name)): b.id
             for b in boundaries
         }
 
-        query = db.query(OffreEmploiBrute).filter(
-            OffreEmploiBrute.location.isnot(None),
-        )
-
-        if level:
-            query = query.join(SenegalAdminBoundary).filter(
-                SenegalAdminBoundary.level == level
-            )
-            print(query)
-
-        pending_offers = query.all()
-        logger.info(f"📋 {len(pending_offers)} offres à matcher")
+        # On ne traite que ceux qui n'ont pas encore de boundary_id
+        entities = db.query(model_class).filter(
+            model_class.location.isnot(None),
+            model_class.admin_boundary_id.is_(None)
+        ).all()
+        
+        logger.info(f"📋 {len(entities)} {model_class.__name__} à matcher")
 
         matched = 0
-
-        for offer in pending_offers:
-            matched_boundary = self._find_best_match(
-                str(offer.location),  # 🔥 Cast ici
+        for entity in entities:
+            matched_id = self._find_best_match(
+                str(entity.location),
                 boundary_map,
                 similarity_threshold,
             )
 
-            if matched_boundary:
-                offer.admin_boundary_id = int(matched_boundary)  # 🔥 Cast int() pour Pylance
+            if matched_id:
+                entity.admin_boundary_id = int(matched_id)
                 matched += 1
 
         db.commit()
-
         return {
             "status": "success",
-            "total_processed": len(pending_offers),
+            "entity": model_class.__name__,
+            "total_processed": len(entities),
             "matched": matched,
         }
 
-    # ------------------------------------------------------------
-    # Normalisation des noms
-    # ------------------------------------------------------------
     def _normalize_name(self, name: Optional[str]) -> str:
         import unicodedata
-
         if not isinstance(name, str):
             return ""
-
         if "," in name:
             name = name.split(",")[0]
-
         name = name.lower().strip()
-
         name = "".join(
             c for c in unicodedata.normalize("NFD", name)
             if unicodedata.category(c) != "Mn"
         )
-
         name = name.replace("-", " ").replace("_", " ")
-
         return " ".join(name.split())
 
-    # ------------------------------------------------------------
-    # Fuzzy matching
-    # ------------------------------------------------------------
-    def _find_best_match(
-        self,
-        location: Optional[str],
-        boundary_map: dict,
-        threshold: int,
-    ) -> Optional[int]:
-
+    def _find_best_match(self, location: Optional[str], boundary_map: dict, threshold: int) -> Optional[int]:
         if not isinstance(location, str):
             return None
-
-        location = str(location)
         norm_location = self._normalize_name(location)
 
-        # --- matching exact ---
         for boundary_name, boundary_id in boundary_map.items():
             if boundary_name in norm_location or norm_location in boundary_name:
                 return boundary_id
 
-        # --- fuzzy matching ---
         words = norm_location.split()
         names = list(boundary_map.keys())
-
         for word in words:
             if len(word) < 3:
                 continue
-
-            matches = get_close_matches(
-                word,
-                names,
-                n=1,
-                cutoff=threshold / 100,
-            )
-
+            matches = get_close_matches(word, names, n=1, cutoff=threshold / 100)
             if matches:
                 return boundary_map[matches[0]]
-
         return None
 
-    # ------------------------------------------------------------
-    # Vérification des imports
-    # ------------------------------------------------------------
     def verify_import(self, db: Session):
         stats = db.query(
             SenegalAdminBoundary.level,
             func.count(SenegalAdminBoundary.id),
         ).group_by(SenegalAdminBoundary.level).all()
-
         result = {level: count for level, count in stats}
         logger.info(f"📊 Stats import : {result}")
         return result
 
-
-    # Fin du fichier - ajoutez :
-    # Dans admin_boundary_importer.py
     def match_and_refresh(self, db: Session, level: str = None):
         """Matching + refresh atomique pour éviter incohérence."""
         try:
-            # 1. Match les offres
-            match_result = self.match_offers_to_boundaries(db, level)
-            
-            # 2. Si des offres ont été matchées, refresh immédiatement
+            match_result = self.match_offers_to_boundaries(db)
             if match_result["matched"] > 0:
                 service = AdminBoundaryService()
                 refresh = service.refresh_offer_counts(db, level)
                 match_result["offer_counts_updated"] = refresh["updated_rows"]
-            
             return match_result
         except Exception:
             db.rollback()
