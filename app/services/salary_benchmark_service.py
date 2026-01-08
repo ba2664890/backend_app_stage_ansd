@@ -8,7 +8,7 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 import logging
 
-from ..models.database_models import OffreEmploiEnrichie, Application
+from ..models.database_models import OffreEmploiEnrichie, OffreEmploiBrute, Application
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,8 @@ class SalaryBenchmarkService:
             query = query.filter(OffreEmploiEnrichie.extracted_sector == sector)
         
         if location:
-            query = query.join(OffreEmploiEnrichie.offre_brute).filter(
-                OffreEmploiEnrichie.offre_brute.has(location=location)
+            query = query.join(OffreEmploiBrute).filter(
+                OffreEmploiBrute.location.ilike(f"%{location}%")
             )
         
         if experience_years is not None:

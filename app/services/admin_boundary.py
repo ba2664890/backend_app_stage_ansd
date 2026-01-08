@@ -588,11 +588,11 @@ class CarteService:
              
         talent_results = talent_query.group_by(UserProfile.location).all()
         # Création d'une map normalisée : "dakar" -> count
-        talent_map = {}
+        temp_talent_map = {}
         for loc, count in talent_results:
             if loc:
                 norm = self.admin_service._normalize_name(loc)
-                talent_map[norm] = talent_map.get(norm, 0) + count
+                temp_talent_map[norm] = temp_talent_map.get(norm, 0) + count
 
         # --- Calcul de la croissance ---
         growth_map = self._calculate_regional_growth(db, level.value)
@@ -603,6 +603,14 @@ class CarteService:
         # Construction des features GeoJSON
         for b in boundaries:
             total_offers += b.offer_count
+            b_norm = self.admin_service._normalize_name(b.name)
+            
+            # Agrégation intelligente des talents : inclusion du nom
+            # Si le nom de la limite est contenu dans la location du talent, on le compte
+            t_count = 0
+            for loc_norm, count in temp_talent_map.items():
+                if b_norm in loc_norm:
+                    t_count += count
 
             # Convertit geometry
             geometry = b.geojson if isinstance(b.geojson, dict) else {}
@@ -628,7 +636,7 @@ class CarteService:
                     "name": b.name,
                     "level": b.level,
                     "offer_count": b.offer_count,  # ✅ Utilise le compteur pré-calculé
-                    "talent_count": talent_map.get(self.admin_service._normalize_name(b.name), 0), # ✅ Vrais chiffres
+                    "talent_count": t_count, # ✅ Vrais chiffres agrégés
                     "growth": growth_map.get(self.admin_service._normalize_name(b.name), 0.0), # ✅ Croissance réelle
                     "centroid": centroid_value,
                     "parent_name": b.parent_name  # ✅ IMPORTANT pour la navigation
