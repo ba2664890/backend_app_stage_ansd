@@ -34,57 +34,111 @@ class RHAssistantService:
     async def chat(
         self,
         db: Session,
-        recruiter_id: UUID,
-        chat_request: ChatRequest
+        user_or_recruiter_id: UUID,
+        chat_request: ChatRequest,
+        user_role: str = 'recruiter'
     ) -> Dict:
         """
-        Traite une question du recruteur.
+        Traite une question de l'utilisateur (recruteur ou candidat).
         """
         question = chat_request.question
         context_data = chat_request.context or {}
         
-        # 1. RAG : Rechercher des infos pertinentes dans la base vectorielle
-        logger.info(f"Recherche RAG pour: {question}")
-        rag_context = self.rag_service.search_context(question, n_results=5)
+        # Définir le système prompt selon le rôle
+        if user_role == 'candidate':
+            system_prompt = """
+Tu es l'Assistant Carrière de 'Emploi Sénégal', un expert en orientation professionnelle et recherche d'emploi.
+Ton objectif est d'aider les candidats avec précision, empathie et encouragement.
+
+Directives :
+1. **Analyse Personnalisée** : Utilise le contexte fourni (profil, documents, offres recommandées) pour donner des conseils adaptés.
+2. **Expertise Locale** : Tu connais les spécificités du marché sénégalais (secteurs, villes, tendances).
+3. **Encouragement** : Sois positif et motivant. Aide le candidat à surmonter les obstacles.
+4. **Pratique** : Propose des actions concrètes (améliorer CV, préparer entretien, postuler à telle offre).
+5. **Honnêteté** : Si tu ne connais pas quelque chose, admets-le et propose une recherche.
+"""
+        else:
+            system_prompt = SYSTEM_PROMPT  # Prompt RH par défaut
         
-        # Formatage enrichi du contexte pour le LLM
-        full_context = rag_context if rag_context else "Aucune offre spécifique trouvée dans la base de données actuelle pour cette requête."
+        # 1. RAG : Rechercher des infos pertinentes dans la base vectorielle
+        logger.info(f"Recherche RAG pour: {question} (role: {user_role})")
+        
+        # Pour les candidats, on pourrait chercher dans leurs documents aussi
+        if user_role == 'candidate':
+            # Récupérer le profil et les documents du candidat
+            from ..models.database_models import UserProfile, Document
+            profile = db.query(UserProfile).filter(UserProfile.user_id == user_or_recruiter_id).first()
+            documents = db.query(Document).filter(Document.user_id == user_or_recruiter_id).limit(5).all()
+            
+            # Contexte enrichi pour candidat
+            candidate_context = f"Profil candidat: "
+            if profile:
+                candidate_context += f"{profile.first_name or ''} {profile.last_name or ''}, "
+                candidate_context += f"Compétences: {', '.join(profile.skills or [])}. "
+                candidate_context += f"Expérience: {profile.experience_years or 0} ans. "
+                candidate_context += f"Localisation: {profile.location or 'Non spécifiée'}."
+            
+            if documents:
+                candidate_context += f"\n\nDocuments téléchargés: {len(documents)} document(s) (CV, diplômes, etc.)"
+            
+            # RAG sur les offres pertinentes
+            rag_context = self.rag_service.search_context(question, n_results=3)
+            full_context = f"{candidate_context}\n\n{rag_context if rag_context else 'Aucune offre spécifique trouvée.'}"
+        else:
+            # Mode recruteur : RAG classique sur toutes les offres
+            rag_context = self.rag_service.search_context(question, n_results=5)
+            full_context = rag_context if rag_context else "Aucune offre spécifique trouvée dans la base de données actuelle pour cette requête."
         
         # 2. LLM : Générer la réponse
         answer = await self.llm_client.generate_response(
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=system_prompt,
             user_message=question,
             context=full_context
         )
         
         # 3. Sauvegarder l'historique
-        chat_history = RHChatHistory(
-            recruiter_id=recruiter_id,
-            question=question,
-            answer=answer,
-            context={**context_data, "rag_sources_used": bool(rag_context)},
-            model_used=self.llm_client.model,
-            tokens_used=len(question) + len(answer) # Approximation simple
-        )
-        db.add(chat_history)
-        db.commit()
+        if user_role == 'recruiter':
+            chat_history = RHChatHistory(
+                recruiter_id=user_or_recruiter_id,
+                question=question,
+                answer=answer,
+                context={**context_data, "rag_sources_used": bool(rag_context if user_role == 'recruiter' else full_context)},
+                model_used=self.llm_client.model,
+                tokens_used=len(question) + len(answer)
+            )
+            db.add(chat_history)
+            db.commit()
+        # Note: Pour les candidats, on pourrait créer une table CandidateChatHistory séparée
         
         return {
             "answer": answer,
-            "sources": ["Base de données interne (Offres d'emploi)"],
-            "suggestions": self._generate_dynamic_suggestions(question)
+            "sources": ["Base de données interne (Offres d'emploi)", "Votre profil"] if user_role == 'candidate' else ["Base de données interne (Offres d'emploi)"],
+            "suggestions": self._generate_dynamic_suggestions(question, user_role)
         }
     
-    def _generate_dynamic_suggestions(self, last_question: str) -> List[str]:
-        """Génère des suggestions basées sur le contexte."""
-        suggestions = [
-            "Générer une description de poste pour un développeur Python",
-            "Quelles sont les compétences les plus demandées en ce moment ?",
-            "Analyser le profil d'un candidat"
-        ]
-        # Logique simple pour varier les suggestions
-        if "salaire" in last_question.lower():
-            suggestions.insert(0, "Comparer les salaires par secteur d'activité")
+    def _generate_dynamic_suggestions(self, last_question: str, user_role: str = 'recruiter') -> List[str]:
+        """Génère des suggestions basées sur le contexte et le rôle."""
+        if user_role == 'candidate':
+            suggestions = [
+                "Comment améliorer mon CV ?",
+                "Quelles sont les compétences les plus demandées ?",
+                "Comment me préparer à un entretien d'embauche ?"
+            ]
+            # Logique simple pour varier les suggestions
+            if "cv" in last_question.lower():
+                suggestions.insert(0, "Analyser mon CV et proposer des améliorations")
+            elif "entretien" in last_question.lower():
+                suggestions.insert(0, "Me donner des exemples de questions d'entretien")
+        else:
+            # Suggestions pour recruteurs
+            suggestions = [
+                "Générer une description de poste pour un développeur Python",
+                "Quelles sont les compétences les plus demandées en ce moment ?",
+                "Analyser le profil d'un candidat"
+            ]
+            # Logique simple pour varier les suggestions
+            if "salaire" in last_question.lower():
+                suggestions.insert(0, "Comparer les salaires par secteur d'activité")
         return suggestions
     
     async def generate_job_description(

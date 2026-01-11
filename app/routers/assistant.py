@@ -32,26 +32,34 @@ async def chat_with_assistant(
     current_user = Depends(get_current_user)
 ):
     """
-    Discuter avec l'assistant RH IA.
+    Discuter avec l'assistant IA.
     
-    **Permissions**: Recruteur
+    **Permissions**: Tous les utilisateurs (recruteurs et candidats)
+    - Recruteurs : Assistance RH (offres, candidats, marché)
+    - Candidats : Assistance carrière (recherche emploi, CV, candidatures)
     """
     try:
         # Récupérer les services depuis l'état de l'application
         assistant_service = request.app.state.assistant_service
         recruiter_service = request.app.state.recruiter_service
         
-        # Vérifier que l'utilisateur est un recruteur
         user_id = current_user.user_id
-        recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
+        user_role = getattr(current_user, 'role', 'candidate')
         
-        if not recruiter:
-            raise HTTPException(
-                status_code=403,
-                detail="Vous devez être recruteur pour utiliser l'assistant RH"
-            )
+        # Déterminer le contexte selon le rôle
+        if user_role == 'recruiter' or user_role == 'hr_manager':
+            # Mode recruteur : vérifier l'accès recruteur
+            recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
+            if not recruiter:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Recruteur non trouvé"
+                )
+            response = await assistant_service.chat(db, recruiter.id, chat_request, user_role='recruiter')
+        else:
+            # Mode candidat : utiliser l'ID utilisateur directement
+            response = await assistant_service.chat(db, user_id, chat_request, user_role='candidate')
         
-        response = await assistant_service.chat(db, recruiter.id, chat_request)
         return ChatResponse(**response)
     
     except HTTPException:
