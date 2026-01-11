@@ -517,6 +517,7 @@ class ApplicationResponse(ApplicationBase):
     user_id: UUID
     job_id: UUID
     company_id: UUID
+    cv_id: Optional[UUID] = None  # Ajout du lien vers le CV
     status: str
     notes: Optional[str]
     rating: Optional[int]

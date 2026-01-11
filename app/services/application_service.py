@@ -23,17 +23,25 @@ class ApplicationService:
         "offer_made", "hired", "rejected", "withdrawn"
     ]
     
-    def create_application(
+    async def create_application(
         self,
         db: Session,
         user_id: UUID,
-        application_data: ApplicationCreate
+        application_data: ApplicationCreate,
+        cv_file: Optional[any] = None  # Using any to avoid UploadFile import issues if needed, but it's FastAPI's UploadFile
     ) -> Application:
         """
-        Crée une nouvelle candidature.
-        Supporte les offres non encore enrichies en créant une coquille (skeleton).
+        Crée une nouvelle candidature avec support optionnel pour l'upload d'un CV.
+        Gère les doublons de documents (met à jour si le CV existe déjà).
         """
-        # 1. Chercher l'offre enrichie (via offre_id car le frontend envoie l'ID brute)
+        import os
+        import uuid
+        import shutil
+        from datetime import datetime
+        from ..models.database_models import Document
+        from .file_service import FileService
+        
+        # 1. Chercher l'offre enrichie
         job = db.query(OffreEmploiEnrichie).filter(
             OffreEmploiEnrichie.offre_id == application_data.job_id
         ).first()
@@ -48,7 +56,6 @@ class ApplicationService:
             if not brute:
                 raise ValueError(f"Offre d'emploi {application_data.job_id} non trouvée")
             
-            # Créer une coquille (skeleton) pour permettre la candidature
             job = OffreEmploiEnrichie(
                 offre_id=brute.id,
                 processed_at=None,
@@ -57,7 +64,6 @@ class ApplicationService:
             db.add(job)
             db.commit()
             db.refresh(job)
-            logger.info(f"Skeleton enrichment créé lors de la candidature pour l'offre {brute.id}")
         else:
             brute = job.offre_brute
 
@@ -66,14 +72,12 @@ class ApplicationService:
         if brute.company_id:
             company_id = brute.company_id
         else:
-            # Fallback : chercher l'entreprise par nom si l'ID n'est pas encore migré
             from ..models.database_models import Company
             company = db.query(Company).filter(Company.name == brute.company_name).first()
             if company:
                 company_id = company.id
             else:
-                # Créer une entreprise par défaut ou lever une erreur
-                raise ValueError(f"L'entreprise '{brute.company_name}' n'est pas référencée dans le système")
+                raise ValueError(f"L'entreprise '{brute.company_name}' n'est pas référencée")
         
         # 4. Vérifier si candidature existe déjà
         existing = db.query(Application).filter(
@@ -84,12 +88,69 @@ class ApplicationService:
         if existing:
             raise ValueError("Vous avez déjà postulé à cette offre")
         
-        # 5. Créer la candidature
+        # 5. Gérer le CV (Upload et dédoublonnage)
+        cv_id = None
+        if cv_file:
+            UPLOAD_DIR = "app/static/uploads"
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
+            
+            file_ext = os.path.splitext(cv_file.filename)[1]
+            unique_filename = f"{user_id}_{uuid.uuid4()}{file_ext}"
+            file_path = os.path.join(UPLOAD_DIR, unique_filename)
+            
+            # Sauvegarder le fichier
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(cv_file.file, buffer)
+            
+            # Extraire le texte
+            file_service = FileService()
+            extracted_text = None
+            try:
+                extracted_text = await file_service.extract_text_from_file(file_path)
+            except Exception as e:
+                logger.warning(f"Erreur d'extraction texte CV: {e}")
+            
+            # GÉRER LES DOUBLONS : Chercher si un CV avec le même nom existe déjà pour cet utilisateur
+            existing_doc = db.query(Document).filter(
+                Document.user_id == user_id,
+                Document.category == "cv",
+                Document.name == cv_file.filename
+            ).first()
+            
+            if existing_doc:
+                # Mise à jour du document existant (évite les doublons dans le profil)
+                logger.info(f"Mise à jour du CV existant '{cv_file.filename}' pour l'utilisateur {user_id}")
+                # Supprimer l'ancien fichier si possible
+                if os.path.exists(existing_doc.file_path):
+                    try: os.remove(existing_doc.file_path)
+                    except: pass
+                
+                existing_doc.file_path = file_path
+                existing_doc.extracted_text = extracted_text
+                existing_doc.uploaded_at = datetime.utcnow()
+                cv_id = existing_doc.id
+            else:
+                # Créer un nouveau document
+                new_doc = Document(
+                    user_id=user_id,
+                    name=cv_file.filename,
+                    file_path=file_path,
+                    file_type=cv_file.content_type or "application/pdf",
+                    category="cv",
+                    extracted_text=extracted_text,
+                    uploaded_at=datetime.utcnow()
+                )
+                db.add(new_doc)
+                db.flush() # Pour récupérer l'ID
+                cv_id = new_doc.id
+        
+        # 6. Créer la candidature
         application = Application(
             user_id=user_id,
             job_id=job.id,
             company_id=company_id,
             cover_letter=application_data.cover_letter,
+            cv_id=cv_id,
             status="applied"
         )
         
@@ -97,17 +158,16 @@ class ApplicationService:
         db.commit()
         db.refresh(application)
         
-        # 6. Créer l'entrée d'historique
+        # 7. Historique
         history = ApplicationStatusHistory(
             application_id=application.id,
             from_status=None,
             to_status="applied",
-            comment="Candidature initiale"
+            comment="Candidature initiale (avec CV)" if cv_id else "Candidature initiale"
         )
         db.add(history)
         db.commit()
         
-        logger.info(f"Candidature créée: User {user_id} → Job {job.id}")
         return application
     
     def get_application_by_id(self, db: Session, application_id: UUID) -> Optional[Application]:

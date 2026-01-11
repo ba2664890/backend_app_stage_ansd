@@ -436,6 +436,10 @@ class Application(Base):
     company = relationship("Company", backref="applications")
     status_history = relationship("ApplicationStatusHistory", back_populates="application", cascade="all, delete-orphan")
     
+    # Lien vers le CV utilisé pour cette candidature
+    cv_id = Column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="SET NULL"), nullable=True)
+    cv = relationship("Document", backref="applications_used_in")
+    
     # Index
     __table_args__ = (
         UniqueConstraint('user_id', 'job_id', name='uq_user_job_application'),

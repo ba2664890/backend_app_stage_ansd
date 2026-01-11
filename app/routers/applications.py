@@ -25,9 +25,13 @@ router = APIRouter(prefix="/api/v1/applications", tags=["applications"])
 application_service = ApplicationService()
 
 
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+
 @router.post("", response_model=ApplicationResponse, status_code=201)
 async def create_application(
-    application_data: ApplicationCreate,
+    job_id: UUID = Form(...),
+    cover_letter: Optional[str] = Form(None),
+    cv: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
@@ -38,11 +42,24 @@ async def create_application(
     """
     try:
         user_id = current_user.user_id
-        application = application_service.create_application(db, user_id, application_data)
+        
+        # Créer l'objet de données pour le service (rétrocompatibilité structurelle locale)
+        # Note: On transforme les Form en objet Pydantic attendu par le service original si on veut minimiser les changements du service, 
+        # mais on va quand même adapter le service pour gérer le fichier 'cv'.
+        application_data = ApplicationCreate(
+            job_id=job_id,
+            cover_letter=cover_letter
+        )
+        
+        application = await application_service.create_application(db, user_id, application_data, cv)
         return application
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Erreur création candidature: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de la création de la candidature: {str(e)}")
 
 
