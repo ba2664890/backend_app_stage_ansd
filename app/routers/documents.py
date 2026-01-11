@@ -39,6 +39,11 @@ async def upload_document(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    import logging
+    from ..services.file_service import FileService
+    
+    logger = logging.getLogger(__name__)
+    
     # Validate file type
     allowed_types = ["application/pdf", "image/jpeg", "image/png", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
     if file.content_type not in allowed_types:
@@ -66,7 +71,17 @@ async def upload_document(
     else:
         size_str = f"{file_size / (1024 * 1024):.1f} MB"
 
-    # Create DB entry
+    # Extract text from document for persistence
+    extracted_text = None
+    try:
+        file_service = FileService()
+        extracted_text = await file_service.extract_text_from_file(file_path)
+        logger.info(f"✅ Texte extrait du document {file.filename}: {len(extracted_text)} caractères")
+    except Exception as e:
+        logger.warning(f"⚠️ Impossible d'extraire le texte de {file.filename}: {e}")
+        # Continue même si l'extraction échoue
+
+    # Create DB entry with extracted text
     new_doc = Document(
         user_id=current_user.user_id,
         name=file.filename,
@@ -74,7 +89,8 @@ async def upload_document(
         file_type=file.content_type,
         size=size_str,
         category=category,
-        uploaded_at=datetime.utcnow()
+        uploaded_at=datetime.utcnow(),
+        extracted_text=extracted_text  # Stocker le texte extrait
     )
     
     db.add(new_doc)

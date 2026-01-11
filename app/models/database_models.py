@@ -644,6 +644,9 @@ class Document(Base):
     uploaded_at = Column(DateTime, default=func.now())
     is_verified = Column(Boolean, default=False)
     
+    # Contenu extrait du document (pour persistance sur Railway)
+    extracted_text = Column(Text, nullable=True)
+    
     # Relations
     user = relationship("User", backref="documents")
 

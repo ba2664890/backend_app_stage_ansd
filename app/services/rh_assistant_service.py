@@ -68,7 +68,6 @@ Directives :
         if user_role == 'candidate':
             # Récupérer le profil et les documents du candidat
             from ..models.database_models import UserProfile, Document
-            from .file_service import FileService
             
             profile = db.query(UserProfile).filter(UserProfile.user_id == user_or_recruiter_id).first()
             documents = db.query(Document).filter(Document.user_id == user_or_recruiter_id).limit(5).all()
@@ -83,26 +82,36 @@ Directives :
                 candidate_context += f"Expérience: {profile.experience_years or 0} ans. "
                 candidate_context += f"Localisation: {profile.location or 'Non spécifiée'}."
             
-            # Extraire le contenu des documents (CVs, diplômes)
+            # Lire le contenu des documents depuis la DB (pas depuis le filesystem)
             if documents:
                 candidate_context += f"\n\nDocuments du candidat:\n"
-                file_service = FileService()
                 
                 for doc in documents:
-                    logger.info(f"📄 Extraction de {doc.name} ({doc.category}) depuis {doc.file_path}")
                     candidate_context += f"\n--- {doc.category.upper()}: {doc.name} ---\n"
-                    try:
-                        # Extraire le texte du document
-                        doc_text = await file_service.extract_text_from_file(doc.file_path)
-                        logger.info(f"✅ Extraction réussie: {len(doc_text)} caractères extraits")
+                    
+                    if doc.extracted_text:
+                        # Texte déjà extrait et stocké en DB
+                        logger.info(f"✅ Texte trouvé en DB pour {doc.name}: {len(doc.extracted_text)} caractères")
                         # Limiter à 2000 caractères pour éviter de surcharger le contexte
-                        candidate_context += doc_text[:2000]
-                        if len(doc_text) > 2000:
+                        candidate_context += doc.extracted_text[:2000]
+                        if len(doc.extracted_text) > 2000:
                             candidate_context += "\n[... contenu tronqué pour économiser les tokens ...]"
                         candidate_context += "\n"
-                    except Exception as e:
-                        logger.error(f"❌ Impossible d'extraire le texte de {doc.name}: {e}", exc_info=True)
-                        candidate_context += f"[Erreur lors de la lecture du fichier: {str(e)}]\n"
+                    else:
+                        # Fallback : tenter d'extraire depuis le fichier (ancien système)
+                        logger.warning(f"⚠️ Pas de texte extrait en DB pour {doc.name}, tentative d'extraction du fichier...")
+                        try:
+                            from .file_service import FileService
+                            file_service = FileService()
+                            doc_text = await file_service.extract_text_from_file(doc.file_path)
+                            logger.info(f"✅ Extraction réussie depuis fichier: {len(doc_text)} caractères")
+                            candidate_context += doc_text[:2000]
+                            if len(doc_text) > 2000:
+                                candidate_context += "\n[... contenu tronqué ...]"
+                            candidate_context += "\n"
+                        except Exception as e:
+                            logger.error(f"❌ Impossible d'extraire le texte de {doc.name}: {e}")
+                            candidate_context += f"[Document non accessible - veuillez le re-télécharger]\n"
             else:
                 logger.warning(f"⚠️ Aucun document trouvé pour le candidat {user_or_recruiter_id}")
             
