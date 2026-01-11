@@ -137,23 +137,23 @@ Réponds UNIQUEMENT avec le JSON, sans texte additionnel."""
         if not extracted_data.get("company_name"):
             raise ValueError("Le nom de l'entreprise est manquant. Assurez-vous que le document mentionne l'entreprise.")
         
-        # Nettoyage et normalisation des données
+        # Nettoyage et normalisation des données (robuste aux valeurs None du LLM)
         cleaned_data = {
-            "title": extracted_data.get("title", "").strip(),
-            "company_name": extracted_data.get("company_name", "").strip(),
-            "location": extracted_data.get("location", "Dakar").strip(),
-            "contract_type": extracted_data.get("contract_type", "CDI").strip(),
-            "description": extracted_data.get("description", "").strip() or f"Poste de {extracted_data.get('title')} chez {extracted_data.get('company_name')}",
+            "title": (extracted_data.get("title") or "").strip(),
+            "company_name": (extracted_data.get("company_name") or "").strip(),
+            "location": (extracted_data.get("location") or "Dakar").strip(),
+            "contract_type": (extracted_data.get("contract_type") or "CDI").strip(),
+            "description": (extracted_data.get("description") or "").strip() or f"Poste de {extracted_data.get('title')} chez {extracted_data.get('company_name')}",
             "sector": extracted_data.get("sector"),
             "min_salary": extracted_data.get("min_salary"),
             "max_salary": extracted_data.get("max_salary"),
             "experience_years": extracted_data.get("experience_years"),
             "education_level": extracted_data.get("education_level"),
-            "skills": extracted_data.get("skills", []),
-            "languages": extracted_data.get("languages", []),
-            "benefits": extracted_data.get("benefits", []),
-            "remote_type": extracted_data.get("remote_type", "onsite"),
-            "nb_positions": extracted_data.get("nb_positions", 1)
+            "skills": extracted_data.get("skills", []) if isinstance(extracted_data.get("skills"), list) else [],
+            "languages": extracted_data.get("languages", []) if isinstance(extracted_data.get("languages"), list) else [],
+            "benefits": extracted_data.get("benefits", []) if isinstance(extracted_data.get("benefits"), list) else [],
+            "remote_type": (extracted_data.get("remote_type") or "onsite").strip(),
+            "nb_positions": extracted_data.get("nb_positions") or 1
         }
         
         logger.info(f"Données extraites et nettoyées: title={cleaned_data['title']}, company={cleaned_data['company_name']}")

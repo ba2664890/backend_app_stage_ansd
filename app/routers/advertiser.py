@@ -66,7 +66,8 @@ async def post_job_file(
         raise
     except Exception as e:
         log.error(f"Erreur inattendue upload annonceur: {type(e).__name__}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Une erreur inattendue est survenue lors du traitement. Veuillez réessayer.")
+        # On renvoie le détail de l'erreur pour débugger sur Railway (en prod on masquerait normalement)
+        raise HTTPException(status_code=500, detail=f"Erreur interne ({type(e).__name__}): {str(e)}")
     finally:
         await service.file_service.cleanup_file(file_path)
 

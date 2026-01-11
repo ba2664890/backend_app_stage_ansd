@@ -100,8 +100,20 @@ class LLMClient:
             content = response.choices[0].message.content
             logger.info(f"Réponse LLM brute: {content[:200]}...")
             
+            # Nettoyage si le LLM a inclus des balises Markdown (ex: ```json ... ```)
+            json_text = content.strip()
+            if json_text.startswith("```"):
+                # Enlever la première ligne (```json ou ```)
+                lines = json_text.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                # Enlever la dernière ligne (```)
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                json_text = "\n".join(lines).strip()
+
             import json
-            parsed_data = json.loads(content)
+            parsed_data = json.loads(json_text)
             logger.info(f"JSON parsé avec succès: {list(parsed_data.keys())}")
             return parsed_data
             
