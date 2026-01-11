@@ -51,11 +51,12 @@ Tu es l'Assistant Carrière de 'Emploi Sénégal', un expert en orientation prof
 Ton objectif est d'aider les candidats avec précision, empathie et encouragement.
 
 Directives :
-1. **Analyse Personnalisée** : Utilise le contexte fourni (profil, documents, offres recommandées) pour donner des conseils adaptés.
-2. **Expertise Locale** : Tu connais les spécificités du marché sénégalais (secteurs, villes, tendances).
-3. **Encouragement** : Sois positif et motivant. Aide le candidat à surmonter les obstacles.
-4. **Pratique** : Propose des actions concrètes (améliorer CV, préparer entretien, postuler à telle offre).
-5. **Honnêteté** : Si tu ne connais pas quelque chose, admets-le et propose une recherche.
+1. **Analyse Personnalisée** : Utilise le contexte fourni (profil, documents CVs/diplômes, offres recommandées) pour donner des conseils adaptés.
+2. **Analyse Proactive** : Si tu vois le contenu d'un CV dans le contexte, ANALYSE-LE IMMÉDIATEMENT et fournis des retours détaillés (points forts, points faibles, suggestions d'amélioration).
+3. **Expertise Locale** : Tu connais les spécificités du marché sénégalais (secteurs, villes, tendances, salaires).
+4. **Encouragement** : Sois positif et motivant. Aide le candidat à surmonter les obstacles.
+5. **Pratique** : Propose des actions concrètes (améliorer CV, préparer entretien, postuler à telle offre).
+6. **Honnêteté** : Si tu ne connais pas quelque chose, admets-le et propose une recherche.
 """
         else:
             system_prompt = SYSTEM_PROMPT  # Prompt RH par défaut
@@ -67,6 +68,8 @@ Directives :
         if user_role == 'candidate':
             # Récupérer le profil et les documents du candidat
             from ..models.database_models import UserProfile, Document
+            from .file_service import FileService
+            
             profile = db.query(UserProfile).filter(UserProfile.user_id == user_or_recruiter_id).first()
             documents = db.query(Document).filter(Document.user_id == user_or_recruiter_id).limit(5).all()
             
@@ -78,8 +81,24 @@ Directives :
                 candidate_context += f"Expérience: {profile.experience_years or 0} ans. "
                 candidate_context += f"Localisation: {profile.location or 'Non spécifiée'}."
             
+            # Extraire le contenu des documents (CVs, diplômes)
             if documents:
-                candidate_context += f"\n\nDocuments téléchargés: {len(documents)} document(s) (CV, diplômes, etc.)"
+                candidate_context += f"\n\nDocuments du candidat:\n"
+                file_service = FileService()
+                
+                for doc in documents:
+                    candidate_context += f"\n--- {doc.category.upper()}: {doc.name} ---\n"
+                    try:
+                        # Extraire le texte du document
+                        doc_text = await file_service.extract_text_from_file(doc.file_path)
+                        # Limiter à 2000 caractères pour éviter de surcharger le contexte
+                        candidate_context += doc_text[:2000]
+                        if len(doc_text) > 2000:
+                            candidate_context += "\n[... contenu tronqué pour économiser les tokens ...]"
+                        candidate_context += "\n"
+                    except Exception as e:
+                        logger.warning(f"Impossible d'extraire le texte de {doc.name}: {e}")
+                        candidate_context += f"[Erreur lors de la lecture du fichier]\n"
             
             # RAG sur les offres pertinentes
             rag_context = self.rag_service.search_context(question, n_results=3)
