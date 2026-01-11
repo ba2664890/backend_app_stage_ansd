@@ -73,6 +73,8 @@ Directives :
             profile = db.query(UserProfile).filter(UserProfile.user_id == user_or_recruiter_id).first()
             documents = db.query(Document).filter(Document.user_id == user_or_recruiter_id).limit(5).all()
             
+            logger.info(f"🔍 Candidat {user_or_recruiter_id}: {len(documents)} documents trouvés dans la DB")
+            
             # Contexte enrichi pour candidat
             candidate_context = f"Profil candidat: "
             if profile:
@@ -87,18 +89,22 @@ Directives :
                 file_service = FileService()
                 
                 for doc in documents:
+                    logger.info(f"📄 Extraction de {doc.name} ({doc.category}) depuis {doc.file_path}")
                     candidate_context += f"\n--- {doc.category.upper()}: {doc.name} ---\n"
                     try:
                         # Extraire le texte du document
                         doc_text = await file_service.extract_text_from_file(doc.file_path)
+                        logger.info(f"✅ Extraction réussie: {len(doc_text)} caractères extraits")
                         # Limiter à 2000 caractères pour éviter de surcharger le contexte
                         candidate_context += doc_text[:2000]
                         if len(doc_text) > 2000:
                             candidate_context += "\n[... contenu tronqué pour économiser les tokens ...]"
                         candidate_context += "\n"
                     except Exception as e:
-                        logger.warning(f"Impossible d'extraire le texte de {doc.name}: {e}")
-                        candidate_context += f"[Erreur lors de la lecture du fichier]\n"
+                        logger.error(f"❌ Impossible d'extraire le texte de {doc.name}: {e}", exc_info=True)
+                        candidate_context += f"[Erreur lors de la lecture du fichier: {str(e)}]\n"
+            else:
+                logger.warning(f"⚠️ Aucun document trouvé pour le candidat {user_or_recruiter_id}")
             
             # RAG sur les offres pertinentes
             rag_context = self.rag_service.search_context(question, n_results=3)
