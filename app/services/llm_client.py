@@ -83,7 +83,10 @@ class LLMClient:
         
         if not self.client:
             logger.warning("Mode simulation activé - pas de clé API LLM")
-            return None
+            raise ValueError(
+                "Le service d'extraction IA n'est pas configuré. "
+                "Veuillez utiliser le formulaire manuel pour publier votre offre."
+            )
 
         try:
             response = await self.client.chat.completions.create(

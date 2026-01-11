@@ -113,12 +113,11 @@ class FileService:
             else:
                 raise ValueError(f"Type de fichier non supporté: {file_extension}")
                 
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction du texte: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="Erreur lors de l'extraction du texte du fichier"
-            )
+            raise ValueError(f"Impossible d'extraire le texte du fichier: {str(e)}")
     
     async def _extract_text_from_pdf(self, file_path: Path) -> str:
         """Extrait le texte d'un fichier PDF avec gestion robuste des erreurs."""

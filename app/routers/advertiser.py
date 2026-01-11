@@ -44,15 +44,29 @@ async def post_job_file(
     service: AdvertiserService = Depends(get_advertiser_service)
 ):
     """Publie une offre en extrayant les données d'un fichier (PDF, Word)."""
-    file_path = await service.file_service.save_upload_file(file)
+    import logging
+    log = logging.getLogger(__name__)
+    
     try:
-        return await service.post_job_file(db, current_user.user_id, file_path)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        file_path = await service.file_service.save_upload_file(file)
+    except HTTPException:
+        raise
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Erreur upload annonceur: {e}")
-        raise HTTPException(status_code=500, detail="Erreur lors du traitement du fichier.")
+        log.error(f"Erreur sauvegarde fichier: {e}")
+        raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde du fichier.")
+    
+    try:
+        result = await service.post_job_file(db, current_user.user_id, file_path)
+        return result
+    except ValueError as e:
+        # Erreurs de validation (titre manquant, extraction échouée, etc.)
+        log.warning(f"Validation échouée pour upload annonceur: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Erreur inattendue upload annonceur: {type(e).__name__}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Une erreur inattendue est survenue lors du traitement. Veuillez réessayer.")
     finally:
         await service.file_service.cleanup_file(file_path)
 
