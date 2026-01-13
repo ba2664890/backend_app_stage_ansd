@@ -197,20 +197,18 @@ async def find_candidates_for_job(
             # Limiter et exécuter
             candidates = fallback_query.limit(20).all()
             
-        # 7. Préparation de la réponse (Conversion manuelle en dict pour éviter les soucis de sérialisation JSON en cas de manque de response_model)
+        # 7. Préparation de la réponse (Conversion manuelle en dict pour éviter les soucis de sérialisation JSON)
+        # Le frontend attend : name, title, match (%)
         candidates_data = []
         for c in candidates:
             candidates_data.append({
                 "id": str(c.id),
-                "user_id": str(c.user_id),
-                "first_name": c.first_name,
-                "last_name": c.last_name,
-                "current_title": c.current_title,
+                "name": f"{c.first_name or ''} {c.last_name or ''}".strip() or "Candidat Anonyme",
+                "title": c.current_title or "Poste non spécifié",
+                "match": 85, # Score arbitraire pour le fallback SQL
                 "skills": c.skills or [],
                 "location": c.location,
-                "experience_years": c.experience_years,
-                "category": c.category.value if hasattr(c.category, 'value') else str(c.category) if c.category else None,
-                "is_active": c.is_active
+                "experience_years": c.experience_years
             })
             
         return {"candidates": candidates_data, "count": len(candidates_data)}
