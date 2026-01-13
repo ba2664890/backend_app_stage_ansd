@@ -154,15 +154,44 @@ async def find_candidates_for_job(
         # 4. Chercher dans Qdrant les CVs similaires
         candidate_ids = await embedding_service.find_similar_cvs(job_embedding, limit=20)
         
-        if not candidate_ids:
-            return {"candidates": [], "count": 0}
-            
-        # 5. Récupérer les profils complets depuis Postgres
-        candidates = db.query(UserProfile).filter(UserProfile.id.in_(candidate_ids)).all()
+        candidates = []
+        if candidate_ids:
+            # 5. Récupérer les profils complets depuis Postgres si on a des IDs de Qdrant
+            candidates = db.query(UserProfile).filter(UserProfile.id.in_(candidate_ids)).all()
         
-        # TODO: Retourner un modèle Pydantic propre, ici on retourne les objets ORM (FastAPI convertira si possible)
-        # Mais id, user_id, title, etc.
+        # 6. Fallback SQL si aucun candidat trouvé via vectoriel (ou si mode léger)
+        if not candidates:
+            from sqlalchemy import or_, func, any_
+            
+            # Recherche par titre (insensible à la casse)
+            title_query = f"%{job.title}%"
+            
+            # Construction de la requête de fallback
+            fallback_query = db.query(UserProfile).filter(UserProfile.is_active == True)
+            
+            # Filtre par titre ou par compétences
+            conditions = [UserProfile.current_title.ilike(title_query)]
+            
+            if skills:
+                # Pour PostgreSQL, on peut utiliser l'opérateur de chevauchement d'arrays && 
+                # ou vérifier si une des compétences du job est dans l'array des compétences du profil
+                # Ici on utilise une approche simple : le profil a au moins une compétence en commun
+                from sqlalchemy.dialects.postgresql import ARRAY
+                fallback_query = fallback_query.filter(
+                    or_(
+                        UserProfile.current_title.ilike(title_query),
+                        UserProfile.skills.overlap(skills)
+                    )
+                )
+            else:
+                fallback_query = fallback_query.filter(UserProfile.current_title.ilike(title_query))
+            
+            # Limiter et exécuter
+            candidates = fallback_query.limit(20).all()
+            
         return {"candidates": candidates, "count": len(candidates)}
         
     except Exception as e:
+        import traceback
+        logger.error(f"Erreur matching candidats: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Erreur matching candidats: {str(e)}")

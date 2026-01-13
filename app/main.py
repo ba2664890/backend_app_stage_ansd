@@ -39,7 +39,7 @@ from .services.job_service import JobService
 from .models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, RecruiterCreate, JobCreate
 from .services.analytics_service import AnalyticsService
 from .services.recommendation_service import RecommendationService
-# from .services.cv_pipeline_service import CVPipelineService
+from .services.cv_pipeline_service import CVPipelineService
 from .services.user_service import UserService
 from .services.admin_boundary import AdminBoundaryService, CarteService
 from .models.api_models import AdminBoundaryOut
@@ -123,7 +123,7 @@ async def lifespan(app: FastAPI):
             app.state.job_service = JobService()
             app.state.analytics_service = AnalyticsService()
             app.state.recommendation_service = RecommendationService()
-            # app.state.cv_pipeline_service = CVPipelineService() # Desactivé modules lourds
+            app.state.cv_pipeline_service = CVPipelineService()
             app.state.user_service = UserService()
             app.state.file_service = FileService()
             app.state.recruiter_service = RecruiterService()
@@ -703,7 +703,6 @@ async def get_my_jobs(
         raise HTTPException(status_code=500, detail="Erreur lors de la récupération de vos offres")
 
 
-job_servic = JobService()
 @app.get("/api/v1/jobs/saved")
 async def get_saved_jobs(
     user=Depends(get_current_user),
