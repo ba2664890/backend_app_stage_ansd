@@ -6,6 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+import logging
+
+logger = logging.getLogger(__name__)
 
 from ..database import get_db
 from ..models.api_models import (
@@ -129,12 +132,17 @@ async def find_candidates_for_job(
     Utilise la recherche vectorielle Qdrant (embedding CV vs embedding Job).
     """
     try:
-        # 1. Récupérer le job et ses détails enrichis
-        job = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_id).first()
+        # 1. Récupérer le job et ses détails enrichis (conversion string -> UUID pour SQLAlchemy)
+        try:
+            job_uuid = UUID(job_id) if isinstance(job_id, str) else job_id
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Format d'ID de job invalide")
+
+        job = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_uuid).first()
         if not job:
             raise HTTPException(status_code=404, detail="Job non trouvé")
             
-        enrichie = db.query(OffreEmploiEnrichie).filter(OffreEmploiEnrichie.offre_id == job_id).first()
+        enrichie = db.query(OffreEmploiEnrichie).filter(OffreEmploiEnrichie.offre_id == job_uuid).first()
         skills = enrichie.extracted_skills if enrichie and enrichie.extracted_skills else []
         
         # 2. Accéder au service d'embedding via l'état de l'app
