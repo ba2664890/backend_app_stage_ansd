@@ -89,6 +89,9 @@ class JobOfferResponse(JobOfferBase):
     confidence_score: Optional[float] = Field(None, description="Score de confiance NLP")
     created_at: Optional[datetime] = None
     processed_at: Optional[datetime] = Field(None, description="Date de traitement NLP")
+    recruiter_id: Optional[UUID] = None
+    contributor_id: Optional[UUID] = None
+
     @validator("posted_date", pre=True, always=True)
     def parse_posted_date(cls, v):
         if v is None:

@@ -281,7 +281,9 @@ class JobService:
             "remote_type": brute.remote_type,
             "is_urgent": brute.is_urgent,
             "languages": brute.languages or [],
-            "benefits": brute.benefits or []
+            "benefits": brute.benefits or [],
+            "recruiter_id": brute.recruiter_id,
+            "contributor_id": brute.contributor_id
         }
         
         # Ajouter les données enrichies si disponibles
