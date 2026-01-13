@@ -149,7 +149,7 @@ async def find_candidates_for_job(
         if not hasattr(request.app.state, 'cv_pipeline_service'):
              raise HTTPException(status_code=503, detail="Service de pipeline CV non disponible")
              
-        embedding_service = request.app.state.cv_pipeline_service.cv_embedding_service
+        embedding_service = request.app.state.cv_pipeline_service.embedding_service
         
         # 3. Générer embedding du job (Titre + Skills + Desc)
         # Note: on utilise await car embed_job est async
@@ -197,7 +197,23 @@ async def find_candidates_for_job(
             # Limiter et exécuter
             candidates = fallback_query.limit(20).all()
             
-        return {"candidates": candidates, "count": len(candidates)}
+        # 7. Préparation de la réponse (Conversion manuelle en dict pour éviter les soucis de sérialisation JSON en cas de manque de response_model)
+        candidates_data = []
+        for c in candidates:
+            candidates_data.append({
+                "id": str(c.id),
+                "user_id": str(c.user_id),
+                "first_name": c.first_name,
+                "last_name": c.last_name,
+                "current_title": c.current_title,
+                "skills": c.skills or [],
+                "location": c.location,
+                "experience_years": c.experience_years,
+                "category": c.category.value if hasattr(c.category, 'value') else str(c.category) if c.category else None,
+                "is_active": c.is_active
+            })
+            
+        return {"candidates": candidates_data, "count": len(candidates_data)}
         
     except Exception as e:
         import traceback
