@@ -187,6 +187,29 @@ class ApplicationService:
         applications = query.order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
         return applications, total
     
+    def _enrich_application(self, app: Application) -> Application:
+        """Helper pour enrichir les attributs dynamiques d'une candidature."""
+        if not app:
+            return app
+            
+        # Initialiser les attributs pour éviter les erreurs Pydantic
+        app.user_name = "Candidat"
+        app.user_email = ""
+        app.job_title = ""
+        app.company_name = ""
+        
+        if app.user:
+            profile = app.user.profile
+            if profile:
+                app.user_name = f"{profile.first_name or ''} {profile.last_name or ''}".strip() or "Candidat"
+            app.user_email = app.user.email
+            
+        if app.job and app.job.offre_brute:
+            app.job_title = app.job.offre_brute.title
+            app.company_name = app.job.offre_brute.company_name
+            
+        return app
+
     def get_company_applications(
         self,
         db: Session,
@@ -207,17 +230,8 @@ class ApplicationService:
             joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
         ).order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
         
-        # Enriches applications with basic details if needed (or rely on relationship loading)
-        # However, for ApplicationWithDetailsResponse, we need specific fields.
-        # Ensure relationships are loaded
         for app in applications:
-            if app.user:
-                profile = app.user.profile
-                app.user_name = f"{profile.first_name} {profile.last_name}" if profile else "Candidat"
-                app.user_email = app.user.email
-            if app.job and app.job.offre_brute:
-                app.job_title = app.job.offre_brute.title
-                app.company_name = app.job.offre_brute.company_name
+            self._enrich_application(app)
 
         return applications, total
     
@@ -255,18 +269,9 @@ class ApplicationService:
         changed_by: UUID
     ) -> Optional[Application]:
         """
-        Met à jour le statut d'une candidature.
-        
-        Args:
-            db: Session de base de données
-            application_id: ID de la candidature
-            status_data: Nouvelles données de statut
-            changed_by: ID du recruteur qui fait le changement
-            
-        Returns:
-            Optional[Application]: La candidature mise à jour
+        Met à jour le statut d'une candidature de manière robuste.
         """
-        # Utiliser joinedload pour avoir tous les détails pour la réponse API
+        # 1. Récupérer avec toutes les relations
         application = db.query(Application).options(
             joinedload(Application.user).joinedload(User.profile),
             joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
@@ -275,32 +280,24 @@ class ApplicationService:
         if not application:
             return None
         
-        # Initialiser les attributs dynamiques
-        application.user_name = "Candidat"
-        application.user_email = ""
-        application.job_title = ""
-        application.company_name = ""
-        
         if status_data.status not in self.VALID_STATUSES:
             raise ValueError(f"Statut invalide: {status_data.status}")
         
         old_status = application.status
         application.status = status_data.status
         
-        # Mettre à jour les timestamps selon le statut
+        # 2. Mettre à jour les timestamps
         if status_data.status in ["shortlisted", "interview_scheduled"] and not application.reviewed_at:
             application.reviewed_at = datetime.now()
         
-        if status_data.interview_date:
+        if status_data.status == "interview_scheduled" and status_data.interview_date:
             application.interview_date = status_data.interview_date
+            logger.info(f"Entretien planifié pour {application_id} le {status_data.interview_date}")
         
         if status_data.status in ["hired", "rejected"]:
             application.decision_date = datetime.now()
         
-        db.commit()
-        db.refresh(application)
-        
-        # Créer l'entrée d'historique
+        # 3. Créer l'historique
         history = ApplicationStatusHistory(
             application_id=application.id,
             from_status=old_status,
@@ -309,18 +306,24 @@ class ApplicationService:
             comment=status_data.comment
         )
         db.add(history)
+        
+        # 4. Commit final
         db.commit()
         
-        # Ré-enrichir les champs de détails pour la réponse API
-        if application.user:
-            profile = application.user.profile
-            application.user_name = f"{profile.first_name if profile else ''} {profile.last_name if profile else ''}".strip() or "Candidat"
-            application.user_email = application.user.email
-        if application.job and application.job.offre_brute:
-            application.job_title = application.job.offre_brute.title
-            application.company_name = application.job.offre_brute.company_name
-            
-        logger.info(f"Statut candidature {application_id}: {old_status} → {status_data.status}")
+        # 5. Rafraîchir pour être sûr d'avoir les données à jour du serveur
+        db.refresh(application)
+        
+        # 6. Re-charger explicitement les relations pour l'enrichissement
+        # (db.refresh peut invalider les objets liés)
+        application = db.query(Application).options(
+            joinedload(Application.user).joinedload(User.profile),
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+        ).filter(Application.id == application_id).first()
+        
+        # 7. Enrichir et retourner
+        self._enrich_application(application)
+        
+        logger.info(f"Statut candidature {application_id} mis à jour avec succès: {status_data.status}")
         return application
     
     def update_notes(
