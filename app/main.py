@@ -1035,6 +1035,37 @@ async def get_user_profile(
     return response
 
 
+@app.get("/api/v1/users/profile/{user_id}", response_model=UserProfileResponse)
+async def get_user_profile_by_id(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserProfile = Depends(get_current_user)
+):
+    """
+    Récupère un profil utilisateur par son user_id (pour les recruteurs/admins).
+    """
+    # Vérification basique des permissions (optionnel mais recommandé)
+    # On laisse passer recruiter, hr_manager, admin
+    current_account = db.query(User).filter(User.id == current_user.user_id).first()
+    if current_account.role.value not in ["recruiter", "hr_manager", "admin"]:
+        # Si c'est un candidat, il ne peut voir que son propre profil
+        if current_user.user_id != user_id:
+             raise HTTPException(status_code=403, detail="Accès non autorisé")
+
+    target_profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+    if not target_profile:
+        raise HTTPException(status_code=404, detail="Profil non trouvé")
+        
+    user_account = db.query(User).filter(User.id == user_id).first()
+    if not user_account:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+        
+    response = UserProfileResponse.from_orm(target_profile)
+    response.role = user_account.role.value if user_account.role else "candidate"
+    response.email = user_account.email
+    return response
+
+
 
 
 @app.post("/api/v1/recommendations", response_model=RecommendationResponse)
