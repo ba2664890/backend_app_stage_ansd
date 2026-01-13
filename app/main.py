@@ -639,6 +639,7 @@ async def get_jobs(
     max_salary: Optional[int] = Query(None, ge=0, description="Salaire maximum"),
     job_title: Optional[str] = Query(None, description="Filtrer par titre de poste extrait"),
     search: Optional[str] = Query(None, description="Recherche textuelle"),
+    source_type: Optional[str] = Query(None, description="Filtrer par source (recruiter ou scraped)"),
     db=Depends(get_db)
 ):
     """Récupère une liste paginée d'offres d'emploi avec filtres."""
@@ -652,7 +653,8 @@ async def get_jobs(
             min_salary=min_salary,
             max_salary=max_salary,
             job_title=job_title,
-            search=search
+            search=search,
+            source_type=source_type
         )
         
         result = app.state.job_service.search_jobs(db, params)
