@@ -266,9 +266,20 @@ class ApplicationService:
         Returns:
             Optional[Application]: La candidature mise à jour
         """
-        application = self.get_application_by_id(db, application_id)
+        # Utiliser joinedload pour avoir tous les détails pour la réponse API
+        application = db.query(Application).options(
+            joinedload(Application.user).joinedload(User.profile),
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+        ).filter(Application.id == application_id).first()
+        
         if not application:
             return None
+        
+        # Initialiser les attributs dynamiques
+        application.user_name = "Candidat"
+        application.user_email = ""
+        application.job_title = ""
+        application.company_name = ""
         
         if status_data.status not in self.VALID_STATUSES:
             raise ValueError(f"Statut invalide: {status_data.status}")
@@ -277,7 +288,7 @@ class ApplicationService:
         application.status = status_data.status
         
         # Mettre à jour les timestamps selon le statut
-        if status_data.status == "shortlisted" and not application.reviewed_at:
+        if status_data.status in ["shortlisted", "interview_scheduled"] and not application.reviewed_at:
             application.reviewed_at = datetime.now()
         
         if status_data.interview_date:
@@ -300,6 +311,15 @@ class ApplicationService:
         db.add(history)
         db.commit()
         
+        # Ré-enrichir les champs de détails pour la réponse API
+        if application.user:
+            profile = application.user.profile
+            application.user_name = f"{profile.first_name if profile else ''} {profile.last_name if profile else ''}".strip() or "Candidat"
+            application.user_email = application.user.email
+        if application.job and application.job.offre_brute:
+            application.job_title = application.job.offre_brute.title
+            application.company_name = application.job.offre_brute.company_name
+            
         logger.info(f"Statut candidature {application_id}: {old_status} → {status_data.status}")
         return application
     

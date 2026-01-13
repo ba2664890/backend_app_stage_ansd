@@ -164,7 +164,7 @@ async def get_application(
     return application
 
 
-@router.put("/{application_id}/status", response_model=ApplicationResponse)
+@router.put("/{application_id}/status", response_model=ApplicationWithDetailsResponse)
 async def update_application_status(
     application_id: UUID,
     status_data: ApplicationUpdateStatus,
