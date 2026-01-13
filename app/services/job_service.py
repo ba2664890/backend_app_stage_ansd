@@ -84,6 +84,24 @@ class JobService:
                     func.lower(OffreEmploiEnrichie.extracted_job_title).contains(func.lower(params.job_title))
                 )
             
+            if hasattr(params, 'source_type') and params.source_type:
+                if params.source_type == 'direct':
+                    query = query.filter(OffreEmploiBrute.recruiter_id.isnot(None))
+                elif params.source_type == 'indirect':
+                    query = query.filter(OffreEmploiBrute.recruiter_id.is_(None))
+                # Ancienne compatibilité
+                elif params.source_type == 'recruiter':
+                    query = query.filter(OffreEmploiBrute.recruiter_id.isnot(None))
+                elif params.source_type == 'advertiser':
+                    query = query.filter(OffreEmploiBrute.contributor_id.isnot(None))
+                elif params.source_type == 'scraped':
+                    query = query.filter(
+                        and_(
+                            OffreEmploiBrute.recruiter_id.is_(None),
+                            OffreEmploiBrute.contributor_id.is_(None)
+                        )
+                    )
+            
             if params.search:
                 # Nettoyer et séparer les termes de recherche
                 search_terms = params.search.strip().split()
