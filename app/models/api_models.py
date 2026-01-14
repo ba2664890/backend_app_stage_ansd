@@ -121,6 +121,7 @@ class JobSearchParams(BaseModel):
     max_salary: Optional[int] = Field(None, ge=0, description="Salaire maximum")
     job_title: Optional[str] = Field(None, description="Filtrer par titre de poste extrait")
     search: Optional[str] = Field(None, description="Recherche textuelle")
+    source_type: Optional[str] = Field(None, description="Filtrer par type de source (direct ou indirect)")
 
 # Modèles pour l'analytics
 class MarketTrend(BaseModel):
