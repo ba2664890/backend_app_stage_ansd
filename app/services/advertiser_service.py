@@ -69,63 +69,74 @@ class AdvertiserService:
         return job_response
 
     async def post_job_file(self, db: Session, user_id: UUID, file_path: str) -> JobOfferResponse:
-        """Extrait les infos d'un fichier, publie l'offre et attribue des points."""
-        try:
-            text = await self.file_service.extract_text_from_file(file_path)
-            logger.info(f"Texte extrait du fichier ({len(text)} caractères)")
-        except Exception as e:
-            logger.error(f"Erreur extraction texte: {e}")
-            raise ValueError(f"Impossible d'extraire le texte du fichier: {str(e)}")
+        """Extrait les infos d'un fichier (PDF/Word ou Image), publie l'offre et attribue des points."""
+        import os
+        file_ext = os.path.splitext(file_path)[1].lower()
+        extracted_data = None
         
-        # Limiter le texte pour éviter les dépassements de tokens
-        text_excerpt = text[:6000]
-        
-        # Extraire les infos via LLM avec prompt amélioré
-        prompt = f"""Tu es un expert en analyse d'offres d'emploi au Sénégal. Extrais les informations structurées de cette offre d'emploi.
-
-TEXTE DE L'OFFRE:
-{text_excerpt}
-
+        # PROMPT COMMUN
+        prompt_instruction = """Tu es un expert en analyse d'offres d'emploi au Sénégal. 
+Extrais les informations structurées de ce document.
 INSTRUCTIONS:
-1. Extrais UNIQUEMENT les informations présentes dans le texte
+1. Extrais UNIQUEMENT les informations présentes
 2. Pour les champs manquants, utilise null
-3. Pour les salaires, convertis en FCFA si nécessaire
-4. Pour les compétences, extrais une liste de 3-10 compétences clés
-5. Pour la localisation, utilise les villes sénégalaises (Dakar, Thiès, Saint-Louis, etc.)
+3. Convertis les salaires en FCFA si nécessaire
+4. Localisation: villes sénégalaises (Dakar, Thiès...)
+5. Contrat: CDI, CDD, Stage, etc.
 
 FORMAT JSON ATTENDU:
-{{
+{
     "title": "Titre exact du poste",
     "company_name": "Nom exact de l'entreprise",
-    "location": "Ville au Sénégal",
-    "contract_type": "CDI|CDD|Stage|Freelance|Apprentissage",
-    "description": "Description complète du poste et des missions",
-    "sector": "Secteur d'activité (Informatique, Finance, Santé, etc.)",
+    "location": "Ville",
+    "contract_type": "Type de contrat",
+    "description": "Description complète",
+    "sector": "Secteur",
     "min_salary": 0,
     "max_salary": 0,
     "experience_years": 0,
-    "education_level": "Bac +2|Bac +3|Bac +5|Doctorat|Autodidacte",
-    "skills": ["compétence1", "compétence2", "compétence3"],
-    "languages": ["Français", "Anglais"],
-    "benefits": ["Avantage1", "Avantage2"],
+    "education_level": "Niveau",
+    "skills": ["comp1", "comp2"],
+    "languages": ["lang1"],
+    "benefits": ["avantages"],
     "remote_type": "onsite|hybrid|remote",
     "nb_positions": 1
-}}
+}"""
 
-Réponds UNIQUEMENT avec le JSON, sans texte additionnel."""
-        
-        try:
-            extracted_data = await self.llm_client.generate_json_response(
-                system_prompt="Tu es un assistant expert en extraction de données d'emploi pour le marché sénégalais. Tu réponds toujours en JSON valide.",
-                user_message=prompt
-            )
-        except Exception as e:
-            logger.error(f"Erreur appel LLM: {e}")
-            raise ValueError("Le service d'extraction IA est temporairement indisponible. Veuillez réessayer dans quelques instants.")
-        
-        # Validation renforcée
+        # CAS 1: IMAGES (Vision)
+        if file_ext in ['.jpg', '.jpeg', '.png', '.webp']:
+            try:
+                logger.info(f"Traitement d'image pour Vision: {file_path}")
+                base64_image = await self.file_service.get_image_base64(file_path)
+                extracted_data = await self.llm_client.generate_vision_response(
+                    system_prompt="Tu es une IA experte en extraction de données depuis des photos d'annonces d'emploi.",
+                    user_message=prompt_instruction,
+                    base64_image=base64_image
+                )
+            except Exception as e:
+                logger.error(f"Erreur Vision: {e}")
+                raise ValueError(f"Erreur lors de l'analyse de l'image: {str(e)}")
+
+        # CAS 2: DOCUMENTS TEXTE (PDF/DOC)
+        else:
+            try:
+                text = await self.file_service.extract_text_from_file(file_path)
+                logger.info(f"Texte extrait du fichier ({len(text)} caractères)")
+                text_excerpt = text[:6000]
+                
+                full_prompt = f"{prompt_instruction}\n\nTEXTE DE L'OFFRE:\n{text_excerpt}"
+                
+                extracted_data = await self.llm_client.generate_json_response(
+                    system_prompt="Tu es un assistant expert en extraction de données d'emploi.",
+                    user_message=full_prompt
+                )
+            except Exception as e:
+                logger.error(f"Erreur extraction texte: {e}")
+                raise ValueError(f"Impossible d'extraire le texte du fichier: {str(e)}")
+
+        # Validation commune
         if extracted_data is None:
-            raise ValueError("L'extraction IA a échoué. Le service LLM n'a pas pu traiter le document. Vérifiez que le fichier contient du texte lisible.")
+            raise ValueError("L'extraction IA a échoué. Le service n'a pas pu traiter le document.")
         
         if not isinstance(extracted_data, dict):
             logger.error(f"Type de données invalide reçu: {type(extracted_data)}")

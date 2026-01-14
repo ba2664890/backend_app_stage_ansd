@@ -127,6 +127,54 @@ class LLMClient:
                 logger.error(f"Détails de la réponse: {e.response}")
             return None
 
+    async def generate_vision_response(self, system_prompt: str, user_message: str, base64_image: str) -> Dict:
+        """Génère une réponse structurée JSON à partir d'une image (Vision)."""
+        if not self.client:
+            raise ValueError("Le service Vision n'est pas configuré. Clé API manquante.")
+
+        messages = [
+            {"role": "system", "content": f"{system_prompt} Réponds UNIQUEMENT en JSON valide."},
+            {
+                "role": "user", 
+                "content": [
+                    {"type": "text", "text": user_message},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    }
+                ]
+            }
+        ]
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,  # Assurez-vous que le modèle supporte Vision (gpt-4o, gpt-4-turbo)
+                messages=messages,
+                response_format={"type": "json_object"},
+                temperature=0.3,
+                max_tokens=2000
+            )
+            
+            content = response.choices[0].message.content
+            logger.info(f"Réponse Vision brute: {content[:100]}...")
+            
+            # Nettoyage JSON
+            json_text = content.strip()
+            if json_text.startswith("```"):
+                lines = json_text.splitlines()
+                if lines[0].startswith("```"): lines = lines[1:]
+                if lines and lines[-1].strip() == "```": lines = lines[:-1]
+                json_text = "\n".join(lines).strip()
+
+            import json
+            return json.loads(json_text)
+            
+        except Exception as e:
+            logger.error(f"Erreur Vision API: {e}")
+            return None
+
     def _mock_response(self, message: str) -> str:
         """Fallback si pas de clé API."""
         return (f"[SIMULATION] J'ai bien reçu votre message : '{message}'. "

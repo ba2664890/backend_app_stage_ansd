@@ -27,8 +27,15 @@ class FileService:
         """Initialise le service de fichiers."""
         self.upload_dir = Path("uploads")
         self.upload_dir.mkdir(exist_ok=True)
-        self.allowed_extensions = {'.pdf', '.doc', '.docx', '.txt'}
+        self.allowed_extensions = {'.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png', '.webp'}
         self.max_file_size = 10 * 1024 * 1024  # 10MB
+    
+    async def get_image_base64(self, file_path: str) -> str:
+        """Encode une image en base64 pour l'API Vision."""
+        import base64
+        async with aiofiles.open(file_path, "rb") as image_file:
+            encoded_string = base64.b64encode(await image_file.read()).decode('utf-8')
+        return encoded_string
     
     async def save_upload_file(self, file: UploadFile) -> str:
         """
