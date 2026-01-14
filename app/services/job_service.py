@@ -57,14 +57,19 @@ class JobService:
             
             # --- FILTRAGE STRICT PAR CATÉGORIE ---
             if user_category == 'pupil':
-                # Les élèves ne voient que les Concours, Bourses, Ecoles/Examens (PAS les stages -> réservés étudiants/pro)
+                # Les élèves ne voient que les Concours, Bourses, Ecoles/Examens
+                # ET EXCLUSION FORMELLE des contrats pro (CDD, CDI, Stage)
                 query = query.filter(
-                    or_(
-                        func.lower(OffreEmploiBrute.title).contains('concours'),
-                        func.lower(OffreEmploiBrute.title).contains('bourse'),
-                        func.lower(OffreEmploiBrute.title).contains('examen'),
-                        func.lower(OffreEmploiBrute.title).contains('ecole'),
-                        OffreEmploiEnrichie.job_type == 'scholarship_exam'
+                    and_(
+                        or_(
+                            func.lower(OffreEmploiBrute.title).contains('concours'),
+                            func.lower(OffreEmploiBrute.title).contains('bourse'),
+                            func.lower(OffreEmploiBrute.title).contains('examen'),
+                            func.lower(OffreEmploiBrute.title).contains('ecole'),
+                            OffreEmploiEnrichie.job_type == 'scholarship_exam'
+                        ),
+                        # Exclusion explicite
+                        func.lower(OffreEmploiBrute.contract_type).notin_(['cdd', 'cdi', 'stage', 'internship', 'emploi'])
                     )
                 )
             
@@ -111,6 +116,11 @@ class JobService:
             if hasattr(params, 'job_title') and params.job_title:
                 query = query.filter(
                     func.lower(OffreEmploiEnrichie.extracted_job_title).contains(func.lower(params.job_title))
+                )
+
+            if hasattr(params, 'education_level') and params.education_level:
+                query = query.filter(
+                    func.lower(OffreEmploiBrute.education_level).contains(func.lower(params.education_level))
                 )
             
             if hasattr(params, 'source_type') and params.source_type:
