@@ -16,6 +16,7 @@ from ..models.database_models import User, UserProfile
 
 # ⚙️ Schéma de sécurité HTTP Bearer
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
@@ -59,24 +60,28 @@ def get_current_user(
     token = credentials.credentials
     payload = verify_token(token)
 
-    email: Optional[str] = payload.get("sub")
-    if not email:
+    # Note: payload.get("sub") returns user_id (UUID string) based on create_user_token
+    # But line 71 uses it to filter by email? 
+    # Let's fix this potential bug too: we should use user_id to find User, assuming sub IS user_id.
+    
+    sub: Optional[str] = payload.get("sub")
+    if not sub:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token invalide : identifiant manquant.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # ✅ 1. Chercher l'utilisateur par email
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Utilisateur non trouvé.",
-        )
+    # ✅ 1. Chercher le profil via user.id (UUID)
+    # On suppose que 'sub' est l'ID utilisateur (voir create_user_token)
+    user_profile = db.query(UserProfile).filter(UserProfile.user_id == sub).first()
+    
+    # Fallback pour compatibilité si 'sub' était l'email (ancien code)
+    if not user_profile:
+        user = db.query(User).filter(User.email == sub).first()
+        if user:
+            user_profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
 
-    # ✅ 2. Chercher le profil via user.id (UUID)
-    user_profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
     if not user_profile:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -86,7 +91,7 @@ def get_current_user(
     return user_profile
 
 def get_current_user_optional(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_optional),
     db: Session = Depends(get_db)
 ) -> Optional[UserProfile]:
     """Retourne l’utilisateur courant s’il est authentifié, sinon None."""
@@ -98,9 +103,35 @@ def get_current_user_optional(
         user_id = payload.get("sub")
         if not user_id:
             return None
-        return db.query(UserProfile).filter(UserProfile.id == user_id).first()
+            
+        # Try both strategies (ID or Email) to be safe
+        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first() # UserProfile.user_id matches sub
+        if not profile:
+             # Maybe sub is Profile ID? (unlikely but check)
+             profile = db.query(UserProfile).filter(UserProfile.id == user_id).first()
+             
+        if not profile:
+             # Maybe sub is email?
+             user = db.query(User).filter(User.email == user_id).first()
+             if user:
+                 profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+                 
+        return profile
     except Exception:
         return None
+
+def get_current_active_user_optional(
+    current_user: Optional[UserProfile] = Depends(get_current_user_optional),
+) -> Optional[UserProfile]:
+    """
+    Retourne l'utilisateur seulement s'il est actif.
+    Utilisé pour les routes publiques qui personnalisent le contenu si connecté.
+    """
+    if not current_user:
+        return None
+    if not current_user.is_active:
+        return None
+    return current_user
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[UserProfile]:
     """Vérifie l’authenticité d’un utilisateur."""
