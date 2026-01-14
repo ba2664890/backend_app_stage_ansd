@@ -690,6 +690,36 @@ class PointTransactionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# ==================== MESSAGING (RECRUITER-CANDIDATE) ====================
+
+class MessageCreate(BaseModel):
+    """Modèle pour envoyer un message."""
+    receiver_id: UUID = Field(..., description="ID du destinataire")
+    content: str = Field(..., description="Contenu du message")
+
+class MessageResponse(BaseModel):
+    """Modèle de réponse pour un message."""
+    id: UUID
+    sender_id: UUID
+    receiver_id: UUID
+    content: str
+    is_read: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ConversationSummary(BaseModel):
+    """Résumé d'une conversation pour la liste."""
+    user_id: UUID
+    first_name: Optional[str]
+    last_name: Optional[str]
+    email: Optional[str]
+    last_message: Optional[str]
+    last_message_at: Optional[datetime]
+    unread_count: int = 0
+    role: str
+
 class AdvertiserStatsResponse(BaseModel):
     profile: AdvertiserProfileResponse
     recent_transactions: List[PointTransactionResponse]

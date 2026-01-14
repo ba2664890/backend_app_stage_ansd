@@ -473,6 +473,31 @@ class ApplicationStatusHistory(Base):
         Index('idx_status_history_created', 'created_at'),
     )
 
+# ==================== MESSAGING (RECRUITER-CANDIDATE) ====================
+
+class Message(Base):
+    """Messages échangés entre recruteurs et candidats."""
+    
+    __tablename__ = "messages"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    receiver_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    content = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relations
+    sender = relationship("User", foreign_keys=[sender_id])
+    receiver = relationship("User", foreign_keys=[receiver_id])
+    
+    # Index
+    __table_args__ = (
+        Index('idx_messages_sender', 'sender_id'),
+        Index('idx_messages_receiver', 'receiver_id'),
+        Index('idx_messages_created', 'created_at'),
+    )
+
 # ==================== MODULE 9: AI ASSISTANT (CHAT RH) ====================
 
 class RHChatHistory(Base):
