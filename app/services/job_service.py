@@ -74,18 +74,9 @@ class JobService:
                 )
             
             elif user_category == 'informal':
-                # Les profils informels/sans diplôme voient :
-                # - Offres explicitement "Sans diplôme"
-                # - Apprentissages, Ateliers, Formations pratiques
+                # Les profils informels voient UNIQUEMENT "Sans diplôme" (Strict)
                 query = query.filter(
-                    or_(
-                        func.lower(OffreEmploiBrute.education_level).contains('sans diplôme'),
-                        func.lower(OffreEmploiBrute.education_level).contains('aucun'),
-                        func.lower(OffreEmploiBrute.title).contains('apprenti'),
-                        func.lower(OffreEmploiBrute.title).contains('atelier'),
-                        func.lower(OffreEmploiBrute.title).contains('formation'),
-                        OffreEmploiEnrichie.job_type == 'workshop_training'
-                    )
+                    func.lower(OffreEmploiBrute.education_level).contains('sans diplôme')
                 )
 
             # Appliquer les filtres standards
