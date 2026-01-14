@@ -120,11 +120,9 @@ async def get_conversations(
     recruiter = db.query(Recruiter).filter(Recruiter.user_id == user_id).first()
     if recruiter:
         # Trouver les candidats ayant postulé aux offres de l'entreprise du recruteur
-        # Jointure: Application -> Job -> Company
-        from ..models.database_models import Job
-        
-        applications = db.query(Application).join(Job).filter(
-            Job.company_id == recruiter.company_id
+        # Application a directement company_id
+        applications = db.query(Application).filter(
+            Application.company_id == recruiter.company_id
         ).all()
         
         for app in applications:
@@ -141,9 +139,7 @@ async def get_conversations(
     if not contact_ids:
         return []
         
-    users = db.query(User).options(
-        # Eager load profile
-    ).filter(User.id.in_(contact_ids)).all()
+    users = db.query(User).filter(User.id.in_(contact_ids)).all()
     
     # Mapper profiles manuellement si joinedload complexe
     profiles = db.query(UserProfile).filter(UserProfile.user_id.in_(contact_ids)).all()
