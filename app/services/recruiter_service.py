@@ -3,11 +3,11 @@ Service pour la gestion des recruteurs.
 """
 
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
 import logging
 
-from ..models.database_models import Recruiter, Company, User
+from ..models.database_models import Recruiter, Company, User, UserProfile
 from ..models.api_models import RecruiterCreate
 
 logger = logging.getLogger(__name__)
@@ -105,10 +105,20 @@ class RecruiterService:
         Returns:
             tuple: (Liste de recruteurs, nombre total)
         """
-        query = db.query(Recruiter).filter(Recruiter.company_id == company_id)
+        query = db.query(Recruiter).options(
+            joinedload(Recruiter.user).joinedload(User.profile)
+        ).filter(Recruiter.company_id == company_id)
         
         total = query.count()
         recruiters = query.order_by(Recruiter.created_at.desc()).offset(skip).limit(limit).all()
+        
+        # Enrich the objects for Pydantic serialization
+        for r in recruiters:
+            if r.user:
+                r.email = r.user.email
+                if r.user.profile:
+                    r.first_name = r.user.profile.first_name
+                    r.last_name = r.user.profile.last_name
         
         return recruiters, total
     
