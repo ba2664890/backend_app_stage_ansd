@@ -9,6 +9,7 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from ..config import settings
 from ..database import get_db
@@ -60,10 +61,6 @@ def get_current_user(
     token = credentials.credentials
     payload = verify_token(token)
 
-    # Note: payload.get("sub") returns user_id (UUID string) based on create_user_token
-    # But line 71 uses it to filter by email? 
-    # Let's fix this potential bug too: we should use user_id to find User, assuming sub IS user_id.
-    
     sub: Optional[str] = payload.get("sub")
     if not sub:
         raise HTTPException(
@@ -72,11 +69,17 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # ✅ 1. Chercher le profil via user.id (UUID)
-    # On suppose que 'sub' est l'ID utilisateur (voir create_user_token)
-    user_profile = db.query(UserProfile).filter(UserProfile.user_id == sub).first()
+    user_profile = None
     
-    # Fallback pour compatibilité si 'sub' était l'email (ancien code)
+    # Tentative de traiter 'sub' comme un UUID
+    try:
+        user_uuid = UUID(sub)
+        user_profile = db.query(UserProfile).filter(UserProfile.user_id == user_uuid).first()
+    except ValueError:
+        # 'sub' n'est pas un UUID valide, peut-être un email ?
+        pass
+    
+    # Fallback : chercher par email si pas trouvé par ID
     if not user_profile:
         user = db.query(User).filter(User.email == sub).first()
         if user:
@@ -104,14 +107,20 @@ def get_current_user_optional(
         if not user_id:
             return None
             
-        # Try both strategies (ID or Email) to be safe
-        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first() # UserProfile.user_id matches sub
-        if not profile:
-             # Maybe sub is Profile ID? (unlikely but check)
-             profile = db.query(UserProfile).filter(UserProfile.id == user_id).first()
+        profile = None
+        
+        # 1. Essayer par UUID (user_id)
+        try:
+            uuid_obj = UUID(user_id)
+            profile = db.query(UserProfile).filter(UserProfile.user_id == uuid_obj).first()
+            if not profile:
+                 # Check if UUID matches profile ID? (Edge case)
+                 profile = db.query(UserProfile).filter(UserProfile.id == uuid_obj).first()
+        except ValueError:
+            pass
              
+        # 2. Essayer par Email
         if not profile:
-             # Maybe sub is email?
              user = db.query(User).filter(User.email == user_id).first()
              if user:
                  profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()

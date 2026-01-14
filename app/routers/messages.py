@@ -177,7 +177,7 @@ async def get_conversations(
             last_message=conv_data["last_message"],
             last_message_at=conv_data["last_message_at"],
             unread_count=conv_data["unread_count"],
-            role=user.role.value
+            role=user.role.value if hasattr(user.role, "value") else str(user.role)
         ))
         
     # Trier par date du dernier message
