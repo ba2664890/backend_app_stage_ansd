@@ -39,13 +39,14 @@ class JobService:
             OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id, isouter=True
         )
     
-    def search_jobs(self, db: Session, params: JobSearchParams) -> PaginatedResponse[JobOfferResponse]:
+    def search_jobs(self, db: Session, params: JobSearchParams, user_category: Optional[str] = None) -> PaginatedResponse[JobOfferResponse]:
         """
         Recherche des offres d'emploi avec filtres.
         
         Args:
             db: Session de base de données
             params: Paramètres de recherche
+            user_category: Catégorie de l'utilisateur (optionnel)
             
         Returns:
             Réponse paginée avec les offres d'emploi
@@ -54,7 +55,35 @@ class JobService:
             # Construire la requête de base
             query = self._get_base_query(db)
             
-            # Appliquer les filtres
+            # --- FILTRAGE STRICT PAR CATÉGORIE ---
+            if user_category == 'pupil':
+                # Les élèves ne voient que les Concours, Bourses, et Stages découvertes
+                query = query.filter(
+                    or_(
+                        func.lower(OffreEmploiBrute.title).contains('concours'),
+                        func.lower(OffreEmploiBrute.title).contains('bourse'),
+                        func.lower(OffreEmploiBrute.title).contains('examen'),
+                        func.lower(OffreEmploiBrute.contract_type).contains('stage'),
+                        OffreEmploiEnrichie.job_type.in_(['scholarship_exam', 'internship'])
+                    )
+                )
+            
+            elif user_category == 'informal':
+                # Les profils informels/sans diplôme voient :
+                # - Offres explicitement "Sans diplôme"
+                # - Apprentissages, Ateliers, Formations pratiques
+                query = query.filter(
+                    or_(
+                        func.lower(OffreEmploiBrute.education_level).contains('sans diplôme'),
+                        func.lower(OffreEmploiBrute.education_level).contains('aucun'),
+                        func.lower(OffreEmploiBrute.title).contains('apprenti'),
+                        func.lower(OffreEmploiBrute.title).contains('atelier'),
+                        func.lower(OffreEmploiBrute.title).contains('formation'),
+                        OffreEmploiEnrichie.job_type == 'workshop_training'
+                    )
+                )
+
+            # Appliquer les filtres standards
             if params.location:
                 query = query.filter(
                     func.lower(OffreEmploiBrute.location).contains(func.lower(params.location))

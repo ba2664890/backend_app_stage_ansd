@@ -208,7 +208,12 @@ async def find_candidates_for_job(
         candidates = []
         if candidate_ids:
             # 5. Récupérer les profils complets depuis Postgres si on a des IDs de Qdrant
-            candidates = db.query(UserProfile).filter(UserProfile.id.in_(candidate_ids)).all()
+            # FILTRAGE: Les recruteurs ne voient pas les élèves (category='pupil')
+            from ..models.database_models import CandidateCategory
+            candidates = db.query(UserProfile).filter(
+                UserProfile.id.in_(candidate_ids),
+                UserProfile.category != CandidateCategory.PUPIL
+            ).all()
         
         # 6. Fallback SQL si aucun candidat trouvé via vectoriel (ou si mode léger)
         if not candidates:
@@ -218,7 +223,11 @@ async def find_candidates_for_job(
             title_query = f"%{job.title}%"
             
             # Construction de la requête de fallback
-            fallback_query = db.query(UserProfile).filter(UserProfile.is_active == True)
+            # FILTRAGE: Exclure les élèves
+            fallback_query = db.query(UserProfile).filter(
+                UserProfile.is_active == True,
+                UserProfile.category != CandidateCategory.PUPIL
+            )
             
             # Filtre par titre ou par compétences
             conditions = [UserProfile.current_title.ilike(title_query)]
