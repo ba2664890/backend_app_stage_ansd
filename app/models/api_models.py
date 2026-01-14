@@ -122,6 +122,7 @@ class JobSearchParams(BaseModel):
     job_title: Optional[str] = Field(None, description="Filtrer par titre de poste extrait")
     search: Optional[str] = Field(None, description="Recherche textuelle")
     source_type: Optional[str] = Field(None, description="Filtrer par type de source (direct ou indirect)")
+    education_level: Optional[str] = Field(None, description="Filtrer par niveau d'éducation")
 
 # Modèles pour l'analytics
 class MarketTrend(BaseModel):
