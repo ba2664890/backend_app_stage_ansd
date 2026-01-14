@@ -129,7 +129,7 @@ async def get_conversations(
             if app.user_id not in conversations_map and app.user_id != user_id:
                 conversations_map[app.user_id] = {
                     "last_message": "Nouvelle candidature",
-                    "last_message_at": app.created_at,
+                    "last_message_at": app.applied_at,
                     "unread_count": 0, # Pas de msg non lu, juste une notif potentielle
                     "is_application": True
                 }
