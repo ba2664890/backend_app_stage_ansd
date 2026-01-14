@@ -453,6 +453,11 @@ class RecruiterCreate(RecruiterBase):
     """Modèle pour créer un recruteur."""
     company_id: UUID = Field(..., description="ID de l'entreprise")
 
+class RecruiterInvite(BaseModel):
+    """Modèle pour inviter un nouveau recruteur."""
+    email: str = Field(..., description="Email de l'utilisateur à inviter")
+    role: Optional[str] = Field("recruiter", description="Rôle à lui assigner")
+
 class RecruiterResponse(RecruiterBase):
     """Modèle de réponse pour un recruteur."""
     id: UUID

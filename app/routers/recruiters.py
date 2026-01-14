@@ -15,6 +15,7 @@ from ..models.api_models import (
     RecruiterCreate,
     RecruiterResponse,
     RecruiterWithCompanyResponse,
+    RecruiterInvite,
     PaginatedResponse
 )
 from ..services.recruiter_service import RecruiterService
@@ -115,6 +116,48 @@ async def get_company_recruiters(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des recruteurs: {str(e)}")
+
+
+@router.post("/invite", response_model=RecruiterResponse)
+async def invite_recruiter(
+    invite_data: RecruiterInvite,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Invite un nouvel utilisateur à rejoindre l'entreprise actuelle comme recruteur.
+    """
+    # 1. Obtenir le profil recruteur de l'inviteur pour avoir l'ID de l'entreprise
+    inviter = recruiter_service.get_recruiter_by_user(db, current_user.user_id)
+    if not inviter:
+        raise HTTPException(status_code=403, detail="Seul un recruteur peut inviter d'autres membres")
+    
+    # 2. Trouver l'utilisateur par email
+    from ..models.database_models import User, UserRole
+    user_to_invite = db.query(User).filter(User.email == invite_data.email).first()
+    
+    if not user_to_invite:
+        raise HTTPException(status_code=404, detail=f"Aucun utilisateur trouvé avec l'email {invite_data.email}")
+    
+    # 3. Créer le recruteur
+    try:
+        recruiter = recruiter_service.create_recruiter(
+            db, 
+            user_to_invite.id, 
+            RecruiterCreate(company_id=inviter.company_id, role=invite_data.role)
+        )
+        
+        # 4. S'assurer que l'utilisateur a le rôle RECRUITER dans le système principal
+        if user_to_invite.role not in [UserRole.RECRUITER, UserRole.HR_MANAGER, UserRole.ADMIN]:
+            user_to_invite.role = UserRole.RECRUITER
+            db.commit()
+            
+        return recruiter
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erreur lors de l'invitation: {e}")
+        raise HTTPException(status_code=500, detail="Erreur interne lors de l'invitation")
 
 # Import pour le matching (placé ici pour éviter les cycles si possible, ou en haut)
 from fastapi import Request
