@@ -56,6 +56,7 @@ class JobService:
             query = self._get_base_query(db)
             
             # --- FILTRAGE STRICT PAR CATÉGORIE ---
+            if user_category == 'pupil':
                 # Les élèves ne voient que les Concours, Bourses, Ecoles/Examens (PAS les stages -> réservés étudiants/pro)
                 query = query.filter(
                     or_(
