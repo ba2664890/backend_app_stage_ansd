@@ -134,7 +134,26 @@ async def get_conversations(
                     "is_application": True
                 }
 
-    # --- 3. Enrichir avec les infos utilisateurs ---
+    # --- 3. Candidatures (Si Candidat) ---
+    # Si l'utilisateur a postulé, il peut voir le recruteur de l'entreprise
+    my_applications = db.query(Application).filter(Application.user_id == user_id).all()
+    for app in my_applications:
+        # Trouver le recruteur associé à l'entreprise
+        # Simplification MVP: prendre le premier recruteur de l'entreprise
+        company_recruiter = db.query(Recruiter).filter(Recruiter.company_id == app.company_id).first()
+        
+        if company_recruiter and company_recruiter.user_id != user_id:
+            recruiter_user_id = company_recruiter.user_id
+            
+            if recruiter_user_id not in conversations_map:
+                conversations_map[recruiter_user_id] = {
+                    "last_message": f"Candidature envoyée: {app.status}",
+                    "last_message_at": app.applied_at,
+                    "unread_count": 0,
+                    "is_application": True
+                }
+
+    # --- 4. Enrichir avec les infos utilisateurs ---
     contact_ids = list(conversations_map.keys())
     if not contact_ids:
         return []
