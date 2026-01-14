@@ -56,15 +56,14 @@ class JobService:
             query = self._get_base_query(db)
             
             # --- FILTRAGE STRICT PAR CATÉGORIE ---
-            if user_category == 'pupil':
-                # Les élèves ne voient que les Concours, Bourses, et Stages découvertes
+                # Les élèves ne voient que les Concours, Bourses, Ecoles/Examens (PAS les stages -> réservés étudiants/pro)
                 query = query.filter(
                     or_(
                         func.lower(OffreEmploiBrute.title).contains('concours'),
                         func.lower(OffreEmploiBrute.title).contains('bourse'),
                         func.lower(OffreEmploiBrute.title).contains('examen'),
-                        func.lower(OffreEmploiBrute.contract_type).contains('stage'),
-                        OffreEmploiEnrichie.job_type.in_(['scholarship_exam', 'internship'])
+                        func.lower(OffreEmploiBrute.title).contains('ecole'),
+                        OffreEmploiEnrichie.job_type == 'scholarship_exam'
                     )
                 )
             
