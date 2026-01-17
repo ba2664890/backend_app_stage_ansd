@@ -253,7 +253,7 @@ app = FastAPI(
 
 ALLOWED_ORIGINS = [
     "https://frontend-webscraping-pvfqjzk4q-cardans-projects-cb73ad15.vercel.app",
-    "https://frontend-webscraping.vercel.app",
+    "https://sunusouba.vercel.app",
     "http://localhost:5173",
     "http://127.0.0.1:5173"
 ]

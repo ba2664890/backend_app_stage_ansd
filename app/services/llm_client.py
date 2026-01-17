@@ -132,6 +132,10 @@ class LLMClient:
         if not self.client:
             raise ValueError("Le service Vision n'est pas configuré. Clé API manquante.")
 
+        # 🔥 IMPORTANT: Vision nécessite gpt-4o, gpt-4-turbo ou gpt-4o-mini (mais pas gpt-3.5)
+        # On force gpt-4o pour garantir la compatibilité
+        vision_model = "gpt-4o" if not self.model.startswith("grok") else self.model
+        
         messages = [
             {"role": "system", "content": f"{system_prompt} Réponds UNIQUEMENT en JSON valide."},
             {
@@ -150,7 +154,7 @@ class LLMClient:
 
         try:
             response = await self.client.chat.completions.create(
-                model=self.model,  # Assurez-vous que le modèle supporte Vision (gpt-4o, gpt-4-turbo)
+                model=vision_model,
                 messages=messages,
                 response_format={"type": "json_object"},
                 temperature=0.3,
