@@ -255,7 +255,11 @@ ALLOWED_ORIGINS = [
     "https://frontend-webscraping-pvfqjzk4q-cardans-projects-cb73ad15.vercel.app",
     "https://sunusouba.vercel.app",
     "http://localhost:5173",
-    "http://127.0.0.1:5173"
+    "http://127.0.0.1:5173",
+    "http://localhost:8082",
+    "http://127.0.0.1:8082",
+    "http://172.16.71.236:8082",
+    "exp://172.16.71.236:8082"
 ]
 
 app.add_middleware(
