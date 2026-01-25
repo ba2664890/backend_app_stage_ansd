@@ -68,3 +68,22 @@ async def get_choropleth_data(
         parent_name=parent_name
     )
 
+@router.get("/geojson/{level}", response_model=dict)
+async def get_geojson_collection(
+    level: str,
+    parent_name: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Exporte les données géospatiales au format GeoJSON brut pour Google Maps.
+    """
+    try:
+        admin_level = AdminLevel(level)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid level: {level}")
+
+    admin_service = AdminBoundaryService()
+    carte_service = CarteService(admin_service)
+    
+    return carte_service.get_geojson_collection(db, level=admin_level, parent_name=parent_name)
+

@@ -724,3 +724,50 @@ class CarteService:
             )
             
         return [{"id": r.id, "name": r.name} for r in query.all()]
+
+    def get_geojson_collection(
+        self,
+        db: Session,
+        level: AdminLevel,
+        parent_name: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Génère une FeatureCollection GeoJSON compatible Google Maps/PostGIS.
+        """
+        query = db.query(SenegalAdminBoundary).filter(
+            SenegalAdminBoundary.level == level.value
+        )
+        
+        if parent_name:
+            query = query.filter(
+                func.lower(SenegalAdminBoundary.parent_name) == func.lower(parent_name)
+            )
+
+        boundaries = query.all()
+        
+        features = []
+        for b in boundaries:
+            # Parse geojson if it's a string
+            geometry = b.geojson
+            if isinstance(geometry, str):
+                try:
+                    geometry = json.loads(geometry)
+                except Exception:
+                    continue
+            
+            features.append({
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": {
+                    "id": b.id,
+                    "name": b.name,
+                    "offer_count": b.offer_count,
+                    "level": b.level,
+                    "parent_name": b.parent_name
+                }
+            })
+            
+        return {
+            "type": "FeatureCollection",
+            "features": features
+        }
