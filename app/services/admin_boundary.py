@@ -628,9 +628,29 @@ class CarteService:
         # --- Calcul de la croissance ---
         growth_map = self._calculate_regional_growth(db, level.value)
 
+        # Requête optimisée avec extraction directe des coordonnées du centroid
+        from sqlalchemy import func as sql_func
+        
+        boundaries_query = (
+            db.query(
+                SenegalAdminBoundary,
+                sql_func.ST_Y(sql_func.ST_AsText(SenegalAdminBoundary.centroid)).label('centroid_lat'),
+                sql_func.ST_X(sql_func.ST_AsText(SenegalAdminBoundary.centroid)).label('centroid_lng')
+            )
+            .filter(
+                SenegalAdminBoundary.level == level.value,
+                SenegalAdminBoundary.offer_count >= min_offers
+            )
+            .all()
+        )
+
         features = []
         total_offers = 0
-        for b in boundaries:
+        for row in boundaries_query:
+            b = row[0]  # SenegalAdminBoundary object
+            centroid_lat = row[1]  # latitude
+            centroid_lng = row[2]  # longitude
+            
             total_offers += b.offer_count
             t_count = final_talent_counts.get(b.id, 0)
 
@@ -642,14 +662,13 @@ class CarteService:
                 except:
                     geometry = {}
 
-            # Convertit centroid
-            centroid_value = b.centroid
-            if hasattr(centroid_value, "desc"):
-                try:
-                    from shapely.geometry import mapping, shape
-                    centroid_value = mapping(shape(centroid_value))
-                except:
-                    centroid_value = None
+            # Centroid optimisé - extraction directe depuis PostGIS
+            centroid_value = None
+            if centroid_lat is not None and centroid_lng is not None:
+                centroid_value = {
+                    "lat": float(centroid_lat),
+                    "lng": float(centroid_lng)
+                }
 
             features.append({
                 "type": "Feature",
