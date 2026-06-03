@@ -1196,7 +1196,7 @@ async def get_job_alerts(
         raise HTTPException(status_code=500, detail="Erreur lors de la récupération des alertes")
 
 # Routes pour les statistiques
-@app.get("/api/v1/stats/dashboard", response_model=JobStatisticsResponse)
+@app.get("/api/v1/stats/dashboard", response_model=DashboardStats)
 async def get_dashboard_stats(db=Depends(get_db)):
     """Récupère les statistiques pour le tableau de bord."""
     try:
