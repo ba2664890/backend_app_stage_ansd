@@ -148,8 +148,18 @@ async def save_job(
     if not job_id:
         raise HTTPException(status_code=400, detail="job_id requis")
     
-    job_service.save_job(db, current_user.id, job_id)
-    return {"message": "Job saved"}
+    try:
+        job_service.save_job(db, current_user.id, job_id)
+        return {"message": "Job saved"}
+    except ValueError as e:
+        # L'utilisateur n'existe pas dans cette DB ou l'offre est introuvable
+        error_msg = str(e)
+        if "Utilisateur" in error_msg and "introuvable" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session invalide : votre compte n'existe pas dans cette base de données. Veuillez vous reconnecter."
+            )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg)
 
 @router.delete("/saved/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_saved_job(
@@ -158,7 +168,10 @@ async def remove_saved_job(
     current_user = Depends(get_current_user)
 ):
     """Retire une offre des favoris."""
-    job_uuid = UUID(job_id)
+    try:
+        job_uuid = UUID(job_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format d'ID invalide")
     job_service.remove_saved_job(db, current_user.id, job_uuid)
     return None
 

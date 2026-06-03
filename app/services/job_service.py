@@ -10,7 +10,7 @@ from uuid import UUID
 import logging
 from datetime import datetime, timedelta
 
-from ..models.database_models import OffreEmploiBrute, OffreEmploiEnrichie, UserSavedJob
+from ..models.database_models import OffreEmploiBrute, OffreEmploiEnrichie, UserSavedJob, User
 from ..models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, JobCreate
 from ..utils.job_title_extraction import extract_job_title
 from sqlalchemy.exc import SQLAlchemyError
@@ -441,30 +441,42 @@ class JobService:
             else:
                 job_uuid = job_id
 
-            # 1. Vérifier que l'offre brute existe
+            # 1. Vérifier que l'utilisateur existe dans la table users
+            #    (évite ForeignKeyViolation qui cause un 500 bloquant les headers CORS)
+            user_exists = db.query(User.id).filter(User.id == user_id).first()
+            if not user_exists:
+                raise ValueError(
+                    f"Utilisateur {user_id} introuvable. "
+                    "Votre session est peut-être expirée ou liée à une ancienne base de données. "
+                    "Veuillez vous reconnecter."
+                )
+
+            # 2. Vérifier que l'offre brute existe
             brute = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_uuid).first()
             if not brute:
                 raise ValueError(f"Offre d'emploi {job_id} introuvable dans la base de données")
 
-            # 2. Vérifier si déjà sauvegardé
+            # 3. Vérifier si déjà sauvegardé
             existing = db.query(UserSavedJob).filter(
                 UserSavedJob.user_id == user_id,
                 UserSavedJob.job_id == brute.id
             ).first()
-            
+
             if existing:
                 return existing
 
-            # 3. Sauvegarder
+            # 4. Sauvegarder
             saved = UserSavedJob(user_id=user_id, job_id=brute.id)
             db.add(saved)
             db.commit()
             db.refresh(saved)
             return saved
 
+        except ValueError:
+            # Re-raise proprement pour que le router retourne 404/401
+            raise
         except Exception as e:
-            if isinstance(e, ValueError):
-                raise
+            db.rollback()
             logger.error(f"Erreur lors de la sauvegarde de l'offre: {e}", exc_info=True)
             raise RuntimeError(f"Erreur interne lors de la sauvegarde : {str(e)}")
 
