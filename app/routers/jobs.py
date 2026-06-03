@@ -135,7 +135,7 @@ async def get_saved_jobs(
     current_user = Depends(get_current_user)
 ):
     """Récupère les offres favorites."""
-    return job_service.get_saved_jobs(db, current_user.id)
+    return job_service.get_saved_jobs(db, current_user.user_id)
 
 @router.post("/saved", status_code=status.HTTP_201_CREATED)
 async def save_job(
@@ -149,7 +149,7 @@ async def save_job(
         raise HTTPException(status_code=400, detail="job_id requis")
     
     try:
-        job_service.save_job(db, current_user.id, job_id)
+        job_service.save_job(db, current_user.user_id, job_id)
         return {"message": "Job saved"}
     except ValueError as e:
         # L'utilisateur n'existe pas dans cette DB ou l'offre est introuvable
@@ -172,7 +172,7 @@ async def remove_saved_job(
         job_uuid = UUID(job_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Format d'ID invalide")
-    job_service.remove_saved_job(db, current_user.id, job_uuid)
+    job_service.remove_saved_job(db, current_user.user_id, job_uuid)
     return None
 
 @router.get("/{job_id}", response_model=JobOfferResponse)

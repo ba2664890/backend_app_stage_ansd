@@ -70,7 +70,7 @@ async def get_favorites(
     current_user = Depends(get_current_user)
 ):
     """Récupère les offres favorites."""
-    return job_service.get_saved_jobs(db, current_user.id) # user.id ou user.user_id selon le model
+    return job_service.get_saved_jobs(db, current_user.user_id)
 
 @router.post("/favorites")
 async def add_favorite(
@@ -84,7 +84,7 @@ async def add_favorite(
         raise HTTPException(status_code=400, detail="job_id requis")
     
     try:
-        job_service.save_job(db, current_user.id, job_id)
+        job_service.save_job(db, current_user.user_id, job_id)
         return {"message": "Job added to favorites"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -563,6 +563,11 @@ def get_unmatched_offers(
 
 
 # Routes de base
+@app.head("/", include_in_schema=False)
+async def root_head():
+    """Répond aux vérifications HEAD sur la racine pour les probes Render."""
+    return Response(status_code=200)
+
 @app.get("/", response_model=Dict[str, Any])
 async def root():
     """Endpoint racine avec les informations de l'API."""
@@ -578,6 +583,12 @@ async def root():
 
 
 
+
+
+@app.head("/health", include_in_schema=False)
+async def health_head():
+    """Répond aux vérifications HEAD sur l'endpoint de santé."""
+    return Response(status_code=200)
 
 
 @app.post("/refresh-offer-counts")
