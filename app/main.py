@@ -27,13 +27,15 @@ from .database import SessionLocal, engine, Base, get_db
 from .models.database_models import (
     OffreEmploiBrute, OffreEmploiEnrichie, SenegalAdminBoundary, User, UserProfile, 
     JobRecommendation, JobStatistics, Company, Recruiter, Application, RHChatHistory,
-    UserRole
+    UserRole, Reward, TrajectoryStep, PointTransaction
 )
 from .models.api_models import (
     ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, RecommendationResponse, SalaryByExperience, SaveJobRequest,
     UserProfileCreate, UserProfileResponse, JobSearchParams, AuthResponse,
-    PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData, UserResponse
+    PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData, UserResponse,
+    TrajectoryStepResponse, RewardResponse
 )
+
 
 from .services.job_service import JobService
 from .models.api_models import JobSearchParams, PaginatedResponse, JobOfferResponse, RecruiterCreate, JobCreate
@@ -49,12 +51,13 @@ from .services.llm_client import LLMClient
 from .services.rag_service import RAGService
 from .services.rh_assistant_service import RHAssistantService
 
-from .utils.auth import create_access_token, get_current_user, verify_password
+from .utils.auth import create_access_token, get_current_user, verify_password, get_current_user_optional
 from .utils.permissions import PermissionService
 from .utils.logger import setup_logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text, or_
 from uuid import UUID
+
 
 from .db.init_postgis import PostGISManager
 from .core.exceptions import AppError, setup_exception_handlers
@@ -65,6 +68,229 @@ from .utils.job_title_extraction import backfill_job_titles
 setup_logging()
 logger = logging.getLogger(__name__)
 
+
+def seed_default_jobs_and_data(db: Session):
+    try:
+        import uuid
+        # 1. Seeding Company and Recruiter
+        company = db.query(Company).filter(Company.name == "Partenaires de l'État").first()
+        if not company:
+            company = Company(
+                id=uuid.uuid4(),
+                name="Partenaires de l'État",
+                sector="Éducation & Secteur Public",
+                size="GE",
+                location="Dakar, Sénégal",
+                description="Seeding institutionnel pour l'orientation et l'apprentissage local.",
+                is_verified=True
+            )
+            db.add(company)
+            db.flush()
+            
+        user = db.query(User).filter(User.email == "institutionnel@sunusouba.sn").first()
+        if not user:
+            user = User(
+                id=uuid.uuid4(),
+                email="institutionnel@sunusouba.sn",
+                hashed_password="hashed_placeholder_for_seed",
+                role=UserRole.RECRUITER,
+                is_active=True
+            )
+            db.add(user)
+            db.flush()
+            
+        recruiter = db.query(Recruiter).filter(Recruiter.company_id == company.id).first()
+        if not recruiter:
+            recruiter = Recruiter(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                company_id=company.id,
+                role="RH"
+            )
+            db.add(recruiter)
+            db.flush()
+            
+        # 2. Seeding Jobs (Concours, Bourses, Stages, Missions)
+        jobs_to_seed = [
+            {
+                "title": "Concours EPT Thiès",
+                "company_name": "École Polytechnique de Thiès",
+                "location": "Thiès",
+                "contract_type": "Excellence",
+                "description": "Clôture des inscriptions le 15 Mai. Concours d'entrée en première année pour les bacheliers S1, S2, S3.",
+                "education_level": "Baccalauréat S",
+                "sector": "Ingénierie",
+                "skills": ["Mathématiques", "Physique", "Rigueur"],
+                "job_type": "scholarship_exam"
+            },
+            {
+                "title": "Bourse d'Excellence Nationale",
+                "company_name": "Direction des Bourses du Sénégal",
+                "location": "Dakar & Étranger",
+                "contract_type": "Excellence",
+                "description": "Destinée aux bacheliers Mention Très Bien et Bien pour la poursuite d'études dans les classes préparatoires et grandes écoles.",
+                "education_level": "Baccalauréat",
+                "sector": "Éducation",
+                "skills": ["Excellence", "Sciences", "Langues"],
+                "job_type": "scholarship_exam"
+            },
+            {
+                "title": "Concours ENA Sénégal",
+                "company_name": "École Nationale d'Administration",
+                "location": "Dakar",
+                "contract_type": "Concours",
+                "description": "Annonce et ouverture des inscriptions prévues pour Juin 2024. Recrutement pour le cycle moyen et supérieur.",
+                "education_level": "Licence/Master",
+                "sector": "Administration Publique",
+                "skills": ["Droit", "Économie", "Culture Générale"],
+                "job_type": "scholarship_exam"
+            },
+            {
+                "title": "Stage Observation - SAED",
+                "company_name": "Société d'Aménagement des Terres du Delta (SAED)",
+                "location": "Ross Béthio",
+                "contract_type": "Stage Découverte",
+                "description": "Immersion de 3 jours au sein des aménagements hydro-agricoles de la vallée du fleuve pour comprendre les métiers de l'agriculture irriguée.",
+                "education_level": "Secondaire",
+                "sector": "Agro-industrie",
+                "skills": ["Curiosité", "Esprit d'équipe"],
+                "job_type": "internship"
+            },
+            {
+                "title": "Immersion Technicien Qualité",
+                "company_name": "Sen'Eau",
+                "location": "Saint-Louis Centre",
+                "contract_type": "Immersion",
+                "description": "Découverte des métiers du traitement, du contrôle qualité et de l'analyse de la qualité de l'eau dans le laboratoire régional de Saint-Louis.",
+                "education_level": "Secondaire",
+                "sector": "Économie Bleue",
+                "skills": ["Chimie", "Rigueur", "Observation"],
+                "job_type": "internship"
+            },
+            {
+                "title": "Menuisier Rénovation Atelier Luxe",
+                "company_name": "Chantier Pikine Est",
+                "location": "Pikine Est • 1.2km",
+                "contract_type": "Mission",
+                "description": "Recherche menuisier expérimenté pour fabrication de structures en bois massif et ajustements de mobilier de luxe. Rémunération : 45 000 FCFA.",
+                "education_level": "Sans diplôme",
+                "sector": "Artisanat",
+                "skills": ["Menuiserie Élite", "Façonnage Bois", "Ponctualité"],
+                "min_salary": 45000,
+                "max_salary": 50000,
+                "job_type": "craftsman"
+            },
+            {
+                "title": "Ferronnier Ebénisterie de Précision",
+                "company_name": "Atelier Technopole",
+                "location": "Technopole • 3.5km",
+                "contract_type": "Mission",
+                "description": "Ajustement et finitions haut de gamme de mobilier traditionnel revisité. Expérience en soudure et métal requise. Rémunération : 60 000 FCFA.",
+                "education_level": "Sans diplôme",
+                "sector": "Artisanat",
+                "skills": ["Ferronnerie Art", "Soudure", "Gestion Équipe"],
+                "min_salary": 60000,
+                "max_salary": 65000,
+                "job_type": "craftsman"
+            }
+        ]
+        
+        for job_info in jobs_to_seed:
+            existing = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.title == job_info["title"]).first()
+            if not existing:
+                brute = OffreEmploiBrute(
+                    id=uuid.uuid4(),
+                    spider_source="platform",
+                    original_id=f"PLAT-{uuid.uuid4().hex[:8]}",
+                    title=job_info["title"],
+                    company_name=job_info["company_name"],
+                    location=job_info["location"],
+                    contract_type=job_info["contract_type"],
+                    description=job_info["description"],
+                    url="",
+                    source="Internal Platform",
+                    posted_date=datetime.utcnow(),
+                    recruiter_id=recruiter.id,
+                    company_id=company.id,
+                    education_level=job_info["education_level"],
+                    nb_positions=1,
+                    is_urgent=False,
+                    languages=["Français"],
+                    benefits=[]
+                )
+                db.add(brute)
+                db.flush()
+                
+                enrichie = OffreEmploiEnrichie(
+                    offre_id=brute.id,
+                    extracted_contract_type=brute.contract_type,
+                    extracted_sector=job_info["sector"],
+                    extracted_salary_min=job_info.get("min_salary"),
+                    extracted_salary_max=job_info.get("max_salary"),
+                    extracted_skills=job_info["skills"],
+                    extracted_experience_years=0,
+                    extracted_job_title=job_info["title"],
+                    confidence_score=1.0,
+                    processed_at=datetime.utcnow(),
+                    job_type=job_info.get("job_type", "other")
+                )
+                db.add(enrichie)
+                
+        # 3. Seeding Simulator Trajectory Steps
+        trajectory_steps = [
+            # Pupils
+            {"category": "pupil", "step_name": "BAC S2", "comment": "\"Avec votre moyenne de 16/20 en Mathématiques, la filière Polytech est statistiquement votre trajectoire la plus stable. Salaire moyen junior : 550.000 FCFA.\"", "order": 1},
+            {"category": "pupil", "step_name": "CPGE / EPT", "comment": "\"Le concours d'entrée aux classes préparatoires (CPGE) ou à l'École Polytechnique de Thiès (EPT) se prépare dès la classe de Terminale S2.\"", "order": 2},
+            {"category": "pupil", "step_name": "Ingénierie", "comment": "\"Cycle d'ingénieur de conception (3 ans). Fortes opportunités de stages et d'embauche auprès des grands groupes miniers et d'agro-industrie.\"", "order": 3},
+            {"category": "pupil", "step_name": "Expertise", "comment": "\"Après 5 ans d'expérience, devenez expert-conseil ou directeur technique de projets d'infrastructure. Salaire moyen estimé supérieur à 1.5M FCFA.\"", "order": 4},
+            # Informal
+            {"category": "informal", "step_name": "Apprenti Menuisier", "comment": "\"Apprenez les bases du façonnage et de l'assemblage dans un atelier certifié. Durée : 1 à 2 ans. Indemnité : 25 000 - 40 000 FCFA / mois.\"", "order": 1},
+            {"category": "informal", "step_name": "Ouvrier Qualifié", "comment": "\"Gagnez en autonomie sur la fabrication de meubles standards. Première hausse de confiance et de salaire. Revenu estimé : 80 000 - 120 000 FCFA / mois.\"", "order": 2},
+            {"category": "informal", "step_name": "Chef d'Atelier", "comment": "\"Supervisez une équipe d'apprentis et gérez les commandes clients complexes. Revenu estimé : 150 000 - 250 000 FCFA / mois.\"", "order": 3},
+            {"category": "informal", "step_name": "Artisan Indépendant", "comment": "\"Créez votre propre entreprise formalisée avec l'appui de la Chambre des Métiers. Revenu estimé : supérieur à 400 000 FCFA / mois.\"", "order": 4}
+        ]
+        
+        for step in trajectory_steps:
+            existing = db.query(TrajectoryStep).filter(
+                TrajectoryStep.category == step["category"],
+                TrajectoryStep.step_name == step["step_name"]
+            ).first()
+            if not existing:
+                db_step = TrajectoryStep(
+                    id=uuid.uuid4(),
+                    category=step["category"],
+                    step_name=step["step_name"],
+                    comment=step["comment"],
+                    order=step["order"]
+                )
+                db.add(db_step)
+                
+        # 4. Seeding Rewards (Training Courses)
+        training_rewards = [
+            {"name": "Sécurité & Hygiène sur Chantiers", "description": "Formation certifiante aux normes de sécurité, port d'EPI et prévention des risques.", "cost_points": 200},
+            {"name": "Lecture de Plans & Dessin Bâtiment", "description": "Maîtriser la lecture des plans de masse, de coupe et d'exécution BTP.", "cost_points": 300},
+            {"name": "Gestion de Projet BTP & Chantiers", "description": "Apprendre à planifier les tâches, budgétiser et encadrer une équipe sur le terrain.", "cost_points": 400},
+            {"name": "Soudure Haute Pression & Alliages", "description": "Perfectionnement en soudage TIG/MIG pour tuyauterie et structures industrielles.", "cost_points": 500}
+        ]
+        
+        for reward_info in training_rewards:
+            existing = db.query(Reward).filter(Reward.name == reward_info["name"]).first()
+            if not existing:
+                db_reward = Reward(
+                    id=uuid.uuid4(),
+                    name=reward_info["name"],
+                    description=reward_info["description"],
+                    cost_points=reward_info["cost_points"],
+                    image_url=None,
+                    is_active=True,
+                    stock=-1
+                )
+                db.add(db_reward)
+                
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logging.getLogger(__name__).error(f"Error during seeding: {e}")
 
 
 @asynccontextmanager
@@ -107,7 +333,10 @@ async def lifespan(app: FastAPI):
         logger.info("Étape 2/3 : Création des tables...")
         try:
             Base.metadata.create_all(bind=engine)
-            logger.info("✅ Tables créées/mises à jour avec succès")
+            db.execute(text("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 1240;"))
+            db.commit()
+            seed_default_jobs_and_data(db)
+            logger.info("✅ Tables créées/mises à jour et données initiales injectées avec succès")
         except Exception as e:
             logger.exception("❌ Erreur lors de la création des tables")
             raise AppError(
@@ -658,7 +887,8 @@ async def get_jobs(
     job_title: Optional[str] = Query(None, description="Filtrer par titre de poste extrait"),
     search: Optional[str] = Query(None, description="Recherche textuelle"),
     source_type: Optional[str] = Query(None, description="Filtrer par source (recruiter ou scraped)"),
-    db=Depends(get_db)
+    db=Depends(get_db),
+    current_user: Optional[UserProfile] = Depends(get_current_user_optional)
 ):
     """Récupère une liste paginée d'offres d'emploi avec filtres."""
     try:
@@ -675,7 +905,8 @@ async def get_jobs(
             source_type=source_type
         )
         
-        result = app.state.job_service.search_jobs(db, params)
+        user_category = current_user.category.value if (current_user and current_user.category) else None
+        result = app.state.job_service.search_jobs(db, params, user_category=user_category)
         return result
         
     except Exception as e:
@@ -1053,6 +1284,49 @@ async def get_user_profile(
     response.email = user_account.email
     
     return response
+
+
+@app.get("/api/v1/candidat/trajectory", response_model=List[TrajectoryStepResponse])
+def get_candidate_trajectory(
+    category: str = Query("pupil", description="Catégorie (pupil ou informal)"),
+    db: Session = Depends(get_db)
+):
+    """Récupère les étapes du simulateur de trajectoire pour une catégorie."""
+    steps = db.query(TrajectoryStep).filter(TrajectoryStep.category == category).order_by(TrajectoryStep.order.asc()).all()
+    return steps
+
+
+@app.get("/api/v1/users/rewards", response_model=List[RewardResponse])
+def list_candidate_rewards(
+    db: Session = Depends(get_db)
+):
+    """Liste les formations/récompenses disponibles pour le candidat."""
+    return db.query(Reward).filter(Reward.is_active == True).all()
+
+
+@app.post("/api/v1/users/rewards/claim/{reward_id}", response_model=Dict[str, Any])
+def claim_candidate_reward(
+    reward_id: UUID,
+    current_user: UserProfile = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Permet au candidat d'acheter une formation avec ses points."""
+    reward = db.query(Reward).filter(Reward.id == reward_id).first()
+    if not reward or not reward.is_active:
+        raise HTTPException(status_code=404, detail="Formation non trouvée ou inactive")
+        
+    if current_user.points < reward.cost_points:
+        raise HTTPException(status_code=400, detail=f"Points insuffisants. Il vous faut {reward.cost_points} points.")
+        
+    current_user.points -= reward.cost_points
+    db.commit()
+    db.refresh(current_user)
+    
+    return {
+        "success": True,
+        "message": f"Formation '{reward.name}' débloquée avec succès !",
+        "remaining_points": current_user.points
+    }
 
 
 @app.get("/api/v1/users/profile/{user_id}", response_model=UserProfileResponse)

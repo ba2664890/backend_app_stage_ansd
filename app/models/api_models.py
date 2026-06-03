@@ -224,6 +224,8 @@ class UserProfileBase(BaseModel):
     """Modèle de base pour le profil utilisateur."""
     phone: Optional[str] = Field(None, description="Numéro de téléphone")
     first_name: Optional[str] = Field(None, description="Prénom")
+    points: Optional[int] = Field(1240, description="Points formation du candidat")
+
     last_name: Optional[str] = Field(None, description="Nom")
     location: Optional[str] = Field(None, description="Localisation")
     category: Optional[CandidateCategory] = Field(CandidateCategory.STUDENT_PRO, description="Catégorie de profil candidat")
@@ -735,3 +737,25 @@ class AdvertiserStatsResponse(BaseModel):
     profile: AdvertiserProfileResponse
     recent_transactions: List[PointTransactionResponse]
     claimed_rewards: List[UserRewardResponse]
+
+
+class TrajectoryStepResponse(BaseModel):
+    id: UUID
+    category: str
+    step_name: str
+    comment: Optional[str] = None
+    order: int
+    # Frontend-facing aliases
+    label: str = ""
+    ai_insight: str = ""
+
+    class Config:
+        from_attributes = True
+
+    @classmethod
+    def from_orm(cls, obj):
+        instance = super().from_orm(obj)
+        instance.label = obj.step_name
+        instance.ai_insight = obj.comment or ""
+        return instance
+

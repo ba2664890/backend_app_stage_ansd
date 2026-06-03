@@ -210,6 +210,7 @@ class UserProfile(Base):
     )
 
     # --- champs déjà présents ---
+    points = Column(Integer, default=1240)
     
     phone = Column(String(50))
     first_name = Column(String(100))
@@ -749,3 +750,15 @@ class UserReward(Base):
     # Relations
     advertiser = relationship("AdvertiserProfile", back_populates="claimed_rewards")
     reward = relationship("Reward")
+
+
+class TrajectoryStep(Base):
+    """Étapes de simulation de trajectoire pour les candidats."""
+    __tablename__ = "trajectory_steps"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    category = Column(String(50), nullable=False) # 'pupil' ou 'informal'
+    step_name = Column(String(100), nullable=False)
+    comment = Column(Text, nullable=False)
+    order = Column(Integer, default=0)
+
