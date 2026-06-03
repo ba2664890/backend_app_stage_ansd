@@ -84,6 +84,12 @@ async def get_chat_history(
     recruiter_service = request.app.state.recruiter_service
     
     user_id = current_user.user_id
+    user_role = getattr(current_user, 'role', 'candidate')
+    role_value = user_role.value if hasattr(user_role, "value") else str(user_role)
+
+    if role_value != 'recruiter' and role_value != 'hr_manager':
+        return []
+
     recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
     
     if not recruiter:

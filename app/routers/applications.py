@@ -63,7 +63,7 @@ async def create_application(
         raise HTTPException(status_code=500, detail=f"Erreur lors de la création de la candidature: {str(e)}")
 
 
-@router.get("/me", response_model=PaginatedResponse[ApplicationResponse])
+@router.get("/me", response_model=PaginatedResponse[ApplicationWithDetailsResponse])
 async def get_my_applications(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),

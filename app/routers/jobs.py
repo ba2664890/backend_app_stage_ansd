@@ -161,3 +161,15 @@ async def remove_saved_job(
     job_uuid = UUID(job_id)
     job_service.remove_saved_job(db, current_user.id, job_uuid)
     return None
+
+@router.get("/{job_id}", response_model=JobOfferResponse)
+async def get_job(
+    job_id: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user_optional)
+):
+    """Récupère une offre par son identifiant."""
+    job = job_service.get_job_by_id(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Offre non trouvée")
+    return job

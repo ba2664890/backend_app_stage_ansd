@@ -235,6 +235,16 @@ class UserProfileBase(BaseModel):
     preferred_salary_min: Optional[int] = Field(None, ge=0, description="Salaire minimum préféré")
     preferred_salary_max: Optional[int] = Field(None, ge=0, description="Salaire maximum préféré")
     cv_url: Optional[str] = Field(None, description="URL du CV")
+    bio: Optional[str] = Field(None, description="Biographie/Présentation")
+    availability: Optional[str] = Field(None, description="Disponibilité")
+    linkedin: Optional[str] = Field(None, description="Lien LinkedIn")
+    github: Optional[str] = Field(None, description="Lien GitHub")
+    portfolio: Optional[str] = Field(None, description="Lien Portfolio")
+    whatsapp: Optional[str] = Field(None, description="Numéro WhatsApp")
+    languages: Optional[List[Dict[str, Any]]] = Field(None, description="Langues maîtrisées")
+    experiences: Optional[List[Dict[str, Any]]] = Field(None, description="Expériences et parcours")
+    certifications: Optional[List[Dict[str, Any]]] = Field(None, description="Certifications obtenues")
+
 
 class UserProfileCreate(UserProfileBase):
     """Modèle pour créer un profil utilisateur."""

@@ -181,10 +181,17 @@ class ApplicationService:
         skip: int = 0,
         limit: int = 50
     ) -> tuple[List[Application], int]:
-        """Récupère toutes les candidatures d'un utilisateur."""
+        """Récupère toutes les candidatures d'un utilisateur avec les détails d'offre."""
         query = db.query(Application).filter(Application.user_id == user_id)
         total = query.count()
-        applications = query.order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
+        applications = query.options(
+            joinedload(Application.user).joinedload(User.profile),
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+        ).order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
+
+        for app in applications:
+            self._enrich_application(app)
+
         return applications, total
     
     def _enrich_application(self, app: Application) -> Application:

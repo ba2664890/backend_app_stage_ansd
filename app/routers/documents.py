@@ -63,6 +63,9 @@ async def upload_document(
 
     # Calculate size
     file_size = os.path.getsize(file_path)
+    if file_size > 5 * 1024 * 1024:
+        os.remove(file_path)
+        raise HTTPException(status_code=400, detail="Le fichier ne doit pas dépasser 5 Mo.")
     # Convert to human readable
     if file_size < 1024:
         size_str = f"{file_size} B"
