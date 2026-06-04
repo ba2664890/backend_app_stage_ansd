@@ -52,6 +52,7 @@ def _ensure_recruiter(profile: UserProfile) -> None:
 
 
 def _boundary_rows(db: Session) -> list[Dict[str, Any]]:
+    centroid_geometry = func.ST_GeomFromText(func.ST_AsText(SenegalAdminBoundary.centroid), 4326)
     rows = (
         db.query(
             SenegalAdminBoundary.id,
@@ -59,8 +60,8 @@ def _boundary_rows(db: Session) -> list[Dict[str, Any]]:
             SenegalAdminBoundary.level,
             SenegalAdminBoundary.parent_name,
             SenegalAdminBoundary.offer_count,
-            func.ST_Y(func.ST_AsText(SenegalAdminBoundary.centroid)).label("lat"),
-            func.ST_X(func.ST_AsText(SenegalAdminBoundary.centroid)).label("lng"),
+            func.ST_Y(centroid_geometry).label("lat"),
+            func.ST_X(centroid_geometry).label("lng"),
         )
         .filter(SenegalAdminBoundary.centroid.isnot(None))
         .all()
