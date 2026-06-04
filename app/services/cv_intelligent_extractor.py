@@ -8,7 +8,7 @@ except ImportError:
     
 from dataclasses import dataclass
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 
 logger = logging.getLogger(__name__)
