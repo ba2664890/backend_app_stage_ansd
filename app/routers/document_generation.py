@@ -72,7 +72,7 @@ def _profile_from_db(db_profile: UserProfile, user: User) -> UserProfileData:
     return UserProfileData(
         first_name=db_profile.first_name or "",
         last_name=db_profile.last_name or "",
-        email=user.email or "",
+        email=user.user.email or "",
         phone=db_profile.phone or "",
         location=db_profile.location or "",
         current_title=db_profile.current_title or "",
