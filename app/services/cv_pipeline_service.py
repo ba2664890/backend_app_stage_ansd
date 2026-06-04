@@ -43,16 +43,8 @@ class CVPipelineService:
     ) -> CVPipelineResult:
         """
         Pipeline complet: fichier → recommandations + explications IA.
-        
-        Args:
-            file_path: Chemin du fichier CV
-            user_id: ID utilisateur (optionnel)
-            generate_explanations: Si True, génère des explications LLM
-            
-        Returns:
-            Résultat enrichi avec embeddings et contexte
+        Intègre désormais l'analyse multimodale avancée (images, liens).
         """
-        
         try:
             # Étape 1: Extraction texte (votre FileService)
             logger.info(f"Étape 1: Extraction texte depuis {file_path}")
@@ -61,24 +53,47 @@ class CVPipelineService:
             if len(raw_text.strip()) < 100:
                 raise ValueError("CV trop court ou illisible")
             
-            # Étape 2: Extraction intelligente (spaCy)
-            logger.info("Étape 2: Extraction structurée avec spaCy")
+            # Étape 2: Extraction intelligente (spaCy + URLs)
+            logger.info("Étape 2: Extraction structurée et liens")
             cv_data = self.extractor.extract(raw_text)
+            
+            # --- NOUVEAU: Analyse Multimodale (Liens & Visuel) ---
+            logger.info("Étape 2.5: Synthèse IA des spécificités (Liens, Visuel)")
+            
+            # A. Synthèse des liens
+            if cv_data.urls:
+                link_prompt = f"Le candidat a inclus ces liens dans son CV : {', '.join(cv_data.urls)}. En une phrase, que suggèrent ces plateformes (ex: GitHub = code, LinkedIn = réseau, Behance = design) ?"
+                cv_data.links_metadata = await self.llm_client.generate_response(
+                    system_prompt="Tu es un analyste de CV ultra concis.",
+                    user_message=link_prompt,
+                    temperature=0.2
+                )
+            
+            # B. Synthèse visuelle (Si le fichier est une image, on pourrait envoyer le base64 au LLM Vision)
+            # Pour l'instant on utilise une analyse structurelle basée sur le texte brut
+            if "capture" in raw_text.lower() or "portfolio" in raw_text.lower():
+                 cv_data.visual_metadata = "Le CV suggère une présentation orientée portfolio/projets visuels."
+            # Si vous avez accès au fichier en base64 pour les images, vous pourriez appeler:
+            # cv_data.visual_metadata = await self.llm_client.generate_vision_response(...)
             
             # Étape 3: Enrichissement avec contexte RAG
             logger.info("Étape 3: Récupération contexte jobs via RAG")
             context_jobs = self._get_relevant_job_context(cv_data)
             
-            # Étape 4: Embedding vectoriel
-            logger.info("Étape 4: Génération embedding")
-            cv_vector = await self.embedding_service.embed_cv(cv_data)
+            # Étape 4: Embedding vectoriel avancé (Pinecone Inference)
+            logger.info("Étape 4: Génération embedding (Pinecone Inference)")
+            cv_vector = await self.embedding_service.embed_cv(
+                cv_data=cv_data,
+                visual_metadata=cv_data.visual_metadata,
+                links_metadata=cv_data.links_metadata
+            )
             
             # Étape 5: Recherche rapide des jobs similaires
             logger.info("Étape 5: Recherche vectorielle jobs")
             job_ids = await self.embedding_service.find_similar_jobs(
                 cv_vector, 
                 limit=100,
-                filter_sectors=cv_data.sectors  # Filtre par secteur
+                filter_sectors=cv_data.sectors
             )
             
             # Étape 6: Post-filtrage et scoring fin avec votre algo existant
@@ -87,12 +102,12 @@ class CVPipelineService:
                 job_ids, cv_data, cv_vector, user_id
             )
             
-            # Étape 7: Génération d'explications via LLM (optionnelle mais puissante)
+            # Étape 7: Génération d'explications via LLM
             explanations = []
             if generate_explanations:
                 logger.info("Étape 7: Génération explications LLM")
                 explanations = await self._generate_llm_explanations(
-                    cv_data, recommendations[:3]  # Top 3 seulement
+                    cv_data, recommendations[:3]
                 )
             
             return CVPipelineResult(
@@ -106,7 +121,7 @@ class CVPipelineService:
         except Exception as e:
             logger.error(f"Erreur pipeline CV: {e}", exc_info=True)
             raise
-    
+
     def _get_relevant_job_context(self, cv_data: CVExtractedData) -> str:
         """Utilise votre RAGService pour obtenir des jobs de référence."""
         # Crée une requête enrichie

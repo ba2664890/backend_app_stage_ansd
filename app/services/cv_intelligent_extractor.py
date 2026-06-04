@@ -22,9 +22,16 @@ class CVExtractedData:
     job_titles: List[str]
     raw_text: str
     clean_text: str  # Texte normalisé pour embedding
+    urls: List[str] = None
+    visual_metadata: Optional[str] = None
+    links_metadata: Optional[str] = None
+    
+    def __post_init__(self):
+        if self.urls is None:
+            self.urls = []
 
 class CVIntelligentExtractor:
-    """Remplacement direct de votre _extract_cv_info_robust()."""
+    """Remplacement direct de votre _extract_cv_info_robust() avec prise en charge avancée des liens."""
     
     def __init__(self, model_name: str = "fr_dep_news_trf"):
         self.nlp = None
@@ -56,36 +63,34 @@ class CVIntelligentExtractor:
         if not self.nlp:
             return
             
-        # À appeler une fois au démarrage avec votre session DB
-        # Exemple: 
-        # skills = db.query(CompetenceReferentiel.competence_name).all()
-        skills = ["Python", "JavaScript", "React", "Docker", "Kubernetes"]  # simulation
+        skills = ["Python", "JavaScript", "React", "Docker", "Kubernetes", "AWS", "Azure"]  # simulation
         self._skill_patterns = [self.nlp(skill.lower()) for skill in skills]
         self._matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
         self._matcher.add("TECH_SKILLS", self._skill_patterns)
     
     def extract(self, text: str) -> CVExtractedData:
-        """Méthode principale - Remplace _extract_cv_info_robust()."""
+        """Méthode principale."""
         if not text or len(text.strip()) < 50:
             return CVExtractedData(0, [], [], [], text, "")
         
         self._load_model()
         
+        # Extraction des URLs universelle
+        urls = self._extract_urls(text)
+        
         if self.nlp:
             doc = self.nlp(text)
-            # Extraction parallèle des features via spaCy
             experience = self._extract_experience(doc)
             skills = self._extract_skills(doc)
             sectors = self._extract_sectors(doc)
             titles = self._extract_job_titles(doc)
             clean_text = self._clean_for_embedding(doc)
         else:
-            # Mode dégradé (Regex)
             experience = self._extract_experience_fallback(text)
             skills = self._extract_skills_fallback(text)
             sectors = self._extract_sectors_fallback(text)
             titles = self._extract_job_titles_fallback(text)
-            clean_text = text[:1000] # Simple troncature
+            clean_text = text[:1000]
 
         return CVExtractedData(
             experience_years=experience,
@@ -93,9 +98,17 @@ class CVIntelligentExtractor:
             sectors=sectors,
             job_titles=titles,
             raw_text=text,
-            clean_text=clean_text
+            clean_text=clean_text,
+            urls=urls
         )
-    
+
+    def _extract_urls(self, text: str) -> List[str]:
+        """Extrait les liens LinkedIn, GitHub, Portfolios."""
+        # Regex basique pour les URLs
+        url_pattern = r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
+        urls = re.findall(url_pattern, text)
+        return list(set(urls))
+        
     def _extract_experience(self, doc) -> int:
         """Extraction robuste de l'expérience via spaCy."""
         max_years = 0
