@@ -75,5 +75,5 @@ openai
 reportlab
 
 # AI Services
-pinecone-client>=3.0.0
+pinecone
 google-generativeai>=0.4.0
