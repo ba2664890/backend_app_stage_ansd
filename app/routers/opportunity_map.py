@@ -384,7 +384,7 @@ async def get_candidate_radar(
     skill: Optional[str] = None,
     lat: Optional[float] = Query(None, ge=-90, le=90),
     lng: Optional[float] = Query(None, ge=-180, le=180),
-    radius_km: int = Query(50, ge=1, le=500),
+    radius_meters: float = Query(50000, ge=1, le=500000),
     limit: int = Query(120, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: UserProfile = Depends(get_current_user),
@@ -397,6 +397,7 @@ async def get_candidate_radar(
     query = _jobs_query(db, search, location, contract_type, sector, skill, user_category)
     rows = query.limit(limit * 2).all()
 
+    radius_km = radius_meters / 1000.0
     jobs: list[Dict[str, Any]] = []
     for brute, enrichie in rows:
         payload = _job_payload(brute, enrichie, boundaries, center, user_skills)
@@ -415,6 +416,7 @@ async def get_candidate_radar(
         "center": center,
         "center_source": center_source,
         "radius_km": radius_km,
+        "radius_meters": radius_meters,
         "jobs": jobs,
         "talents": [],
         "zones": zones,
@@ -436,7 +438,7 @@ async def get_recruiter_radar(
     skill: Optional[str] = None,
     lat: Optional[float] = Query(None, ge=-90, le=90),
     lng: Optional[float] = Query(None, ge=-180, le=180),
-    radius_km: int = Query(50, ge=1, le=500),
+    radius_meters: float = Query(50000, ge=1, le=500000),
     limit: int = Query(120, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: UserProfile = Depends(get_current_user),
@@ -446,6 +448,7 @@ async def get_recruiter_radar(
     boundaries = _boundary_rows(db)
     center, center_source = _request_center(current_user, boundaries, lat, lng, location)
 
+    radius_km = radius_meters / 1000.0
     job_rows = _jobs_query(db, search, location, contract_type, sector, skill, None).limit(limit).all()
     jobs: list[Dict[str, Any]] = []
     for brute, enrichie in job_rows:
@@ -500,6 +503,7 @@ async def get_recruiter_radar(
         "center": center,
         "center_source": center_source,
         "radius_km": radius_km,
+        "radius_meters": radius_meters,
         "jobs": jobs,
         "talents": talents,
         "zones": zones,
