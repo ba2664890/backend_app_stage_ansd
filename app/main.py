@@ -50,6 +50,7 @@ from .services.recruiter_service import RecruiterService
 from .services.llm_client import LLMClient
 from .services.rag_service import RAGService
 from .services.rh_assistant_service import RHAssistantService
+from .services.cloudinary_service import CloudinaryService
 
 from .utils.auth import create_access_token, get_current_user, verify_password, get_current_user_optional
 from .utils.permissions import PermissionService
@@ -1379,6 +1380,7 @@ async def get_job_recommendations(
         logger.error(f"Error fetching recommendations: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la génération des recommandations")
 
+
 @app.post("/api/v1/recommendations/cv-match")
 async def match_cv_with_jobs(
     file: UploadFile = File(...),
@@ -1387,68 +1389,77 @@ async def match_cv_with_jobs(
     user=Depends(get_current_user),
     db=Depends(get_db)
 ):
-    """
-    Upload CV et retourne les meilleures recommandations (Mode léger / TF-IDF).
-    """
     try:
-        # Utiliser l'ID utilisateur authentifié si non fourni
         actual_user_id = user_id or str(user.id)
-        
-        # 1. Sauvegarde
-        file_path = await app.state.file_service.save_upload_file(file)
-        
-        try:
-            # 2. Extraction du texte (Lecture fichier)
-            raw_text = await app.state.file_service.extract_text_from_file(file_path)
-            
-            if len(raw_text.strip()) < 50:
-                 raise HTTPException(status_code=400, detail="CV illisible ou trop court (min 50 chars).")
 
-            # 3. Matching via TF-IDF (RecommendationService)
-            # On utilise le service restauré qui n'utilise PLUS Qdrant/Torch
-            rec_response = app.state.recommendation_service.match_cv_with_jobs(
-                db, 
-                raw_text, 
-                user_id=actual_user_id
+        # Upload Cloudinary
+        cloudinary_result = CloudinaryService.upload_file(file.file)
+
+        file.file.seek(0)
+
+        # Extraction du texte depuis UploadFile
+        raw_text = await app.state.file_service.extract_text_from_upload(file)
+
+        if len(raw_text.strip()) < 50:
+            raise HTTPException(
+                status_code=400,
+                detail="CV illisible ou trop court (min 50 chars)."
             )
-            
-            # 4. Extraction infos pour l'affichage (réutilisation de la logique du service)
-            # C'est un appel à une méthode "interne" (_extract...) mais c'est le plus simple pour garder l'API compatible
-            cv_skills, cv_experience, cv_sectors = app.state.recommendation_service._extract_cv_info_robust(raw_text)
-            
-            # 5. Formater la réponse comme attendu par le frontend
-            return {
-                "user_id": actual_user_id,
-                "cv_analysis": {
-                    "experience_years": cv_experience,
-                    "skills_detected": cv_skills,
-                    "sectors_detected": cv_sectors,
-                    "job_titles_detected": [] # Non extrait par le mode léger
-                },
-                "recommendations": [
-                    {
-                        "job_id": rec.job_id,
-                        "title": rec.title,
-                        "company": rec.company_name,
-                        "match_score": rec.match_score,
-                        "reasons": rec.match_reasons,
-                        "embedding_similarity": 0 # Non disponible en mode TF-IDF
-                    }
-                    for rec in rec_response.recommendations[:10]
-                ],
-                "ai_explanations": ["Le mode IA générative est désactivé pour optimiser les performances."]
-            }
-            
-        finally:
-            # Nettoyage
-            await app.state.file_service.cleanup_file(file_path)
-            
+
+        rec_response = app.state.recommendation_service.match_cv_with_jobs(
+            db,
+            raw_text,
+            user_id=actual_user_id
+        )
+
+        cv_skills, cv_experience, cv_sectors = (
+            app.state.recommendation_service._extract_cv_info_robust(raw_text)
+        )
+
+        return {
+            "user_id": actual_user_id,
+
+            # Infos Cloudinary
+            "cv_url": cloudinary_result["url"],
+            "cv_public_id": cloudinary_result["public_id"],
+
+            "cv_analysis": {
+                "experience_years": cv_experience,
+                "skills_detected": cv_skills,
+                "sectors_detected": cv_sectors,
+                "job_titles_detected": []
+            },
+
+            "recommendations": [
+                {
+                    "job_id": rec.job_id,
+                    "title": rec.title,
+                    "company": rec.company_name,
+                    "match_score": rec.match_score,
+                    "reasons": rec.match_reasons,
+                    "embedding_similarity": 0
+                }
+                for rec in rec_response.recommendations[:10]
+            ],
+
+            "ai_explanations": [
+                "Le mode IA générative est désactivé pour optimiser les performances."
+            ]
+        }
+
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error in lightweight CV matching: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Erreur lors du traitement du CV: {str(e)}")
 
+    except Exception as e:
+        logger.error(
+            f"Error in lightweight CV matching: {e}",
+            exc_info=True
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors du traitement du CV: {str(e)}"
+        )
 
 
 @app.get("/api/v1/users/job-alerts")
