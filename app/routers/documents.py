@@ -3,6 +3,8 @@ import os
 import shutil
 import uuid
 from typing import List
+from app.services.cloudinary_service import CloudinaryService
+from app.utils import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -36,80 +38,183 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def upload_document(
     file: UploadFile = File(...),
     category: str = Form(...),
-    current_user = Depends(get_current_user),
+    current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     import logging
+
     from ..services.file_service import FileService
-    
+    from ..services.cloudinary_service import CloudinaryService
+
     logger = logging.getLogger(__name__)
-    
-    # Validate file type
-    allowed_types = ["application/pdf", "image/jpeg", "image/png", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+
+    allowed_types = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ]
+
     if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Type de fichier non supporté.")
+        raise HTTPException(
+            status_code=400,
+            detail="Type de fichier non supporté."
+        )
 
-    # Generate unique filename
-    file_ext = os.path.splitext(file.filename)[1]
-    unique_filename = f"{current_user.id}_{uuid.uuid4()}{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    cloudinary_url = None
+    cloudinary_public_id = None
 
-    # Save file
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+
+        # ----------------------------
+        # Vérification taille
+        # ----------------------------
+
+        content = await file.read()
+        file_size = len(content)
+
+        if file_size > 5 * 1024 * 1024:
+            raise HTTPException(
+                status_code=400,
+                detail="Le fichier ne doit pas dépasser 5 Mo."
+            )
+
+        file.file.seek(0)
+
+        if file_size < 1024:
+            size_str = f"{file_size} B"
+        elif file_size < 1024 * 1024:
+            size_str = f"{file_size / 1024:.1f} KB"
+        else:
+            size_str = f"{file_size / (1024 * 1024):.1f} MB"
+
+        # ----------------------------
+        # Upload Cloudinary
+        # ----------------------------
+
+        try:
+            upload_result = CloudinaryService.upload_file(
+                file.file
+            )
+
+            cloudinary_url = upload_result["url"]
+            cloudinary_public_id = upload_result["public_id"]
+
+            logger.info(
+                f"✅ Upload Cloudinary réussi: {cloudinary_public_id}"
+            )
+
+        except Exception as e:
+            logger.exception("Erreur Cloudinary")
+
+            raise HTTPException(
+                status_code=500,
+                detail=f"Erreur upload Cloudinary: {str(e)}"
+            )
+
+        # ----------------------------
+        # Extraction du texte
+        # ----------------------------
+
+        extracted_text = None
+
+        try:
+            file.file.seek(0)
+
+            file_service = FileService()
+
+            extracted_text = (
+                await file_service.extract_text_from_upload(file)
+            )
+
+            if extracted_text:
+                logger.info(
+                    f"✅ Texte extrait ({len(extracted_text)} caractères)"
+                )
+
+        except Exception as e:
+            logger.warning(
+                f"⚠️ Extraction impossible: {e}"
+            )
+
+        # ----------------------------
+        # Sauvegarde DB
+        # ----------------------------
+
+        try:
+
+            new_doc = Document(
+                user_id=current_user.user_id,
+                name=file.filename,
+                file_path=cloudinary_url,
+                cloudinary_url=cloudinary_url,
+                cloudinary_public_id=cloudinary_public_id,
+                file_type=file.content_type,
+                size=size_str,
+                category=category,
+                uploaded_at=datetime.utcnow(),
+                extracted_text=extracted_text
+            )
+
+            db.add(new_doc)
+            db.commit()
+            db.refresh(new_doc)
+
+        except Exception as e:
+
+            db.rollback()
+
+            logger.exception(
+                "Erreur base de données"
+            )
+
+            # nettoyage Cloudinary
+            if cloudinary_public_id:
+                try:
+                    CloudinaryService.delete_file(
+                        cloudinary_public_id
+                    )
+                except Exception:
+                    pass
+
+            raise HTTPException(
+                status_code=500,
+                detail=f"Erreur base de données: {str(e)}"
+            )
+
+        return {
+            "id": new_doc.id,
+            "name": new_doc.name,
+            "file_type": new_doc.file_type,
+            "size": new_doc.size,
+            "category": new_doc.category,
+            "uploaded_at": new_doc.uploaded_at,
+            "is_verified": new_doc.is_verified,
+            "url": cloudinary_url
+        }
+
+    except HTTPException:
+        raise
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Erreur lors de la sauvegarde du fichier.")
 
-    # Calculate size
-    file_size = os.path.getsize(file_path)
-    if file_size > 5 * 1024 * 1024:
-        os.remove(file_path)
-        raise HTTPException(status_code=400, detail="Le fichier ne doit pas dépasser 5 Mo.")
-    # Convert to human readable
-    if file_size < 1024:
-        size_str = f"{file_size} B"
-    elif file_size < 1024 * 1024:
-        size_str = f"{file_size / 1024:.1f} KB"
-    else:
-        size_str = f"{file_size / (1024 * 1024):.1f} MB"
+        logger.exception(
+            "Erreur inattendue upload document"
+        )
 
-    # Extract text from document for persistence
-    extracted_text = None
-    try:
-        file_service = FileService()
-        extracted_text = await file_service.extract_text_from_file(file_path)
-        logger.info(f"✅ Texte extrait du document {file.filename}: {len(extracted_text)} caractères")
-    except Exception as e:
-        logger.warning(f"⚠️ Impossible d'extraire le texte de {file.filename}: {e}")
-        # Continue même si l'extraction échoue
+        if cloudinary_public_id:
+            try:
+                CloudinaryService.delete_file(
+                    cloudinary_public_id
+                )
+            except Exception:
+                pass
 
-    # Create DB entry with extracted text
-    new_doc = Document(
-        user_id=current_user.user_id,
-        name=file.filename,
-        file_path=file_path,
-        file_type=file.content_type,
-        size=size_str,
-        category=category,
-        uploaded_at=datetime.utcnow(),
-        extracted_text=extracted_text  # Stocker le texte extrait
-    )
-    
-    db.add(new_doc)
-    db.commit()
-    db.refresh(new_doc)
-
-    return {
-        "id": new_doc.id,
-        "name": new_doc.name,
-        "file_type": new_doc.file_type,
-        "size": new_doc.size,
-        "category": new_doc.category,
-        "uploaded_at": new_doc.uploaded_at,  # Make sure this matches the model field type
-        "is_verified": new_doc.is_verified,
-        "url": f"/static/uploads/{unique_filename}"
-    }
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur serveur: {str(e)}"
+        )
 
 @router.get("", response_model=List[DocumentResponse])
 def get_documents(
@@ -142,9 +247,15 @@ def delete_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Document non trouvé.")
     
-    # Remove file from disk
-    if os.path.exists(doc.file_path):
-        os.remove(doc.file_path)
+    try:
+        if doc.cloudinary_public_id:
+            CloudinaryService.delete_file(
+                doc.cloudinary_public_id
+            )
+    except Exception as e:
+        logger.warning(
+            f"Erreur suppression Cloudinary: {e}"
+        )
     
     db.delete(doc)
     db.commit()

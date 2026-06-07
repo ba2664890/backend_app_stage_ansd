@@ -685,6 +685,8 @@ class Document(Base):
     
     # Contenu extrait du document (pour persistance sur Railway)
     extracted_text = Column(Text, nullable=True)
+    cloudinary_url = Column(String(500), nullable=True)
+    cloudinary_public_id = Column(String(255), nullable=True)
     
     # Relations
     user = relationship("User", backref="documents")
@@ -693,6 +695,8 @@ class Document(Base):
         Index('idx_documents_user', 'user_id'),
         Index('idx_documents_category', 'category'),
     )
+
+
 class AdvertiserProfile(Base):
     """Profil pour les annonceurs/contributeurs."""
     __tablename__ = "advertiser_profiles"

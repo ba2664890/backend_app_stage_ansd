@@ -94,7 +94,26 @@ class FileService:
                 status_code=500,
                 detail="Erreur lors de la sauvegarde du fichier"
             )
-    
+        
+    async def extract_text_from_upload(self, file: UploadFile) -> str:
+        import tempfile
+        import os
+
+        suffix = os.path.splitext(file.filename)[1]
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            content = await file.read()
+            tmp.write(content)
+            temp_path = tmp.name
+
+        try:
+            text = await self.extract_text_from_file(temp_path)
+            return text
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+
     async def extract_text_from_file(self, file_path: str) -> str:
         """
         Extrait le texte d'un fichier (PDF, DOC, DOCX).
