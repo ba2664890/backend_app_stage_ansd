@@ -621,8 +621,16 @@ class MicroLoan(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relations
-    user = relationship("User", backref="micro_loans")
-    approver = relationship("User", foreign_keys=[approved_by])
+    user = relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref="micro_loans"
+    )
+
+    approver = relationship(
+        "User",
+        foreign_keys=[approved_by]
+    )
     payments = relationship("LoanPayment", back_populates="loan", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -694,8 +702,16 @@ class InformalSkillMapping(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relations
-    user = relationship("User", backref="skill_mappings")
-    validator = relationship("User", foreign_keys=[validated_by])
+    user = relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref="skill_mappings"
+    )
+
+    validator = relationship(
+        "User",
+        foreign_keys=[validated_by]
+    )
     
     __table_args__ = (
         Index('idx_skill_mapping_user', 'user_id'),
