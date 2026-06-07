@@ -378,43 +378,69 @@ class MentorshipSession(Base):
 # ==================== 5. GARANTIE DE CONFIANCE (TRUST BOND) ====================
 
 class TrustBond(Base):
-    """Garantie de confiance: assurance/caution pour candidats informels.
-    
-    Problème: Employeur craint de recruter quelqu'un sans CNPS/documents
-    Solution: Fonds d'assurance collecte → compensation en cas de problème
-    """
     __tablename__ = "trust_bonds"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    
-    # Bond info
-    amount = Column(Integer, nullable=False)  # Montant en CFA (ex: 500,000)
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    amount = Column(Integer, nullable=False)
+
     status = Column(
-        SQLAlchemyEnum(TrustBondStatus, name="trust_bond_status_enum", create_type=True, values_callable=lambda x: [e.value for e in x]),
+        SQLAlchemyEnum(
+            TrustBondStatus,
+            name="trust_bond_status_enum",
+            create_type=True,
+            values_callable=lambda x: [e.value for e in x]
+        ),
         default=TrustBondStatus.PENDING
     )
-    
-    # Validation
-    validated_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # Admin ou expert
+
+    validated_by = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
     validation_date = Column(DateTime)
-    
-    # Réclamations
-    claim_history = Column(JSON)  # Historique des réclamations/paiements
+
+    claim_history = Column(JSON)
     total_claimed = Column(Integer, default=0)
-    
-    # Durée
+
     issued_date = Column(DateTime, default=func.now())
-    expiration_date = Column(DateTime)  # Renouvellement annuel?
-    
+    expiration_date = Column(DateTime)
+
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
-    # Relations
-    user = relationship("User", backref="trust_bonds")
-    validator = relationship("User", foreign_keys=[validated_by])
-    claims = relationship("TrustBondClaim", back_populates="bond", cascade="all, delete-orphan")
-    
+
+    # =========================
+    # RELATIONS CORRIGÉES
+    # =========================
+
+    # utilisateur propriétaire du trust bond
+    user = relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref="trust_bonds"
+    )
+
+    # admin / expert qui valide
+    validator = relationship(
+        "User",
+        foreign_keys=[validated_by],
+        backref="validated_trust_bonds"
+    )
+
+    claims = relationship(
+        "TrustBondClaim",
+        back_populates="bond",
+        cascade="all, delete-orphan"
+    )
+
     __table_args__ = (
         Index('idx_trust_bond_user', 'user_id'),
         Index('idx_trust_bond_status', 'status'),
