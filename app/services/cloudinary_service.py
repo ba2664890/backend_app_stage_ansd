@@ -1,6 +1,6 @@
 import cloudinary
 import cloudinary.uploader
-from .config import settings
+from ..config import settings
 
 
 
