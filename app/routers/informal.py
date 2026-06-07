@@ -21,7 +21,7 @@ from ..services.informal_service import (
     MicroLoanService, SkillMappingService, PeerRecommendationService,
     CareerProgressionService
 )
-from ..core.dependencies import get_current_user, require_informal_candidate
+from ..utils.auth import get_current_user
 
 
 router = APIRouter(
