@@ -73,6 +73,8 @@ chromadb
 python-dotenv
 openai
 reportlab
+cloudinary 
+python-multipart
 
 # AI Services
 pinecone
