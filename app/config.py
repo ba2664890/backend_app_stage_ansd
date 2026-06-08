@@ -16,9 +16,7 @@ class Settings:
     # Database
     # =========================
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://neondb_owner:npg_dMZCO35gNoeP@ep-long-resonance-a4y4jpe4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-    )
+        "DATABASE_URL"    )
 
     # =========================
     # API Configuration
