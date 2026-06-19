@@ -52,7 +52,7 @@ class LLMClient:
                 full_prompt,
                 generation_config=GenerationConfig(
                     temperature=temperature,
-                    max_output_tokens=1000
+                    max_output_tokens=4000
                 )
             )
             return response.text
