@@ -137,7 +137,7 @@ Directives :
                 question=question,
                 answer=answer,
                 context={**context_data, "rag_sources_used": bool(rag_context if user_role == 'recruiter' else full_context)},
-                model_used=self.llm_client.model,
+                model_used=self.llm_client.model_name,
                 tokens_used=len(question) + len(answer)
             )
             db.add(chat_history)
@@ -215,7 +215,7 @@ Directives :
             question=f"Générer description pour: {request.job_title}",
             answer=job_description,
             context=request.model_dump(),
-            model_used=self.llm_client.model
+            model_used=self.llm_client.model_name
         )
         db.add(chat_history)
         db.commit()
