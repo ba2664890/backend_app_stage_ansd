@@ -503,7 +503,8 @@ async def award_badge_to_user(
 ):
     """[Admin] Attribuer un badge à un utilisateur."""
     # Vérifier que l'utilisateur courant est admin
-    if current_user.role.value != "admin":
+    role_val = getattr(current_user.user.role, 'value', current_user.user.role)
+    if role_val != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     
     user_badge = await BadgeService.award_badge(db, user_id, badge_id, evidence)
@@ -522,7 +523,8 @@ async def approve_loan_request(
     db: Session = Depends(get_db)
 ):
     """[Admin] Approuver un micro-crédit."""
-    if current_user.role.value != "admin":
+    role_val = getattr(current_user.user.role, 'value', current_user.user.role)
+    if role_val != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     
     loan = await MicroLoanService.approve_loan(db, loan_id, str(current_user.id))

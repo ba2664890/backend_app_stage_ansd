@@ -81,12 +81,15 @@ async def get_my_jobs(
     Récupère les offres postées par le recruteur connecté.
     """
     # Vérifier que c'est bien un recruteur
-    if not hasattr(current_user, 'recruiter_profile') or not current_user.recruiter_profile:
+    user_obj = current_user.user
+    recruiter_profile = user_obj.recruiter_profile
+    if not recruiter_profile:
         # Fallback: vérifier le rôle
-        if current_user.role != 'recruiter' and current_user.role != 'admin':
+        role_val = getattr(user_obj.role, 'value', user_obj.role)
+        if role_val != 'recruiter' and role_val != 'admin':
              raise HTTPException(status_code=403, detail="Accès réservé aux recruteurs")
              
-    recruiter_id = current_user.recruiter_profile.id if current_user.recruiter_profile else None
+    recruiter_id = recruiter_profile.id if recruiter_profile else None
     if not recruiter_id:
          raise HTTPException(status_code=400, detail="Profil recruteur non trouvé")
          
@@ -101,14 +104,16 @@ async def create_job(
     """
     Crée une nouvelle offre d'emploi.
     """
-    if not current_user.recruiter_profile:
+    user_obj = current_user.user
+    recruiter_profile = user_obj.recruiter_profile
+    if not recruiter_profile:
         raise HTTPException(status_code=403, detail="Seuls les recruteurs peuvent publier des offres")
         
     return job_service.create_job(
         db, 
         job_data, 
-        current_user.recruiter_profile.id,
-        current_user.recruiter_profile.company_id
+        recruiter_profile.id,
+        recruiter_profile.company_id
     )
 
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -121,10 +126,12 @@ async def delete_job(
     Supprime une offre d'emploi.
     """
     job_uuid = UUID(job_id)
-    if not current_user.recruiter_profile:
+    user_obj = current_user.user
+    recruiter_profile = user_obj.recruiter_profile
+    if not recruiter_profile:
          raise HTTPException(status_code=403, detail="Action réservée aux recruteurs")
          
-    success = job_service.delete_job(db, job_uuid, current_user.recruiter_profile.id)
+    success = job_service.delete_job(db, job_uuid, recruiter_profile.id)
     if not success:
         raise HTTPException(status_code=404, detail="Offre non trouvée ou non autorisée")
     return None

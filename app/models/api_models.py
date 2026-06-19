@@ -247,6 +247,30 @@ class UserProfileBase(BaseModel):
     experiences: Optional[List[Dict[str, Any]]] = Field(None, description="Expériences et parcours")
     certifications: Optional[List[Dict[str, Any]]] = Field(None, description="Certifications obtenues")
 
+    # Nouveaux champs spécifiques
+    gender: Optional[str] = Field(None, description="Genre")
+    date_of_birth: Optional[str] = Field(None, description="Date de naissance")
+    school_name: Optional[str] = Field(None, description="Établissement scolaire")
+    school_level: Optional[str] = Field(None, description="Niveau scolaire")
+    school_field: Optional[str] = Field(None, description="Filière")
+    school_region: Optional[str] = Field(None, description="Région de l'école")
+    orientation_goal: Optional[str] = Field(None, description="Projet d'orientation")
+    interests: Optional[List[str]] = Field(None, description="Centres d'intérêt")
+    university: Optional[str] = Field(None, description="Université")
+    study_level: Optional[str] = Field(None, description="Niveau d'études (BTS, Licence...)")
+    study_domain: Optional[str] = Field(None, description="Domaine d'études")
+    study_year: Optional[str] = Field(None, description="Année en cours")
+    is_alternance: Optional[bool] = Field(False, description="En alternance")
+    internship_count: Optional[int] = Field(None, description="Nombre de stages")
+    seeking_type: Optional[str] = Field(None, description="Type de contrat recherché")
+    key_skills: Optional[List[str]] = Field(None, description="Compétences clés")
+    informal_activity: Optional[str] = Field(None, description="Activité informelle")
+    informal_sector: Optional[str] = Field(None, description="Secteur informel")
+    spoken_languages: Optional[List[str]] = Field(None, description="Langues parlées")
+    school_level_reached: Optional[str] = Field(None, description="Niveau scolaire atteint")
+    informal_goal: Optional[str] = Field(None, description="Objectif (formaliser, etc)")
+    practical_skills: Optional[str] = Field(None, description="Compétences pratiques")
+
 
 class UserProfileCreate(UserProfileBase):
     """Modèle pour créer un profil utilisateur."""
