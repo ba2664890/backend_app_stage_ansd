@@ -335,6 +335,7 @@ async def lifespan(app: FastAPI):
         try:
             Base.metadata.create_all(bind=engine)
             db.execute(text("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 1240;"))
+            db.execute(text("ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS settings JSONB;"))
             db.commit()
             seed_default_jobs_and_data(db)
             logger.info("✅ Tables créées/mises à jour et données initiales injectées avec succès")

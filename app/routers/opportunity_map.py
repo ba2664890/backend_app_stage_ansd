@@ -464,6 +464,10 @@ async def get_recruiter_radar(
         User.role == UserRole.CANDIDATE,
         UserProfile.is_active.is_(True),
         UserProfile.category != CandidateCategory.PUPIL,
+        or_(
+            UserProfile.settings.is_(None),
+            not_(UserProfile.settings['privacy']['profile_visible'].as_boolean() == False)
+        )
     )
 
     if search:

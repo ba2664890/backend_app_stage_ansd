@@ -208,25 +208,35 @@ async def find_candidates_for_job(
         candidates = []
         if candidate_ids:
             # 5. Récupérer les profils complets depuis Postgres si on a des IDs de Qdrant
-            # FILTRAGE: Les recruteurs ne voient pas les élèves (category='pupil')
+            # FILTRAGE: Les recruteurs ne voient pas les élèves (category='pupil') et respectent la visibilité
             from ..models.database_models import CandidateCategory
+            from sqlalchemy import not_
             candidates = db.query(UserProfile).filter(
                 UserProfile.id.in_(candidate_ids),
-                UserProfile.category != CandidateCategory.PUPIL
+                UserProfile.category != CandidateCategory.PUPIL,
+                or_(
+                    UserProfile.settings.is_(None),
+                    not_(UserProfile.settings['privacy']['profile_visible'].as_boolean() == False)
+                )
             ).all()
         
         # 6. Fallback SQL si aucun candidat trouvé via vectoriel (ou si mode léger)
         if not candidates:
-            from sqlalchemy import or_, func, any_
+            from sqlalchemy import or_, func, any_, not_
+            from ..models.database_models import CandidateCategory
             
             # Recherche par titre (insensible à la casse)
             title_query = f"%{job.title}%"
             
             # Construction de la requête de fallback
-            # FILTRAGE: Exclure les élèves
+            # FILTRAGE: Exclure les élèves et respecter la visibilité
             fallback_query = db.query(UserProfile).filter(
                 UserProfile.is_active == True,
-                UserProfile.category != CandidateCategory.PUPIL
+                UserProfile.category != CandidateCategory.PUPIL,
+                or_(
+                    UserProfile.settings.is_(None),
+                    not_(UserProfile.settings['privacy']['profile_visible'].as_boolean() == False)
+                )
             )
             
             # Filtre par titre ou par compétences

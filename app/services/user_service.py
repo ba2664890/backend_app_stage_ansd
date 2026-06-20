@@ -254,10 +254,10 @@ class UserService:
 
     def get_settings(self, db: Session, user_id: UUID) -> Dict[str, Any]:
         """
-        Récupère les paramètres utilisateur (Mock).
+        Récupère les paramètres utilisateur depuis la base de données.
         """
-        # TODO: Implementer DB storage des settings
-        return {
+        profile = self.get_user_profile(db, str(user_id))
+        default_settings = {
             "notifications": {
                 "email": True,
                 "push": False,
@@ -267,6 +267,8 @@ class UserService:
             },
             "privacy": {
                 "profile_visible": True,
+                "show_email": True,
+                "show_phone": True,
                 "data_analytics": True
             },
             "preferences": {
@@ -274,17 +276,44 @@ class UserService:
                 "language": "fr"
             }
         }
+        if profile and profile.settings:
+            import collections.abc
+            def update(d, u):
+                for k, v in u.items():
+                    if isinstance(v, collections.abc.Mapping):
+                        d[k] = update(d.get(k, {}), v)
+                    else:
+                        d[k] = v
+                return d
+            return update(default_settings, profile.settings)
+        return default_settings
 
     def update_settings(self, db: Session, user_id: UUID, settings: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Met à jour les paramètres utilisateur (Mock).
+        Met à jour les paramètres utilisateur dans la base de données.
         """
         logger.info(f"Updating settings for user {user_id}: {settings}")
-        # On pourrait mapper certains settings sur le UserProfile s'ils correspondent
-        # ex: theme, language...
+        profile = self.get_user_profile(db, str(user_id))
         
-        # Pour l'instant on renvoie juste les settings reçus fusionnés au mock
-        return {**self.get_settings(db, user_id), **settings}
+        current_settings = self.get_settings(db, user_id)
+        
+        import collections.abc
+        def update(d, u):
+            for k, v in u.items():
+                if isinstance(v, collections.abc.Mapping):
+                    d[k] = update(d.get(k, {}), v)
+                else:
+                    d[k] = v
+            return d
+        
+        new_settings = update(current_settings, settings)
+        
+        if profile:
+            profile.settings = new_settings
+            db.commit()
+            db.refresh(profile)
+            
+        return new_settings
 
     def delete_user(self, db: Session, user_id: UUID) -> bool:
         """
@@ -323,6 +352,22 @@ class UserService:
             
             if role:
                 query = query.filter(User.role == role)
+                
+            if role == "candidate":
+                from ..models.database_models import CandidateCategory
+                from sqlalchemy import not_
+                query = query.filter(
+                    or_(
+                        UserProfile.category.is_(None),
+                        UserProfile.category != CandidateCategory.PUPIL
+                    )
+                )
+                query = query.filter(
+                    or_(
+                        UserProfile.settings.is_(None),
+                        not_(UserProfile.settings['privacy']['profile_visible'].as_boolean() == False)
+                    )
+                )
             
             if search:
                 query = query.filter(or_(

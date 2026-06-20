@@ -29,29 +29,76 @@ def _can_view_profile(current_user, target: UserProfile) -> bool:
     )
 
 
-def _profile_payload(profile: UserProfile) -> Dict[str, Any]:
+def _profile_payload(profile: UserProfile, current_user_id: Optional[UUID] = None) -> Dict[str, Any]:
     user = profile.user
+    
+    settings = profile.settings or {}
+    privacy = settings.get("privacy", {})
+    show_email = privacy.get("show_email", True)
+    show_phone = privacy.get("show_phone", True)
+    
+    email_val = user.email if user else None
+    phone_val = profile.phone
+    whatsapp_val = profile.whatsapp
+    
+    # If not the profile owner, mask private fields
+    if current_user_id is None or str(current_user_id) != str(profile.user_id):
+        if not show_email:
+            email_val = "Non partagé (privé)"
+        if not show_phone:
+            phone_val = "Non partagé (privé)"
+            whatsapp_val = "Non partagé (privé)"
+            
     return {
         "id": str(profile.user_id),
         "profile_id": str(profile.id),
-        "email": user.email if user else None,
+        "email": email_val,
         "role": getattr(user.role, "value", user.role) if user else None,
         "points": profile.points,
         "first_name": profile.first_name,
         "last_name": profile.last_name,
-        "phone": profile.phone,
+        "phone": phone_val,
+        "whatsapp": whatsapp_val,
         "location": profile.location,
         "category": getattr(profile.category, "value", profile.category),
         "current_title": profile.current_title,
         "experience_years": profile.experience_years,
         "education_level": profile.education_level,
         "skills": profile.skills or [],
+        "preferred_contract_type": profile.preferred_contract_type or [],
+        "preferred_salary_min": profile.preferred_salary_min,
+        "preferred_salary_max": profile.preferred_salary_max,
         "bio": profile.bio,
         "availability": profile.availability,
         "cv_url": profile.cv_url,
         "linkedin": profile.linkedin,
         "github": profile.github,
         "portfolio": profile.portfolio,
+        "languages": profile.languages or [],
+        "experiences": profile.experiences or [],
+        "certifications": profile.certifications or [],
+        "gender": profile.gender,
+        "date_of_birth": profile.date_of_birth,
+        "school_name": profile.school_name,
+        "school_level": profile.school_level,
+        "school_field": profile.school_field,
+        "school_region": profile.school_region,
+        "orientation_goal": profile.orientation_goal,
+        "interests": profile.interests or [],
+        "university": profile.university,
+        "study_level": profile.study_level,
+        "study_domain": profile.study_domain,
+        "study_year": profile.study_year,
+        "is_alternance": profile.is_alternance,
+        "internship_count": profile.internship_count,
+        "seeking_type": profile.seeking_type,
+        "key_skills": profile.key_skills or [],
+        "informal_activity": profile.informal_activity,
+        "informal_sector": profile.informal_sector,
+        "spoken_languages": profile.spoken_languages or [],
+        "school_level_reached": profile.school_level_reached,
+        "informal_goal": profile.informal_goal,
+        "practical_skills": profile.practical_skills,
         "created_at": profile.created_at,
         "updated_at": profile.updated_at,
     }
@@ -75,7 +122,7 @@ async def get_my_profile(
     current_user = Depends(get_current_user)
 ):
     """Récupère le profil de l'utilisateur connecté."""
-    return _profile_payload(current_user)
+    return _profile_payload(current_user, current_user.user_id)
 
 
 @router.get("/profile/{user_id}", response_model=Dict[str, Any])
@@ -97,7 +144,7 @@ async def get_profile_by_id(
     if not _can_view_profile(current_user, profile):
         raise HTTPException(status_code=403, detail="Vous n'avez pas accès à ce profil")
 
-    return _profile_payload(profile)
+    return _profile_payload(profile, current_user.user_id)
 
 @router.put("/settings", response_model=Dict[str, Any])
 async def update_user_settings(

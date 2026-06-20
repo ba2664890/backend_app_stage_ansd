@@ -242,6 +242,7 @@ class UserProfile(Base):
     languages = Column(JSON)
     experiences = Column(JSON)
     certifications = Column(JSON)
+    settings = Column(JSON, nullable=True)
 
     # Nouveaux champs spécifiques (Élève, Étudiant Pro, Informel)
     gender = Column(String(50))
