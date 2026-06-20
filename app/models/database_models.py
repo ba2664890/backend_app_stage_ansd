@@ -243,6 +243,7 @@ class UserProfile(Base):
     experiences = Column(JSON)
     certifications = Column(JSON)
     settings = Column(JSON, nullable=True)
+    avatar_url = Column(Text, nullable=True)  # URL Cloudinary de la photo de profil
 
     # Nouveaux champs spécifiques (Élève, Étudiant Pro, Informel)
     gender = Column(String(50))

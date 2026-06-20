@@ -237,6 +237,7 @@ class UserProfileBase(BaseModel):
     preferred_salary_min: Optional[int] = Field(None, ge=0, description="Salaire minimum préféré")
     preferred_salary_max: Optional[int] = Field(None, ge=0, description="Salaire maximum préféré")
     cv_url: Optional[str] = Field(None, description="URL du CV")
+    avatar_url: Optional[str] = Field(None, description="URL de la photo de profil")
     bio: Optional[str] = Field(None, description="Biographie/Présentation")
     availability: Optional[str] = Field(None, description="Disponibilité")
     linkedin: Optional[str] = Field(None, description="Lien LinkedIn")

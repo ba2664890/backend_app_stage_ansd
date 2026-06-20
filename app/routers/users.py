@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, File, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from uuid import UUID
@@ -71,6 +71,7 @@ def _profile_payload(profile: UserProfile, current_user_id: Optional[UUID] = Non
         "bio": profile.bio,
         "availability": profile.availability,
         "cv_url": profile.cv_url,
+        "avatar_url": profile.avatar_url,
         "linkedin": profile.linkedin,
         "github": profile.github,
         "portfolio": profile.portfolio,
@@ -224,3 +225,52 @@ async def remove_favorite(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return None
+
+@router.post("/avatar", response_model=Dict[str, Any])
+async def upload_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: UserProfile = Depends(get_current_user)
+):
+    """
+    Upload une photo de profil (avatar) sur Cloudinary et met à jour le profil.
+    """
+    from ..services.cloudinary_service import CloudinaryService
+    
+    # Vérifier le type de fichier
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=400,
+            detail="Seuls les fichiers image sont supportés."
+        )
+        
+    try:
+        # Lire le fichier pour vérifier sa taille
+        content = await file.read()
+        file_size = len(content)
+        if file_size > 5 * 1024 * 1024:
+            raise HTTPException(
+                status_code=400,
+                detail="L'image ne doit pas dépasser 5 Mo."
+            )
+        file.file.seek(0)
+        
+        # Upload Cloudinary
+        upload_result = CloudinaryService.upload_file(file.file)
+        avatar_url = upload_result["url"]
+        
+        # Mettre à jour le profil
+        current_user.avatar_url = avatar_url
+        db.commit()
+        db.refresh(current_user)
+        
+        return {"success": True, "avatar_url": avatar_url}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de l'upload de l'avatar: {str(e)}"
+        )
