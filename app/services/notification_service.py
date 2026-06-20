@@ -178,6 +178,27 @@ class NotificationService:
         notification_data = status_messages.get(new_status)
         
         if notification_data:
+            # Enrichir dynamiquement le message d'entretien planifié
+            if new_status == "interview_scheduled":
+                details_str = ""
+                if application.interview_date:
+                    details_str += f" prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}."
+                
+                fmt_map = {"visio": "en visioconférence", "physical": "en présentiel", "phone": "par téléphone"}
+                itype = application.interview_type
+                if itype in fmt_map:
+                    details_str += f" L'entretien se déroulera {fmt_map[itype]}."
+                
+                if itype == "visio" and application.interview_link:
+                    details_str += f" Lien de connexion : {application.interview_link}"
+                elif itype == "physical" and application.interview_address:
+                    details_str += f" Adresse : {application.interview_address}"
+                
+                if application.interview_instructions:
+                    details_str += f"\n\nConsignes : {application.interview_instructions}"
+                
+                notification_data["message"] = f"Un entretien a été planifié pour '{job_title}'" + details_str
+
             # Créer notification in-app
             self.create_notification(
                 db,
@@ -201,10 +222,10 @@ class NotificationService:
                     body=notification_data["message"] + f"\n\nConsultez votre candidature: {settings.FRONTEND_URL}/applications/{application.id}",
                     html_body=f"""
                     <html>
-                        <body>
-                            <h2>{notification_data["title"]}</h2>
-                            <p>{notification_data["message"]}</p>
-                            <p><a href="{settings.FRONTEND_URL}/applications/{application.id}">Voir ma candidature</a></p>
+                        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                            <h2 style="color: #1a5c32;">{notification_data["title"]}</h2>
+                            <p style="white-space: pre-line;">{notification_data["message"]}</p>
+                            <p style="margin-top: 24px;"><a href="{settings.FRONTEND_URL}/applications/{application.id}" style="background-color: #1a5c32; color: white; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-weight: bold;">Voir ma candidature</a></p>
                         </body>
                     </html>
                     """
@@ -249,13 +270,26 @@ class NotificationService:
         user = application.user
         job_title = application.job.offre_brute.title if application.job.offre_brute else "Offre"
         
+        fmt_map = {"visio": "visioconférence", "physical": "présentiel", "phone": "téléphone"}
+        format_info = f" ({fmt_map[application.interview_type]})" if application.interview_type in fmt_map else ""
+        
+        location_info = ""
+        if application.interview_type == "visio" and application.interview_link:
+            location_info = f"\nLien de connexion : {application.interview_link}"
+        elif application.interview_type == "physical" and application.interview_address:
+            location_info = f"\nAdresse : {application.interview_address}"
+            
+        instructions_info = f"\nConsignes : {application.interview_instructions}" if application.interview_instructions else ""
+        
+        msg = f"N'oubliez pas votre entretien{format_info} pour '{job_title}' prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}.{location_info}{instructions_info}"
+        
         # Créer notification
         self.create_notification(
             db,
             user_id=user.id,
             type="interview_reminder",
             title="📅 Rappel: Entretien demain",
-            message=f"N'oubliez pas votre entretien pour '{job_title}' prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}",
+            message=msg,
             action_url=f"/applications/{application.id}",
             extra_data={"application_id": str(application.id)}
         )
@@ -265,5 +299,5 @@ class NotificationService:
             await self.send_email(
                 to_email=user.email,
                 subject=f"Rappel: Entretien pour {job_title}",
-                body=f"Bonjour,\n\nCeci est un rappel pour votre entretien concernant le poste '{job_title}' prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}.\n\nBonne chance !"
+                body=f"Bonjour,\n\nCeci est un rappel pour votre entretien concernant le poste '{job_title}' prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}.{location_info}{instructions_info}\n\nBonne chance !"
             )

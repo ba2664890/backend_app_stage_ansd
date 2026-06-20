@@ -465,6 +465,10 @@ class Application(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     reviewed_at = Column(DateTime)  # When recruiter first reviewed
     interview_date = Column(DateTime)
+    interview_type = Column(String(50))
+    interview_link = Column(String(512))
+    interview_address = Column(String(512))
+    interview_instructions = Column(Text)
     decision_date = Column(DateTime)
     
     # Relations

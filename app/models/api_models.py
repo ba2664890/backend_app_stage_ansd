@@ -558,6 +558,10 @@ class ApplicationUpdateStatus(BaseModel):
     status: str = Field(..., description="Nouveau statut (applied, shortlisted, interview_scheduled, etc.)")
     comment: Optional[str] = Field(None, description="Commentaire sur le changement")
     interview_date: Optional[datetime] = Field(None, description="Date d'entretien si applicable")
+    interview_type: Optional[str] = Field(None, description="Type d'entretien (visio, physical, phone)")
+    interview_link: Optional[str] = Field(None, description="Lien de visioconférence (Google Meet, Zoom...)")
+    interview_address: Optional[str] = Field(None, description="Adresse physique de l'entretien")
+    interview_instructions: Optional[str] = Field(None, description="Instructions de préparation")
     rating: Optional[int] = Field(None, ge=1, le=5, description="Note de 1 à 5")
 
 class ApplicationUpdateNotes(BaseModel):
@@ -579,6 +583,10 @@ class ApplicationResponse(ApplicationBase):
     updated_at: datetime
     reviewed_at: Optional[datetime]
     interview_date: Optional[datetime]
+    interview_type: Optional[str] = None
+    interview_link: Optional[str] = None
+    interview_address: Optional[str] = None
+    interview_instructions: Optional[str] = None
     decision_date: Optional[datetime]
     
     class Config:

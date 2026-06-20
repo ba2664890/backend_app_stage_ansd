@@ -361,8 +361,13 @@ class ApplicationService:
         if status_data.status in ["shortlisted", "interview_scheduled"] and not application.reviewed_at:
             application.reviewed_at = datetime.now()
         
-        if status_data.status == "interview_scheduled" and status_data.interview_date:
-            application.interview_date = status_data.interview_date
+        if status_data.status == "interview_scheduled":
+            if status_data.interview_date:
+                application.interview_date = status_data.interview_date
+            application.interview_type = getattr(status_data, "interview_type", None)
+            application.interview_link = getattr(status_data, "interview_link", None)
+            application.interview_address = getattr(status_data, "interview_address", None)
+            application.interview_instructions = getattr(status_data, "interview_instructions", None)
             logger.info(f"Entretien planifié pour {application_id} le {status_data.interview_date}")
         
         if status_data.status in ["hired", "rejected"]:
