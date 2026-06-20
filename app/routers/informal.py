@@ -39,7 +39,7 @@ async def create_passport(
     db: Session = Depends(get_db)
 ):
     """Créer un Passeport Numérique."""
-    passport = await DigitalPassportService.create_passport(db, str(current_user.id))
+    passport = await DigitalPassportService.create_passport(db, str(current_user.user_id))
     return {
         "passport_id": str(passport.id),
         "status": passport.status.value,
@@ -63,7 +63,7 @@ async def add_peer_review(
         raise HTTPException(status_code=400, detail="Rating must be 1-5")
     
     review = await DigitalPassportService.add_peer_review(
-        db, passport_id, str(current_user.id), rating, comment,
+        db, passport_id, str(current_user.user_id), rating, comment,
         skills_validated, work_relationship
     )
     
@@ -80,7 +80,7 @@ async def get_passport_progress(
     db: Session = Depends(get_db)
 ):
     """Récupérer la progression du Passeport."""
-    progress = await DigitalPassportService.get_passport_progress(db, str(current_user.id))
+    progress = await DigitalPassportService.get_passport_progress(db, str(current_user.user_id))
     if not progress:
         raise HTTPException(status_code=404, detail="Passport not found")
     return progress
@@ -104,7 +104,7 @@ async def create_project(
 ):
     """Créer un nouveau projet dans le portfolio."""
     project = await PortfolioService.create_project(
-        db, str(current_user.id), title, description, category,
+        db, str(current_user.user_id), title, description, category,
         skills_used, budget, result_description, media_urls,
         client_name, client_contact
     )
@@ -139,7 +139,7 @@ async def get_portfolio_stats(
     db: Session = Depends(get_db)
 ):
     """Récupérer les stats du portfolio."""
-    stats = await PortfolioService.get_portfolio_stats(db, str(current_user.id))
+    stats = await PortfolioService.get_portfolio_stats(db, str(current_user.user_id))
     return stats
 
 
@@ -151,7 +151,7 @@ async def get_user_badges(
     db: Session = Depends(get_db)
 ):
     """Récupérer tous les badges de l'utilisateur."""
-    badges = await BadgeService.get_user_badges(db, str(current_user.id))
+    badges = await BadgeService.get_user_badges(db, str(current_user.user_id))
     return badges
 
 
@@ -163,7 +163,7 @@ async def check_badge_eligibility(
 ):
     """Vérifier si l'utilisateur peut obtenir un badge."""
     is_eligible = await BadgeService.check_badge_criteria(
-        db, str(current_user.id), badge_id
+        db, str(current_user.user_id), badge_id
     )
     
     return {
@@ -186,7 +186,7 @@ async def request_mentorship(
     """Demander du mentorat."""
     expected_end = datetime.now() + timedelta(weeks=duration_weeks)
     mentorship = await MentoringService.create_mentorship_request(
-        db, mentor_id, str(current_user.id), skill_focus, expected_end
+        db, mentor_id, str(current_user.user_id), skill_focus, expected_end
     )
     
     return {
@@ -246,7 +246,7 @@ async def request_trust_bond(
     """Demander une garantie de confiance."""
     expiration = datetime.now() + timedelta(days=365)
     bond = await TrustBondService.create_trust_bond(
-        db, str(current_user.id), amount, expiration
+        db, str(current_user.user_id), amount, expiration
     )
     
     return {
@@ -268,7 +268,7 @@ async def file_trust_bond_claim(
 ):
     """Déposer une réclamation contre une garantie."""
     claim = await TrustBondService.file_claim(
-        db, bond_id, str(current_user.id), reason, amount_claimed, evidence_urls
+        db, bond_id, str(current_user.user_id), reason, amount_claimed, evidence_urls
     )
     
     return {
@@ -287,7 +287,7 @@ async def enroll_course(
     db: Session = Depends(get_db)
 ):
     """S'inscrire à une formation."""
-    enrollment = await TrainingService.enroll_user(db, course_id, str(current_user.id))
+    enrollment = await TrainingService.enroll_user(db, course_id, str(current_user.user_id))
     
     return {
         "enrollment_id": str(enrollment.id),
@@ -361,7 +361,7 @@ async def request_micro_loan(
         raise HTTPException(status_code=400, detail="Loan amount must be 50K-5M CFA")
     
     loan = await MicroLoanService.request_loan(
-        db, str(current_user.id), loan_amount, purpose, description, duration_months
+        db, str(current_user.user_id), loan_amount, purpose, description, duration_months
     )
     
     return {
@@ -407,7 +407,7 @@ async def map_informal_skill(
     service = SkillMappingService(llm_client)
     
     mapping = await service.map_informal_skills(
-        db, str(current_user.id), informal_skill, context
+        db, str(current_user.user_id), informal_skill, context
     )
     
     return {
@@ -436,7 +436,7 @@ async def give_recommendation(
         raise HTTPException(status_code=400, detail="Confidence must be 1-5")
     
     recommendation = await PeerRecommendationService.create_recommendation(
-        db, str(current_user.id), recommended_user_id, skills_recommended,
+        db, str(current_user.user_id), recommended_user_id, skills_recommended,
         reason, confidence_level, work_relationship
     )
     
@@ -454,7 +454,7 @@ async def get_received_recommendations(
 ):
     """Récupérer toutes les recommandations reçues."""
     recommendations = await PeerRecommendationService.get_user_recommendations(
-        db, str(current_user.id)
+        db, str(current_user.user_id)
     )
     return recommendations
 
@@ -468,7 +468,7 @@ async def get_career_dashboard(
 ):
     """Récupérer le dashboard de progression de carrière complet."""
     dashboard = await CareerProgressionService.get_progression_dashboard(
-        db, str(current_user.id)
+        db, str(current_user.user_id)
     )
     return dashboard
 
@@ -480,7 +480,7 @@ async def update_career_progression(
 ):
     """Mettre à jour la progression de carrière."""
     progression = await CareerProgressionService.update_progression(
-        db, str(current_user.id)
+        db, str(current_user.user_id)
     )
     
     return {
@@ -527,7 +527,7 @@ async def approve_loan_request(
     if role_val != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     
-    loan = await MicroLoanService.approve_loan(db, loan_id, str(current_user.id))
+    loan = await MicroLoanService.approve_loan(db, loan_id, str(current_user.user_id))
     
     return {
         "loan_id": str(loan.id),
