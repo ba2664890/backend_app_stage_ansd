@@ -2,7 +2,7 @@
 import os
 import shutil
 import uuid
-from typing import List
+from typing import List, Optional
 from app.services.cloudinary_service import CloudinaryService
 from app.utils import logger
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
@@ -22,7 +22,7 @@ class DocumentResponse(BaseModel):
     id: uuid.UUID
     name: str
     file_type: str
-    size: str
+    size: Optional[str] = None
     category: str
     uploaded_at: datetime
     is_verified: bool
@@ -232,7 +232,7 @@ def get_documents(
             "category": doc.category,
             "uploaded_at": doc.uploaded_at,
             "is_verified": doc.is_verified,
-            "url": f"/static/uploads/{os.path.basename(doc.file_path)}"
+            "url": doc.cloudinary_url if doc.cloudinary_url else (doc.file_path if (doc.file_path and doc.file_path.startswith('http')) else f"/static/uploads/{os.path.basename(doc.file_path)}")
         }
         for doc in docs
     ]
