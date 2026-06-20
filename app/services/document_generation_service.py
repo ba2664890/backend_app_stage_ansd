@@ -307,15 +307,10 @@ Rédige la lettre complète avec formules de politesse adaptées.
         full_name = f"{profile.first_name} {profile.last_name}"
         title_txt = target_job or profile.current_title or "Professionnel"
 
-        banner_data = [[
-            Paragraph(f"<b>{full_name}</b>", styles["cv_name"]),
-            Paragraph(title_txt, styles["cv_title"]),
-        ]]
-        banner = Table(banner_data, colWidths=[A4[0] - 2*cm, None])
         banner = Table(
             [[Paragraph(f"<b>{full_name}</b>", styles["cv_name"]),
               Paragraph(title_txt, styles["cv_subtitle"])]],
-            colWidths=[A4[0]]
+            colWidths=[A4[0]*0.65, A4[0]*0.35]
         )
         banner.setStyle(TableStyle([
             ("BACKGROUND", (0,0), (-1,-1), PRIMARY),
@@ -368,7 +363,7 @@ Rédige la lettre complète avec formules de politesse adaptées.
         if profile.skills:
             items.append(Paragraph("COMPÉTENCES", styles["cv_section_left"]))
             items.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceAfter=4))
-            for skill in profile.skills[:15]:
+            for skill in profile.skills[:10]:
                 items.append(Paragraph(f"• {skill}", styles["cv_small"]))
                 items.append(Spacer(1, 1))
             items.append(Spacer(1, 0.5*cm))
@@ -378,7 +373,7 @@ Rédige la lettre complète avec formules de politesse adaptées.
             items.append(Paragraph("LANGUES", styles["cv_section_left"]))
             items.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceAfter=4))
             langs = profile.languages if isinstance(profile.languages, list) else list(profile.languages.items())
-            for lang in langs[:5]:
+            for lang in langs[:3]:
                 label = f"{lang[0]} – {lang[1]}" if isinstance(lang, (list, tuple)) else str(lang)
                 items.append(Paragraph(f"• {label}", styles["cv_small"]))
                 items.append(Spacer(1, 1))
@@ -389,7 +384,7 @@ Rédige la lettre complète avec formules de politesse adaptées.
             items.append(Paragraph("CERTIFICATIONS", styles["cv_section_left"]))
             items.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceAfter=4))
             certs = profile.certifications if isinstance(profile.certifications, list) else [profile.certifications]
-            for cert in certs[:4]:
+            for cert in certs[:3]:
                 label = cert.get("name", str(cert)) if isinstance(cert, dict) else str(cert)
                 items.append(Paragraph(f"• {label}", styles["cv_small"]))
                 items.append(Spacer(1, 1))
@@ -412,18 +407,16 @@ Rédige la lettre complète avec formules de politesse adaptées.
             items.append(Paragraph("EXPÉRIENCES PROFESSIONNELLES", styles["cv_section_right"]))
             items.append(HRFlowable(width="100%", thickness=2, color=PRIMARY, spaceAfter=6))
             exps = profile.experiences if isinstance(profile.experiences, list) else [profile.experiences]
-            for exp in exps[:6]:
+            for exp in exps[:4]:
                 if isinstance(exp, dict):
                     job_title = exp.get("title", exp.get("poste", ""))
                     company   = exp.get("company", exp.get("entreprise", ""))
                     period    = exp.get("period", exp.get("periode", ""))
                     desc      = exp.get("description", exp.get("desc", ""))
-                    items.append(KeepTogether([
-                        Paragraph(f"<b>{job_title}</b>", styles["cv_exp_title"]),
-                        Paragraph(f"{company} | {period}", styles["cv_exp_meta"]),
-                        Paragraph(desc[:400] if desc else "", styles["cv_exp_desc"]),
-                        Spacer(1, 0.35*cm),
-                    ]))
+                    items.append(Paragraph(f"<b>{job_title}</b>", styles["cv_exp_title"]))
+                    items.append(Paragraph(f"{company} | {period}", styles["cv_exp_meta"]))
+                    items.append(Paragraph(desc[:200] if desc else "", styles["cv_exp_desc"]))
+                    items.append(Spacer(1, 0.35*cm))
                 else:
                     items.append(Paragraph(f"• {str(exp)}", styles["body_normal"]))
             items.append(Spacer(1, 0.3*cm))
