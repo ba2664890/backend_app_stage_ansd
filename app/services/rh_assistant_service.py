@@ -1,10 +1,10 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from sqlalchemy.orm import Session
 from uuid import UUID
 import logging
 import json
 
-from ..models.database_models import RHChatHistory, Recruiter, OffreEmploiBrute
+from ..models.database_models import RHChatHistory, CandidateChatHistory, Recruiter, OffreEmploiBrute
 from ..models.api_models import ChatRequest, GenerateJobDescriptionRequest
 from .llm_client import LLMClient
 from .rag_service import RAGService
@@ -125,6 +125,16 @@ Directives absolues :
             rag_context = self.rag_service.search_context(question, n_results=5)
             full_context = rag_context if rag_context else "Aucune offre spécifique trouvée dans la base de données actuelle pour cette requête."
         
+        # 1.5. Récupérer l'historique récent de la conversation pour conserver le fil de la discussion
+        recent_history = self.get_chat_history(db, user_or_recruiter_id, user_role=user_role, limit=6)
+        if recent_history:
+            history_lines = []
+            for h in reversed(recent_history):
+                history_lines.append(f"Utilisateur: {h.question}")
+                history_lines.append(f"Assistant: {h.answer}")
+            history_context = "\n".join(history_lines)
+            full_context = f"HISTORIQUE RÉCENT DE LA CONVERSATION:\n{history_context}\n\nCONTEXTE COMPLÉMENTAIRE:\n{full_context}"
+        
         # 2. LLM : Générer la réponse
         answer = await self.llm_client.generate_response(
             system_prompt=system_prompt,
@@ -138,13 +148,23 @@ Directives absolues :
                 recruiter_id=user_or_recruiter_id,
                 question=question,
                 answer=answer,
-                context={**context_data, "rag_sources_used": bool(rag_context if user_role == 'recruiter' else full_context)},
+                context={**context_data, "rag_sources_used": bool(rag_context)},
                 model_used=self.llm_client.model_name,
                 tokens_used=len(question) + len(answer)
             )
             db.add(chat_history)
             db.commit()
-        # Note: Pour les candidats, on pourrait créer une table CandidateChatHistory séparée
+        else:
+            chat_history = CandidateChatHistory(
+                user_id=user_or_recruiter_id,
+                question=question,
+                answer=answer,
+                context={**context_data, "rag_sources_used": bool(full_context)},
+                model_used=self.llm_client.model_name,
+                tokens_used=len(question) + len(answer)
+            )
+            db.add(chat_history)
+            db.commit()
         
         return {
             "answer": answer,
@@ -276,10 +296,16 @@ Directives absolues :
     def get_chat_history(
         self,
         db: Session,
-        recruiter_id: UUID,
+        user_or_recruiter_id: UUID,
+        user_role: str = 'recruiter',
         limit: int = 50
-    ) -> List[RHChatHistory]:
+    ) -> List[Any]:
         """Récupère l'historique des conversations."""
-        return db.query(RHChatHistory).filter(
-            RHChatHistory.recruiter_id == recruiter_id
-        ).order_by(RHChatHistory.created_at.desc()).limit(limit).all()
+        if user_role == 'recruiter':
+            return db.query(RHChatHistory).filter(
+                RHChatHistory.recruiter_id == user_or_recruiter_id
+            ).order_by(RHChatHistory.created_at.desc()).limit(limit).all()
+        else:
+            return db.query(CandidateChatHistory).filter(
+                CandidateChatHistory.user_id == user_or_recruiter_id
+            ).order_by(CandidateChatHistory.created_at.desc()).limit(limit).all()

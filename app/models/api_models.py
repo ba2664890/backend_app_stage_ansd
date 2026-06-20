@@ -631,7 +631,8 @@ class ChatResponse(BaseModel):
 class ChatHistoryResponse(BaseModel):
     """Historique de chat."""
     id: UUID
-    recruiter_id: UUID
+    recruiter_id: Optional[UUID] = None
+    user_id: Optional[UUID] = None
     question: str
     answer: str
     created_at: datetime

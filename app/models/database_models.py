@@ -558,6 +558,29 @@ class RHChatHistory(Base):
         Index('idx_chat_history_created', 'created_at'),
     )
 
+class CandidateChatHistory(Base):
+    """Historique des conversations avec l'assistant carrière candidat."""
+    
+    __tablename__ = "candidate_chat_history"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=False)
+    context = Column(JSON)  # Context utilisé pour la réponse (profil, CVs, etc.)
+    model_used = Column(String(50))  # Nom du modèle LLM utilisé
+    tokens_used = Column(Integer)  # Nombre de tokens consommés
+    created_at = Column(DateTime, default=func.now())
+    
+    # Relations
+    user = relationship("User")
+    
+    # Index
+    __table_args__ = (
+        Index('idx_candidate_chat_history_user', 'user_id'),
+        Index('idx_candidate_chat_history_created', 'created_at'),
+    )
+
 # ==================== RBAC: ROLES & PERMISSIONS ====================
 
 class Role(Base):

@@ -89,15 +89,14 @@ async def get_chat_history(
     user_role_obj = getattr(current_user.user, 'role', UserRole.CANDIDATE) if hasattr(current_user, 'user') and current_user.user else UserRole.CANDIDATE
     role_value = user_role_obj.value if hasattr(user_role_obj, 'value') else str(user_role_obj)
 
-    if role_value != 'recruiter' and role_value != 'hr_manager':
-        return []
-
-    recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
+    if role_value == 'recruiter' or role_value == 'hr_manager':
+        recruiter = recruiter_service.get_or_create_recruiter(db, user_id)
+        if not recruiter:
+            raise HTTPException(status_code=403, detail="Recruteur uniquement")
+        history = assistant_service.get_chat_history(db, recruiter.id, user_role='recruiter', limit=limit)
+    else:
+        history = assistant_service.get_chat_history(db, user_id, user_role='candidate', limit=limit)
     
-    if not recruiter:
-        raise HTTPException(status_code=403, detail="Recruteur uniquement")
-    
-    history = assistant_service.get_chat_history(db, recruiter.id, limit)
     return history
 
 
