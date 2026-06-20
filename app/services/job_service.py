@@ -596,6 +596,73 @@ class JobService:
             logger.error(f"Error deleting job {job_id}: {e}")
             raise
 
+    def update_job(self, db: Session, job_id: UUID, job_data: Union[Dict[str, Any], JobCreate], recruiter_id: UUID) -> Optional[JobOfferResponse]:
+        """
+        Met à jour une offre d'emploi existante.
+        """
+        try:
+            brute = db.query(OffreEmploiBrute).filter(
+                OffreEmploiBrute.id == job_id,
+                OffreEmploiBrute.recruiter_id == recruiter_id
+            ).first()
+            
+            if not brute:
+                return None
+
+            if hasattr(job_data, "model_dump"):
+                data = job_data.model_dump()
+            else:
+                data = job_data
+
+            # Mettre à jour les champs bruts
+            brute.title = data.get("title", brute.title)
+            brute.company_name = data.get("company_name", brute.company_name)
+            brute.location = data.get("location", brute.location)
+            brute.contract_type = data.get("contract_type", brute.contract_type)
+            brute.description = data.get("description", brute.description)
+            brute.url = data.get("url", brute.url)
+            brute.education_level = data.get("education_level", brute.education_level)
+            brute.nb_positions = data.get("nb_positions", brute.nb_positions)
+            brute.expiration_date = data.get("expiration_date", brute.expiration_date)
+            brute.remote_type = data.get("remote_type", brute.remote_type)
+            brute.is_urgent = data.get("is_urgent", brute.is_urgent)
+            brute.languages = data.get("languages", brute.languages)
+            brute.benefits = data.get("benefits", brute.benefits)
+
+            # Mettre à jour ou créer l'enrichissement
+            enrichie = db.query(OffreEmploiEnrichie).filter(OffreEmploiEnrichie.offre_id == job_id).first()
+            if not enrichie:
+                enrichie = OffreEmploiEnrichie(
+                    offre_id=brute.id,
+                    extracted_contract_type=brute.contract_type,
+                    extracted_sector=data.get("sector"),
+                    extracted_salary_min=data.get("min_salary"),
+                    extracted_salary_max=data.get("max_salary"),
+                    extracted_skills=data.get("skills", []),
+                    extracted_experience_years=data.get("experience_years"),
+                    extracted_job_title=extract_job_title(brute.title),
+                    confidence_score=1.0,
+                    processed_at=datetime.utcnow()
+                )
+                db.add(enrichie)
+            else:
+                enrichie.extracted_contract_type = brute.contract_type
+                enrichie.extracted_sector = data.get("sector", enrichie.extracted_sector)
+                enrichie.extracted_salary_min = data.get("min_salary", enrichie.extracted_salary_min)
+                enrichie.extracted_salary_max = data.get("max_salary", enrichie.extracted_salary_max)
+                enrichie.extracted_skills = data.get("skills", enrichie.extracted_skills)
+                enrichie.extracted_experience_years = data.get("experience_years", enrichie.extracted_experience_years)
+                enrichie.extracted_job_title = extract_job_title(brute.title)
+                enrichie.processed_at = datetime.utcnow()
+
+            db.commit()
+            db.refresh(brute)
+            return self._create_job_response(brute, enrichie)
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error updating job: {e}")
+            raise
+
     def enrich_job_title(self, db: Session, job_id: UUID) -> bool:
         """
         Enrichit le titre du poste pour une offre existante.

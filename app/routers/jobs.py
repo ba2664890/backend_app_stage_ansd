@@ -136,6 +136,32 @@ async def delete_job(
         raise HTTPException(status_code=404, detail="Offre non trouvée ou non autorisée")
     return None
 
+@router.put("/{job_id}", response_model=JobOfferResponse)
+async def update_job(
+    job_id: str,
+    job_data: JobCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Met à jour une offre d'emploi existante.
+    """
+    job_uuid = UUID(job_id)
+    user_obj = current_user.user
+    recruiter_profile = user_obj.recruiter_profile
+    if not recruiter_profile:
+        raise HTTPException(status_code=403, detail="Action réservée aux recruteurs")
+        
+    updated_job = job_service.update_job(
+        db, 
+        job_uuid, 
+        job_data, 
+        recruiter_profile.id
+    )
+    if not updated_job:
+        raise HTTPException(status_code=404, detail="Offre non trouvée ou non autorisée")
+    return updated_job
+
 @router.get("/saved", response_model=List[JobOfferResponse])
 async def get_saved_jobs(
     db: Session = Depends(get_db),

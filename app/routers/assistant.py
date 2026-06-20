@@ -20,6 +20,7 @@ from ..services.llm_client import LLMClient
 from ..services.rag_service import RAGService
 from ..services.recruiter_service import RecruiterService
 from ..utils.auth import get_current_user
+from ..models.database_models import UserRole
 
 router = APIRouter(prefix="/api/v1/assistant", tags=["ai-assistant"])
 
@@ -44,7 +45,8 @@ async def chat_with_assistant(
         recruiter_service = request.app.state.recruiter_service
         
         user_id = current_user.user_id
-        user_role = getattr(current_user, 'role', 'candidate')
+        user_role_obj = getattr(current_user.user, 'role', UserRole.CANDIDATE) if hasattr(current_user, 'user') and current_user.user else UserRole.CANDIDATE
+        user_role = user_role_obj.value if hasattr(user_role_obj, 'value') else str(user_role_obj)
         
         # Déterminer le contexte selon le rôle
         if user_role == 'recruiter' or user_role == 'hr_manager':
@@ -84,8 +86,8 @@ async def get_chat_history(
     recruiter_service = request.app.state.recruiter_service
     
     user_id = current_user.user_id
-    user_role = getattr(current_user, 'role', 'candidate')
-    role_value = user_role.value if hasattr(user_role, "value") else str(user_role)
+    user_role_obj = getattr(current_user.user, 'role', UserRole.CANDIDATE) if hasattr(current_user, 'user') and current_user.user else UserRole.CANDIDATE
+    role_value = user_role_obj.value if hasattr(user_role_obj, 'value') else str(user_role_obj)
 
     if role_value != 'recruiter' and role_value != 'hr_manager':
         return []
