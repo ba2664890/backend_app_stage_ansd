@@ -285,6 +285,7 @@ class UserProfileResponse(UserProfileBase):
     user_id: UUID
     role: Optional[str] = Field(None, description="Rôle utilisateur")
     email: Optional[str] = Field(None, description="Email de l'utilisateur")
+    settings: Optional[Dict[str, Any]] = None
     
     class Config:
         from_attributes = True
@@ -588,6 +589,20 @@ class ApplicationWithDetailsResponse(ApplicationResponse):
     user_name: Optional[str] = None
     job_title: Optional[str] = None
     company_name: Optional[str] = None
+    cv_url: Optional[str] = None
+    cv_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    category: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    bio: Optional[str] = None
+    skills: Optional[List[str]] = None
+    experience_years: Optional[int] = None
+    education_level: Optional[str] = None
+    match_score: Optional[int] = None
+    linkedin: Optional[str] = None
+    github: Optional[str] = None
+    portfolio: Optional[str] = None
 
 class ApplicationStatusHistoryResponse(BaseModel):
     """Modèle de réponse pour l'historique de statut."""

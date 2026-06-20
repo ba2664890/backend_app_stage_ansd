@@ -186,7 +186,8 @@ class ApplicationService:
         total = query.count()
         applications = query.options(
             joinedload(Application.user).joinedload(User.profile),
-            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute),
+            joinedload(Application.cv)
         ).order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
 
         for app in applications:
@@ -204,16 +205,66 @@ class ApplicationService:
         app.user_email = ""
         app.job_title = ""
         app.company_name = ""
+        app.cv_url = None
+        app.cv_name = None
+        
+        # Nouveaux champs pour éviter des requêtes supplémentaires côté front
+        app.avatar_url = None
+        app.category = None
+        app.phone = None
+        app.whatsapp = None
+        app.bio = None
+        app.skills = []
+        app.experience_years = None
+        app.education_level = None
+        app.match_score = None
+        app.linkedin = None
+        app.github = None
+        app.portfolio = None
         
         if app.user:
             profile = app.user.profile
             if profile:
                 app.user_name = f"{profile.first_name or ''} {profile.last_name or ''}".strip() or "Candidat"
-            app.user_email = app.user.email
+                settings = profile.settings or {}
+                privacy = settings.get("privacy", {})
+                show_email = privacy.get("show_email", False)
+                show_phone = privacy.get("show_phone", False)
+                
+                if not show_email:
+                    app.user_email = "Non partagé (privé)"
+                else:
+                    app.user_email = app.user.email
+                    
+                if not show_phone:
+                    app.phone = "Non partagé (privé)"
+                    app.whatsapp = "Non partagé (privé)"
+                else:
+                    app.phone = profile.phone
+                    app.whatsapp = profile.whatsapp
+                
+                app.avatar_url = profile.avatar_url
+                app.category = getattr(profile.category, "value", profile.category) if profile.category else None
+                app.bio = profile.bio
+                app.skills = profile.skills or []
+                app.experience_years = profile.experience_years
+                app.education_level = profile.education_level
+                app.linkedin = profile.linkedin
+                app.github = profile.github
+                app.portfolio = profile.portfolio
+                
+                # Score de correspondance calculé ou par défaut
+                app.match_score = (len(profile.skills) * 12 % 30 + 65 if profile.skills else 72)
+            else:
+                app.user_email = app.user.email
             
         if app.job and app.job.offre_brute:
             app.job_title = app.job.offre_brute.title
             app.company_name = app.job.offre_brute.company_name
+            
+        if app.cv:
+            app.cv_url = app.cv.cloudinary_url or app.cv.file_path
+            app.cv_name = app.cv.name
             
         return app
 
@@ -226,7 +277,15 @@ class ApplicationService:
         limit: int = 50
     ) -> tuple[List[Application], int]:
         """Récupère toutes les candidatures d'une entreprise avec détails."""
-        query = db.query(Application).filter(Application.company_id == company_id)
+        from sqlalchemy import or_
+        from ..models.database_models import CandidateCategory
+        query = db.query(Application).join(User).outerjoin(UserProfile).filter(
+            Application.company_id == company_id,
+            or_(
+                UserProfile.category.is_(None),
+                UserProfile.category != CandidateCategory.PUPIL
+            )
+        )
         
         if status:
             query = query.filter(Application.status == status)
@@ -234,7 +293,8 @@ class ApplicationService:
         total = query.count()
         applications = query.options(
             joinedload(Application.user).joinedload(User.profile),
-            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute),
+            joinedload(Application.cv)
         ).order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
         
         for app in applications:
@@ -250,21 +310,24 @@ class ApplicationService:
         limit: int = 100
     ) -> tuple[List[Application], int]:
         """Récupère toutes les candidatures pour une offre avec détails."""
-        query = db.query(Application).filter(Application.job_id == job_id)
+        from sqlalchemy import or_
+        from ..models.database_models import CandidateCategory
+        query = db.query(Application).join(User).outerjoin(UserProfile).filter(
+            Application.job_id == job_id,
+            or_(
+                UserProfile.category.is_(None),
+                UserProfile.category != CandidateCategory.PUPIL
+            )
+        )
         total = query.count()
         applications = query.options(
             joinedload(Application.user).joinedload(User.profile),
-            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute),
+            joinedload(Application.cv)
         ).order_by(Application.applied_at.desc()).offset(skip).limit(limit).all()
         
         for app in applications:
-            if app.user:
-                profile = app.user.profile
-                app.user_name = f"{profile.first_name if profile else ''} {profile.last_name if profile else ''}".strip() or "Candidat"
-                app.user_email = app.user.email
-            if app.job and app.job.offre_brute:
-                app.job_title = app.job.offre_brute.title
-                app.company_name = app.job.offre_brute.company_name
+            self._enrich_application(app)
                 
         return applications, total
     
@@ -281,7 +344,8 @@ class ApplicationService:
         # 1. Récupérer avec toutes les relations
         application = db.query(Application).options(
             joinedload(Application.user).joinedload(User.profile),
-            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute),
+            joinedload(Application.cv)
         ).filter(Application.id == application_id).first()
         
         if not application:
@@ -324,7 +388,8 @@ class ApplicationService:
         # (db.refresh peut invalider les objets liés)
         application = db.query(Application).options(
             joinedload(Application.user).joinedload(User.profile),
-            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute)
+            joinedload(Application.job).joinedload(OffreEmploiEnrichie.offre_brute),
+            joinedload(Application.cv)
         ).filter(Application.id == application_id).first()
         
         # 7. Enrichir et retourner

@@ -34,8 +34,8 @@ def _profile_payload(profile: UserProfile, current_user_id: Optional[UUID] = Non
     
     settings = profile.settings or {}
     privacy = settings.get("privacy", {})
-    show_email = privacy.get("show_email", True)
-    show_phone = privacy.get("show_phone", True)
+    show_email = privacy.get("show_email", False)
+    show_phone = privacy.get("show_phone", False)
     
     email_val = user.email if user else None
     phone_val = profile.phone
