@@ -348,7 +348,7 @@ class UserService:
         Recherche des utilisateurs avec filtres.
         """
         try:
-            query = db.query(User).outerjoin(UserProfile)
+            query = db.query(User).outerjoin(UserProfile).options(joinedload(User.profile))
             
             if role:
                 query = query.filter(User.role == role)
