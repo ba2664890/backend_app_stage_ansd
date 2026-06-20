@@ -232,7 +232,11 @@ def get_documents(
             "category": doc.category,
             "uploaded_at": doc.uploaded_at,
             "is_verified": doc.is_verified,
-            "url": doc.cloudinary_url if doc.cloudinary_url else (doc.file_path if (doc.file_path and doc.file_path.startswith('http')) else f"/static/uploads/{os.path.basename(doc.file_path)}")
+            "url": doc.cloudinary_url if doc.cloudinary_url else (
+                doc.file_path if (doc.file_path and doc.file_path.startswith('http'))
+                else (f"/api/v1/documents/generate/download/{os.path.basename(doc.file_path)}" if "generated" in str(doc.file_path)
+                      else f"/static/uploads/{os.path.basename(doc.file_path)}")
+            )
         }
         for doc in docs
     ]

@@ -60,6 +60,8 @@ class DocumentGenerationResponse(BaseModel):
     document_type: str
     file_name: str
     download_url: str
+    docx_file_name: Optional[str] = None
+    docx_download_url: Optional[str] = None
     content_preview: Optional[str] = None  # Les 300 premiers caractères du texte généré
 
 
@@ -100,12 +102,16 @@ def _save_document_to_db(
     file_size = os.path.getsize(file_path)
     size_str = f"{file_size / 1024:.1f} KB"
 
+    file_type = "application/pdf"
+    if file_name.endswith(".docx"):
+        file_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
     new_doc = Document(
         id=uuid.uuid4(),
         user_id=user_id,
         name=file_name,
         file_path=file_path,
-        file_type="application/pdf",
+        file_type=file_type,
         size=size_str,
         category=doc_type,
         uploaded_at=datetime.utcnow(),
@@ -153,7 +159,10 @@ async def generate_cover_letter(
         logger.error(f"Erreur génération lettre de motivation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Erreur lors de la génération du document.")
 
+    # Enregistrer les deux versions en DB
     _save_document_to_db(db, current_user.user_id, result.file_path, result.file_name, "cover_letter")
+    if result.docx_file_path and result.docx_file_name:
+        _save_document_to_db(db, current_user.user_id, result.docx_file_path, result.docx_file_name, "cover_letter")
 
     return DocumentGenerationResponse(
         success=True,
@@ -161,6 +170,8 @@ async def generate_cover_letter(
         document_type="cover_letter",
         file_name=result.file_name,
         download_url=f"/api/v1/documents/generate/download/{result.file_name}",
+        docx_file_name=result.docx_file_name,
+        docx_download_url=f"/api/v1/documents/generate/download/{result.docx_file_name}" if result.docx_file_name else None,
         content_preview=result.content_text[:300] + "..." if len(result.content_text) > 300 else result.content_text,
     )
 
@@ -171,7 +182,7 @@ async def generate_cv(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Génère un CV PDF professionnel à partir du profil candidat."""
+    """Génère un CV PDF et Word professionnel à partir du profil candidat."""
     profile_db = db.query(UserProfile).filter(
         UserProfile.user_id == current_user.user_id
     ).first()
@@ -191,7 +202,10 @@ async def generate_cv(
         logger.error(f"Erreur génération CV: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Erreur lors de la génération du CV.")
 
+    # Enregistrer les deux versions en DB
     _save_document_to_db(db, current_user.user_id, result.file_path, result.file_name, "cv")
+    if result.docx_file_path and result.docx_file_name:
+        _save_document_to_db(db, current_user.user_id, result.docx_file_path, result.docx_file_name, "cv")
 
     return DocumentGenerationResponse(
         success=True,
@@ -199,7 +213,9 @@ async def generate_cv(
         document_type="cv",
         file_name=result.file_name,
         download_url=f"/api/v1/documents/generate/download/{result.file_name}",
-        content_preview=result.content_text[:300],
+        docx_file_name=result.docx_file_name,
+        docx_download_url=f"/api/v1/documents/generate/download/{result.docx_file_name}" if result.docx_file_name else None,
+        content_preview=result.content_text[:300] + "..." if len(result.content_text) > 300 else result.content_text,
     )
 
 
@@ -237,7 +253,10 @@ async def generate_other_letter(
         logger.error(f"Erreur génération lettre ({request.letter_type}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Erreur lors de la génération de la lettre.")
 
+    # Enregistrer les deux versions en DB
     _save_document_to_db(db, current_user.user_id, result.file_path, result.file_name, request.letter_type)
+    if result.docx_file_path and result.docx_file_name:
+        _save_document_to_db(db, current_user.user_id, result.docx_file_path, result.docx_file_name, request.letter_type)
 
     return DocumentGenerationResponse(
         success=True,
@@ -245,7 +264,9 @@ async def generate_other_letter(
         document_type=request.letter_type,
         file_name=result.file_name,
         download_url=f"/api/v1/documents/generate/download/{result.file_name}",
-        content_preview=result.content_text[:300],
+        docx_file_name=result.docx_file_name,
+        docx_download_url=f"/api/v1/documents/generate/download/{result.docx_file_name}" if result.docx_file_name else None,
+        content_preview=result.content_text[:300] + "..." if len(result.content_text) > 300 else result.content_text,
     )
 
 
@@ -254,7 +275,7 @@ async def download_generated_document(
     filename: str,
     current_user=Depends(get_current_user),
 ):
-    """Télécharge un document PDF généré."""
+    """Télécharge ou consulte un document généré (PDF en ligne, Word en téléchargement)."""
     # Sécurité : on n'accepte que les noms sans chemin traversal
     if "/" in filename or ".." in filename:
         raise HTTPException(status_code=400, detail="Nom de fichier invalide.")
@@ -263,11 +284,18 @@ async def download_generated_document(
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Fichier introuvable ou expiré.")
 
+    if filename.endswith(".docx"):
+        media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        disposition = "attachment"
+    else:
+        media_type = "application/pdf"
+        disposition = "inline"
+
     return FileResponse(
         path=file_path,
-        media_type="application/pdf",
+        media_type=media_type,
         filename=filename,
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f"{disposition}; filename={filename}"},
     )
 
 

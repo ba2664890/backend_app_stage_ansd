@@ -70,6 +70,8 @@ class GeneratedDocument:
     file_path: str
     file_name: str
     document_type: str
+    docx_file_path: Optional[str] = None
+    docx_file_name: Optional[str] = None
 
 
 class DocumentGenerationService:
@@ -92,6 +94,8 @@ class DocumentGenerationService:
     ) -> GeneratedDocument:
         """Génère une lettre de motivation sur mesure, strictement ancrée dans le profil."""
         content = await self._llm_cover_letter(profile, job_title, company_name, job_description, tone)
+        
+        # PDF
         file_path = self._build_letter_pdf(
             content=content,
             profile=profile,
@@ -99,19 +103,50 @@ class DocumentGenerationService:
             doc_type="cover_letter",
         )
         file_name = os.path.basename(file_path)
-        return GeneratedDocument(content, file_path, file_name, "cover_letter")
+        
+        # Word (.docx)
+        docx_file_path = self._build_letter_docx(
+            content=content,
+            profile=profile,
+            title=f"Lettre de motivation – {job_title} chez {company_name}",
+            doc_type="cover_letter",
+        )
+        docx_file_name = os.path.basename(docx_file_path)
+        
+        return GeneratedDocument(
+            content_text=content,
+            file_path=file_path,
+            file_name=file_name,
+            document_type="cover_letter",
+            docx_file_path=docx_file_path,
+            docx_file_name=docx_file_name
+        )
 
     async def generate_cv(
         self,
         profile: UserProfileData,
         target_job: str = "",
     ) -> GeneratedDocument:
-        """Génère un CV PDF structuré à partir du profil réel."""
+        """Génère un CV PDF et Word structuré à partir du profil réel."""
         summary = await self._llm_cv_summary(profile, target_job)
         profile.bio = summary  # on injecte l'accroche IA
+        
+        # PDF
         file_path = self._build_cv_pdf(profile, target_job)
         file_name = os.path.basename(file_path)
-        return GeneratedDocument(summary, file_path, file_name, "cv")
+        
+        # Word (.docx)
+        docx_file_path = self._build_cv_docx(profile, target_job)
+        docx_file_name = os.path.basename(docx_file_path)
+        
+        return GeneratedDocument(
+            content_text=summary,
+            file_path=file_path,
+            file_name=file_name,
+            document_type="cv",
+            docx_file_path=docx_file_path,
+            docx_file_name=docx_file_name
+        )
 
     async def generate_other_letter(
         self,
@@ -121,6 +156,8 @@ class DocumentGenerationService:
     ) -> GeneratedDocument:
         """Génère une lettre administrative (démission, relance, stage, recommandation)."""
         content = await self._llm_other_letter(profile, letter_type, context)
+        
+        # PDF
         file_path = self._build_letter_pdf(
             content=content,
             profile=profile,
@@ -128,7 +165,24 @@ class DocumentGenerationService:
             doc_type=letter_type,
         )
         file_name = os.path.basename(file_path)
-        return GeneratedDocument(content, file_path, file_name, letter_type)
+        
+        # Word (.docx)
+        docx_file_path = self._build_letter_docx(
+            content=content,
+            profile=profile,
+            title=self._letter_type_label(letter_type),
+            doc_type=letter_type,
+        )
+        docx_file_name = os.path.basename(docx_file_path)
+        
+        return GeneratedDocument(
+            content_text=content,
+            file_path=file_path,
+            file_name=file_name,
+            document_type=letter_type,
+            docx_file_path=docx_file_path,
+            docx_file_name=docx_file_name
+        )
 
     # ────────────────────────────────────────────────────────
     # GÉNÉRATION LLM (Gemini) — ANTI-HALLUCINATION
@@ -284,6 +338,278 @@ Rédige la lettre complète avec formules de politesse adaptées.
 
         doc.build(story)
         logger.info(f"PDF lettre généré : {file_path}")
+        return file_path
+
+    def _build_letter_docx(
+        self,
+        content: str,
+        profile: UserProfileData,
+        title: str,
+        doc_type: str,
+    ) -> str:
+        import docx
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        file_name = f"{doc_type}_{uuid.uuid4().hex[:8]}.docx"
+        file_path = os.path.join(OUTPUT_DIR, file_name)
+
+        doc = docx.Document()
+
+        # Marges à 2.5 cm (comme le PDF)
+        margin = Inches(1)
+        for section in doc.sections:
+            section.top_margin = margin
+            section.bottom_margin = margin
+            section.left_margin = margin
+            section.right_margin = margin
+
+        # Couleurs
+        primary_color = RGBColor(0x1A, 0x3A, 0x5C) # Hex #1A3A5C
+        text_dark = RGBColor(0x1E, 0x29, 0x3B)     # Hex #1E293B
+        text_grey = RGBColor(0x64, 0x74, 0x8B)     # Hex #64748B
+
+        # Police de base
+        style = doc.styles['Normal']
+        font = style.font
+        font.name = 'Arial'
+        font.size = Pt(10.5)
+        font.color.rgb = text_dark
+
+        # En-tête candidat
+        p_header = doc.add_paragraph()
+        p_header.paragraph_format.space_after = Pt(4)
+        
+        run_name = p_header.add_run(f"{profile.first_name} {profile.last_name}\n")
+        run_name.bold = True
+        run_name.font.size = Pt(14)
+        run_name.font.color.rgb = primary_color
+
+        contacts = filter(None, [profile.email, profile.phone, profile.location])
+        run_contact = p_header.add_run("  |  ".join(contacts))
+        run_contact.font.size = Pt(9.5)
+        run_contact.font.color.rgb = text_grey
+
+        # Séparateur visuel simple
+        p_sep = doc.add_paragraph()
+        p_sep.paragraph_format.space_before = Pt(6)
+        p_sep.paragraph_format.space_after = Pt(18)
+        
+        # Date
+        p_date = doc.add_paragraph()
+        p_date.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p_date.paragraph_format.space_after = Pt(18)
+        run_date = p_date.add_run(f"Dakar, le {datetime.now().strftime('%d %B %Y')}")
+        run_date.font.size = Pt(10)
+        run_date.font.color.rgb = text_grey
+
+        # Objet de la lettre
+        p_obj = doc.add_paragraph()
+        p_obj.paragraph_format.space_after = Pt(18)
+        run_obj = p_obj.add_run(f"Objet : {title}")
+        run_obj.bold = True
+        run_obj.font.size = Pt(11)
+        run_obj.font.color.rgb = primary_color
+
+        # Corps
+        for para in content.split("\n"):
+            para = para.strip()
+            if para:
+                p_body = doc.add_paragraph()
+                p_body.paragraph_format.space_after = Pt(8)
+                p_body.paragraph_format.line_spacing = 1.15
+                p_body.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                run_body = p_body.add_run(para)
+                run_body.font.size = Pt(10.5)
+
+        # Signature
+        p_sig = doc.add_paragraph()
+        p_sig.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p_sig.paragraph_format.space_before = Pt(24)
+        run_sig = p_sig.add_run(f"{profile.first_name} {profile.last_name}")
+        run_sig.bold = True
+        run_sig.font.size = Pt(10.5)
+        run_sig.font.color.rgb = primary_color
+
+        doc.save(file_path)
+        logger.info(f"DOCX lettre généré : {file_path}")
+        return file_path
+
+    def _build_cv_docx(
+        self,
+        profile: UserProfileData,
+        target_job: str = "",
+    ) -> str:
+        import docx
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        file_name = f"cv_{uuid.uuid4().hex[:8]}.docx"
+        file_path = os.path.join(OUTPUT_DIR, file_name)
+
+        doc = docx.Document()
+
+        # Marges à 2 cm
+        margin = Inches(0.8)
+        for section in doc.sections:
+            section.top_margin = margin
+            section.bottom_margin = margin
+            section.left_margin = margin
+            section.right_margin = margin
+
+        # Couleurs
+        primary_color = RGBColor(0x1A, 0x3A, 0x5C) # Hex #1A3A5C
+        accent_color = RGBColor(0xE8, 0xA8, 0x38)  # Hex Sahel Gold
+        text_dark = RGBColor(0x1E, 0x29, 0x3B)     # Hex #1E293B
+        text_grey = RGBColor(0x64, 0x74, 0x8B)     # Hex #64748B
+
+        # Style par défaut
+        style = doc.styles['Normal']
+        font = style.font
+        font.name = 'Arial'
+        font.size = Pt(10)
+        font.color.rgb = text_dark
+
+        def add_section_heading(title_text):
+            p = doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(12)
+            p.paragraph_format.space_after = Pt(3)
+            p.paragraph_format.keep_with_next = True
+            run = p.add_run(title_text.upper())
+            run.bold = True
+            run.font.size = Pt(10.5)
+            run.font.color.rgb = primary_color
+            return p
+
+        # 1. En-tête (Nom, Titre, Contacts)
+        p_header = doc.add_paragraph()
+        p_header.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_header.paragraph_format.space_after = Pt(2)
+        
+        run_name = p_header.add_run(f"{profile.first_name} {profile.last_name}\n")
+        run_name.bold = True
+        run_name.font.size = Pt(18)
+        run_name.font.color.rgb = primary_color
+
+        title_txt = target_job or profile.current_title or "Professionnel"
+        run_title = p_header.add_run(f"{title_txt}\n")
+        run_title.bold = True
+        run_title.font.size = Pt(12)
+        run_title.font.color.rgb = accent_color
+
+        contacts = filter(None, [profile.email, profile.phone, profile.location])
+        run_contact = p_header.add_run("  |  ".join(contacts) + "\n")
+        run_contact.font.size = Pt(9)
+        run_contact.font.color.rgb = text_grey
+
+        links = []
+        if profile.linkedin: links.append(f"LinkedIn: {profile.linkedin}")
+        if profile.github: links.append(f"GitHub: {profile.github}")
+        if profile.portfolio: links.append(f"Portfolio: {profile.portfolio}")
+        if links:
+            run_links = p_header.add_run("  |  ".join(links))
+            run_links.font.size = Pt(8.5)
+            run_links.font.color.rgb = text_grey
+
+        # 2. Résumé professionnel / Profil
+        if profile.bio:
+            add_section_heading("Profil")
+            p_bio = doc.add_paragraph()
+            p_bio.paragraph_format.space_after = Pt(6)
+            p_bio.paragraph_format.line_spacing = 1.15
+            p_bio.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            run_bio = p_bio.add_run(profile.bio)
+            run_bio.font.size = Pt(9.5)
+
+        # 3. Expériences
+        if profile.experiences:
+            add_section_heading("Expériences Professionnelles")
+            exps = profile.experiences if isinstance(profile.experiences, list) else [profile.experiences]
+            for exp in exps[:3]:
+                if isinstance(exp, dict):
+                    job_title = exp.get("title", exp.get("poste", ""))
+                    company   = exp.get("company", exp.get("entreprise", ""))
+                    period    = exp.get("period", exp.get("periode", ""))
+                    desc      = exp.get("description", exp.get("desc", ""))
+
+                    p_exp = doc.add_paragraph()
+                    p_exp.paragraph_format.space_before = Pt(4)
+                    p_exp.paragraph_format.space_after = Pt(1)
+                    p_exp.paragraph_format.keep_with_next = True
+                    
+                    run_job = p_exp.add_run(f"{job_title} ")
+                    run_job.bold = True
+                    run_job.font.size = Pt(9.5)
+                    
+                    run_company = p_exp.add_run(f"— {company}")
+                    run_company.font.size = Pt(9.5)
+                    run_company.font.color.rgb = text_grey
+
+                    p_meta = doc.add_paragraph()
+                    p_meta.paragraph_format.space_after = Pt(2)
+                    p_meta.paragraph_format.keep_with_next = True
+                    run_period = p_meta.add_run(period)
+                    run_period.italic = True
+                    run_period.font.size = Pt(8.5)
+                    run_period.font.color.rgb = text_grey
+
+                    if desc:
+                        p_desc = doc.add_paragraph()
+                        p_desc.paragraph_format.space_after = Pt(4)
+                        p_desc.paragraph_format.line_spacing = 1.15
+                        p_desc.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        run_desc = p_desc.add_run(desc)
+                        run_desc.font.size = Pt(9)
+                else:
+                    p_exp = doc.add_paragraph(style='List Bullet')
+                    p_exp.paragraph_format.space_after = Pt(3)
+                    run_exp = p_exp.add_run(str(exp))
+                    run_exp.font.size = Pt(9)
+
+        # 4. Formation
+        if profile.education_level:
+            add_section_heading("Formation")
+            p_edu = doc.add_paragraph()
+            p_edu.paragraph_format.space_after = Pt(6)
+            run_edu = p_edu.add_run(profile.education_level)
+            run_edu.font.size = Pt(9.5)
+
+        # 5. Compétences
+        if profile.skills:
+            add_section_heading("Compétences")
+            p_skills = doc.add_paragraph()
+            p_skills.paragraph_format.space_after = Pt(6)
+            run_skills = p_skills.add_run(", ".join(profile.skills))
+            run_skills.font.size = Pt(9.5)
+
+        # 6. Langues
+        if profile.languages:
+            add_section_heading("Langues")
+            p_lang = doc.add_paragraph()
+            p_lang.paragraph_format.space_after = Pt(6)
+            langs = profile.languages if isinstance(profile.languages, list) else list(profile.languages.items())
+            lang_strings = []
+            for lang in langs:
+                label = f"{lang[0]} ({lang[1]})" if isinstance(lang, (list, tuple)) else str(lang)
+                lang_strings.append(label)
+            run_lang = p_lang.add_run(", ".join(lang_strings))
+            run_lang.font.size = Pt(9.5)
+
+        # 7. Certifications
+        if profile.certifications:
+            add_section_heading("Certifications")
+            p_certs = doc.add_paragraph()
+            p_certs.paragraph_format.space_after = Pt(6)
+            certs = profile.certifications if isinstance(profile.certifications, list) else [profile.certifications]
+            cert_strings = []
+            for cert in certs:
+                label = cert.get("name", str(cert)) if isinstance(cert, dict) else str(cert)
+                cert_strings.append(label)
+            run_certs = p_certs.add_run(", ".join(cert_strings))
+            run_certs.font.size = Pt(9.5)
+
+        doc.save(file_path)
+        logger.info(f"DOCX CV généré : {file_path}")
         return file_path
 
     # ────────────────────────────────────────────────────────
