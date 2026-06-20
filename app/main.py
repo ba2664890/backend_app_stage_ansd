@@ -533,7 +533,7 @@ app.include_router(jobs.router)
 app.include_router(messages.router)
 app.include_router(advertiser.router)
 app.include_router(document_generation.router)  # Génération IA de documents
-app.include_router(informal.router, prefix="/api/v1/informal", tags=["informal"])  # Espace Informel
+app.include_router(informal.router)  # Espace Informel
 
 
 @app.post("/import", status_code=201)
