@@ -367,6 +367,9 @@ class ApplicationService:
         
         if status_data.status in ["hired", "rejected"]:
             application.decision_date = datetime.now()
+            
+        if status_data.rating is not None:
+            application.rating = status_data.rating
         
         # 3. Créer l'historique
         history = ApplicationStatusHistory(
