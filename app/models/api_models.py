@@ -558,6 +558,7 @@ class ApplicationUpdateStatus(BaseModel):
     status: str = Field(..., description="Nouveau statut (applied, shortlisted, interview_scheduled, etc.)")
     comment: Optional[str] = Field(None, description="Commentaire sur le changement")
     interview_date: Optional[datetime] = Field(None, description="Date d'entretien si applicable")
+    rating: Optional[int] = Field(None, ge=1, le=5, description="Note de 1 à 5")
 
 class ApplicationUpdateNotes(BaseModel):
     """Modèle pour mettre à jour les notes RH."""
