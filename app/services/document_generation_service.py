@@ -297,7 +297,7 @@ Rédige la lettre complète avec formules de politesse adaptées.
         doc = SimpleDocTemplate(
             file_path, pagesize=A4,
             leftMargin=0, rightMargin=0,
-            topMargin=0, bottomMargin=1.5*cm,
+            topMargin=0, bottomMargin=0.6*cm,
         )
 
         styles = self._get_styles()
@@ -316,8 +316,8 @@ Rédige la lettre complète avec formules de politesse adaptées.
             ("BACKGROUND", (0,0), (-1,-1), PRIMARY),
             ("TEXTCOLOR",  (0,0), (-1,-1), WHITE),
             ("LEFTPADDING",(0,0), (-1,-1), 1.5*cm),
-            ("TOPPADDING", (0,0), (-1,-1), 1.2*cm),
-            ("BOTTOMPADDING",(0,0),(-1,-1), 1.2*cm),
+            ("TOPPADDING", (0,0), (-1,-1), 0.7*cm),
+            ("BOTTOMPADDING",(0,0),(-1,-1), 0.7*cm),
         ]))
         story.append(banner)
 
@@ -356,35 +356,35 @@ Rédige la lettre complète avec formules de politesse adaptées.
         for line in filter(None, [profile.email, profile.phone, profile.location,
                                    profile.linkedin, profile.github, profile.portfolio]):
             items.append(Paragraph(line, styles["cv_small"]))
-            items.append(Spacer(1, 2))
-        items.append(Spacer(1, 0.5*cm))
+            items.append(Spacer(1, 1))
+        items.append(Spacer(1, 0.25*cm))
 
         # Compétences
         if profile.skills:
             items.append(Paragraph("COMPÉTENCES", styles["cv_section_left"]))
             items.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceAfter=4))
-            for skill in profile.skills[:10]:
+            for skill in profile.skills[:8]:
                 items.append(Paragraph(f"• {skill}", styles["cv_small"]))
                 items.append(Spacer(1, 1))
-            items.append(Spacer(1, 0.5*cm))
+            items.append(Spacer(1, 0.25*cm))
 
         # Langues
         if profile.languages:
             items.append(Paragraph("LANGUES", styles["cv_section_left"]))
             items.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceAfter=4))
             langs = profile.languages if isinstance(profile.languages, list) else list(profile.languages.items())
-            for lang in langs[:3]:
+            for lang in langs[:2]:
                 label = f"{lang[0]} – {lang[1]}" if isinstance(lang, (list, tuple)) else str(lang)
                 items.append(Paragraph(f"• {label}", styles["cv_small"]))
                 items.append(Spacer(1, 1))
-            items.append(Spacer(1, 0.5*cm))
+            items.append(Spacer(1, 0.25*cm))
 
         # Certifications
         if profile.certifications:
             items.append(Paragraph("CERTIFICATIONS", styles["cv_section_left"]))
             items.append(HRFlowable(width="100%", thickness=1, color=ACCENT, spaceAfter=4))
             certs = profile.certifications if isinstance(profile.certifications, list) else [profile.certifications]
-            for cert in certs[:3]:
+            for cert in certs[:2]:
                 label = cert.get("name", str(cert)) if isinstance(cert, dict) else str(cert)
                 items.append(Paragraph(f"• {label}", styles["cv_small"]))
                 items.append(Spacer(1, 1))
@@ -400,14 +400,14 @@ Rédige la lettre complète avec formules de politesse adaptées.
             items.append(Paragraph("PROFIL", styles["cv_section_right"]))
             items.append(HRFlowable(width="100%", thickness=2, color=PRIMARY, spaceAfter=6))
             items.append(Paragraph(profile.bio, styles["body_justify"]))
-            items.append(Spacer(1, 0.5*cm))
+            items.append(Spacer(1, 0.3*cm))
 
         # Expériences
         if profile.experiences:
             items.append(Paragraph("EXPÉRIENCES PROFESSIONNELLES", styles["cv_section_right"]))
             items.append(HRFlowable(width="100%", thickness=2, color=PRIMARY, spaceAfter=6))
             exps = profile.experiences if isinstance(profile.experiences, list) else [profile.experiences]
-            for exp in exps[:4]:
+            for exp in exps[:3]:
                 if isinstance(exp, dict):
                     job_title = exp.get("title", exp.get("poste", ""))
                     company   = exp.get("company", exp.get("entreprise", ""))
@@ -415,11 +415,11 @@ Rédige la lettre complète avec formules de politesse adaptées.
                     desc      = exp.get("description", exp.get("desc", ""))
                     items.append(Paragraph(f"<b>{job_title}</b>", styles["cv_exp_title"]))
                     items.append(Paragraph(f"{company} | {period}", styles["cv_exp_meta"]))
-                    items.append(Paragraph(desc[:200] if desc else "", styles["cv_exp_desc"]))
-                    items.append(Spacer(1, 0.35*cm))
+                    items.append(Paragraph(desc[:150] if desc else "", styles["cv_exp_desc"]))
+                    items.append(Spacer(1, 0.15*cm))
                 else:
                     items.append(Paragraph(f"• {str(exp)}", styles["body_normal"]))
-            items.append(Spacer(1, 0.3*cm))
+            items.append(Spacer(1, 0.2*cm))
 
         # Formation
         if profile.education_level:
@@ -444,23 +444,23 @@ Rédige la lettre complète avec formules de politesse adaptées.
             "signature":      ParagraphStyle("signature",      fontSize=10, textColor=TEXT_DARK, fontName="Helvetica-Bold", alignment=TA_RIGHT),
 
             # Corps texte
-            "body_normal":    ParagraphStyle("body_normal",    fontSize=10, textColor=TEXT_DARK, leading=15, spaceAfter=4),
-            "body_justify":   ParagraphStyle("body_justify",   fontSize=10, textColor=TEXT_DARK, leading=15, alignment=TA_JUSTIFY),
+            "body_normal":    ParagraphStyle("body_normal",    fontSize=9.5, textColor=TEXT_DARK, leading=13, spaceAfter=4),
+            "body_justify":   ParagraphStyle("body_justify",   fontSize=9.5, textColor=TEXT_DARK, leading=13, alignment=TA_JUSTIFY),
 
             # CV — bandeau
-            "cv_name":        ParagraphStyle("cv_name",        fontSize=22, textColor=WHITE, fontName="Helvetica-Bold", leading=26),
-            "cv_title":       ParagraphStyle("cv_title",       fontSize=13, textColor=ACCENT, fontName="Helvetica-Bold"),
-            "cv_subtitle":    ParagraphStyle("cv_subtitle",    fontSize=12, textColor=ACCENT),
+            "cv_name":        ParagraphStyle("cv_name",        fontSize=20, textColor=WHITE, fontName="Helvetica-Bold", leading=24),
+            "cv_title":       ParagraphStyle("cv_title",       fontSize=12, textColor=ACCENT, fontName="Helvetica-Bold"),
+            "cv_subtitle":    ParagraphStyle("cv_subtitle",    fontSize=11, textColor=ACCENT),
 
             # CV — sections
-            "cv_section_left":  ParagraphStyle("cv_section_left",  fontSize=9,  textColor=PRIMARY, fontName="Helvetica-Bold", spaceBefore=8, spaceAfter=2),
-            "cv_section_right": ParagraphStyle("cv_section_right", fontSize=11, textColor=PRIMARY, fontName="Helvetica-Bold", spaceBefore=10, spaceAfter=2),
+            "cv_section_left":  ParagraphStyle("cv_section_left",  fontSize=9,  textColor=PRIMARY, fontName="Helvetica-Bold", spaceBefore=6, spaceAfter=2),
+            "cv_section_right": ParagraphStyle("cv_section_right", fontSize=10.5, textColor=PRIMARY, fontName="Helvetica-Bold", spaceBefore=8, spaceAfter=2),
 
             # CV — contenu
-            "cv_small":       ParagraphStyle("cv_small",       fontSize=8,  textColor=TEXT_DARK, leading=11),
-            "cv_exp_title":   ParagraphStyle("cv_exp_title",   fontSize=10, textColor=TEXT_DARK, fontName="Helvetica-Bold"),
+            "cv_small":       ParagraphStyle("cv_small",       fontSize=8,  textColor=TEXT_DARK, leading=10),
+            "cv_exp_title":   ParagraphStyle("cv_exp_title",   fontSize=9.5, textColor=TEXT_DARK, fontName="Helvetica-Bold"),
             "cv_exp_meta":    ParagraphStyle("cv_exp_meta",    fontSize=8,  textColor=TEXT_GREY, fontName="Helvetica-Oblique"),
-            "cv_exp_desc":    ParagraphStyle("cv_exp_desc",    fontSize=9,  textColor=TEXT_DARK, leading=13, alignment=TA_JUSTIFY),
+            "cv_exp_desc":    ParagraphStyle("cv_exp_desc",    fontSize=8.5,  textColor=TEXT_DARK, leading=11, alignment=TA_JUSTIFY),
         }
 
     @staticmethod

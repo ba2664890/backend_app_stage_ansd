@@ -467,10 +467,13 @@ async def get_career_dashboard(
     db: Session = Depends(get_db)
 ):
     """Récupérer le dashboard de progression de carrière complet."""
-    dashboard = await CareerProgressionService.get_progression_dashboard(
-        db, str(current_user.user_id)
-    )
-    return dashboard
+    try:
+        dashboard = await CareerProgressionService.get_progression_dashboard(
+            db, str(current_user.user_id)
+        )
+        return dashboard
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/career-progression/update", response_model=Dict)
@@ -479,16 +482,19 @@ async def update_career_progression(
     db: Session = Depends(get_db)
 ):
     """Mettre à jour la progression de carrière."""
-    progression = await CareerProgressionService.update_progression(
-        db, str(current_user.user_id)
-    )
-    
-    return {
-        "stage": progression.current_stage,
-        "progress": progression.stage_progress_percentage,
-        "next_milestone": progression.next_milestone,
-        "message": "Progression mise à jour"
-    }
+    try:
+        progression = await CareerProgressionService.update_progression(
+            db, str(current_user.user_id)
+        )
+        
+        return {
+            "stage": progression.current_stage,
+            "progress": progression.stage_progress_percentage,
+            "next_milestone": progression.next_milestone,
+            "message": "Progression mise à jour"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ==================== BULK/ADMIN ENDPOINTS ====================

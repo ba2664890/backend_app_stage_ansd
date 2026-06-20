@@ -710,6 +710,11 @@ class CareerProgressionService:
         user_id: str
     ) -> CareerProgression:
         """Initialiser le suivi de progression de carrière."""
+        # S'assurer que le user existe pour éviter une ForeignKeyViolation
+        user_exists = db.query(User).filter(User.id == user_id).first()
+        if not user_exists:
+            raise ValueError(f"L'utilisateur avec l'ID {user_id} n'existe pas dans la table 'users'.")
+            
         progression = CareerProgression(
             user_id=user_id,
             current_stage="pure_informal",

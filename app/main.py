@@ -1129,11 +1129,11 @@ from .services.user_service import UserService
 user_service = UserService()
 
 # ==================== ENDPOINT /register ====================
-@app.post("/register", response_model=UserResponse)
+@app.post("/register", response_model=AuthResponse)
 async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     """
     Inscription utilisateur.
-    Crée un utilisateur et un profil vide.
+    Crée un utilisateur et un profil vide, puis connecte l'utilisateur en retournant un token d'accès.
     """
     # Vérifie si l'email existe déjà
     existing_user = db.query(User).filter(User.email == user_in.email).first()
@@ -1170,7 +1170,18 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(profile)
 
-    return user
+    access_token = create_access_token(data={"sub": user.email})
+    
+    # Construction de la réponse utilisateur via l'ORM
+    user_response = UserProfileResponse.from_orm(profile)
+    user_response.role = user.role.value if user.role else "candidate"
+    user_response.email = user.email
+
+    return AuthResponse(
+        access_token=access_token, 
+        token_type="bearer",
+        user=user_response
+    )
 
 
 

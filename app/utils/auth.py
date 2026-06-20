@@ -85,10 +85,16 @@ def get_current_user(
         if user:
             user_profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
 
+    # S'assurer que le profil correspond à un utilisateur existant pour éviter les clés étrangères orphelines
+    if user_profile:
+        user_exists = db.query(User).filter(User.id == user_profile.user_id).first()
+        if not user_exists:
+            user_profile = None
+
     if not user_profile:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Profil non trouvé.",
+            detail="Profil non trouvé ou utilisateur inexistant.",
         )
 
     return user_profile
@@ -125,6 +131,11 @@ def get_current_user_optional(
              if user:
                  profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
                  
+        if profile:
+            user_exists = db.query(User).filter(User.id == profile.user_id).first()
+            if not user_exists:
+                return None
+
         return profile
     except Exception:
         return None
