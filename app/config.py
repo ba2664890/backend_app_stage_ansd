@@ -177,6 +177,8 @@ class Settings:
         "http://localhost:3000,http://localhost:5173"
     ).split(",")
 
+    GOOGLE_CLIENT_ID: Optional[str] = os.getenv("GOOGLE_CLIENT_ID")
+
     @property
     def is_development(self) -> bool:
         return self.ENVIRONMENT == "development"

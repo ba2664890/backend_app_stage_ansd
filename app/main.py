@@ -1227,6 +1227,160 @@ async def login(username: str, password: str, db: Session = Depends(get_db)):
         user=user_response
     )
 
+
+# ==================== GOOGLE AUTH ====================
+import secrets
+import httpx
+from pydantic import BaseModel
+
+class GoogleAuthRequest(BaseModel):
+    credential: str
+    role: Optional[str] = None
+
+class GoogleAuthResponse(BaseModel):
+    success: bool = True
+    is_new_user: bool = False
+    access_token: Optional[str] = None
+    token_type: str = "bearer"
+    user: Optional[UserProfileResponse] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+async def verify_google_token(id_token: str) -> Optional[dict]:
+    """
+    Verifies a Google ID token using Google's tokeninfo endpoint.
+    """
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}",
+                timeout=5.0
+            )
+            if response.status_code != 200:
+                logger.error(f"Google tokeninfo validation failed: {response.text}")
+                return None
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error during Google token validation: {e}")
+            return None
+
+@app.post("/auth/google", response_model=GoogleAuthResponse)
+async def auth_google(req: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """
+    Connexion / Inscription directe avec Google.
+    """
+    # 1. Vérification du token Google
+    payload = await verify_google_token(req.credential)
+    if not payload:
+        raise HTTPException(status_code=400, detail="Jeton Google invalide ou expiré")
+        
+    email = payload.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="L'adresse email Google est requise")
+        
+    first_name = payload.get("given_name", "")
+    last_name = payload.get("family_name", "")
+    picture = payload.get("picture")
+    
+    # 2. Recherche de l'utilisateur existant
+    user = db.query(User).filter(User.email == email).first()
+    
+    if user:
+        # Utilisateur existant -> Connexion
+        now = datetime.now()
+        user.last_login = now
+        profile = user.profile
+        if profile:
+            profile.last_login = now
+            if picture and not profile.avatar_url:
+                profile.avatar_url = picture
+        else:
+            profile = UserProfile(user_id=user.id, last_login=now, avatar_url=picture)
+            db.add(profile)
+            
+        db.commit()
+        db.refresh(user)
+        db.refresh(profile)
+        
+        access_token = create_access_token(data={"sub": user.email})
+        user_response = UserProfileResponse.from_orm(profile)
+        user_response.role = user.role.value if user.role else "candidate"
+        user_response.email = user.email
+        
+        return GoogleAuthResponse(
+            success=True,
+            is_new_user=False,
+            access_token=access_token,
+            user=user_response
+        )
+        
+    # 3. Utilisateur inexistant -> Inscription
+    if not req.role:
+        # Pas de rôle fourni -> retourner les infos pour demander au frontend de faire choisir un rôle
+        return GoogleAuthResponse(
+            success=True,
+            is_new_user=True,
+            email=email,
+            first_name=first_name,
+            last_name=last_name
+        )
+        
+    # Rôle fourni -> Créer l'utilisateur
+    role_str = req.role.lower()
+    if role_str == "recruiter":
+        role_enum = UserRole.RECRUITER
+    elif role_str == "advertiser":
+        role_enum = UserRole.ADVERTISER
+    elif role_str == "candidate":
+        role_enum = UserRole.CANDIDATE
+    else:
+        raise HTTPException(status_code=400, detail=f"Rôle '{req.role}' invalide")
+        
+    # Création d'un mot de passe fort et aléatoire (requis par le schéma SQL)
+    random_password = secrets.token_urlsafe(32)
+    hashed_password = get_password_hash(random_password)
+    
+    verification_token = secrets.token_urlsafe(32)
+    
+    user = User(
+        email=email,
+        hashed_password=hashed_password,
+        role=role_enum,
+        is_verified=True,  # Google a déjà validé l'adresse email
+        is_active=True,
+        verification_token=verification_token
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    # Création du profil associé
+    profile = UserProfile(
+        user_id=user.id,
+        first_name=first_name,
+        last_name=last_name,
+        avatar_url=picture,
+        verification_token=verification_token,
+        last_login=datetime.now()
+    )
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    
+    access_token = create_access_token(data={"sub": user.email})
+    user_response = UserProfileResponse.from_orm(profile)
+    user_response.role = user.role.value
+    user_response.email = user.email
+    
+    return GoogleAuthResponse(
+        success=True,
+        is_new_user=False,
+        access_token=access_token,
+        user=user_response
+    )
+
+
 # ==================== VERIFICATION EMAIL ====================
 @app.get("/verify/{token}")
 async def verify_email(token: str, db: Session = Depends(get_db)):
