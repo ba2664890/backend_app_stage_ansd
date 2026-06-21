@@ -8,14 +8,14 @@ GET  /api/v1/documents/generate/download/{filename}
 import os
 import logging
 from typing import Optional, Dict, Any, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models.database_models import User, UserProfile, Document
-from ..utils.auth import get_current_user
+from ..utils.auth import get_current_user, get_current_user_optional, verify_token
 from ..services.document_generation_service import DocumentGenerationService, UserProfileData
 from datetime import datetime
 import uuid
@@ -273,12 +273,37 @@ async def generate_other_letter(
 @router.get("/download/{filename}")
 async def download_generated_document(
     filename: str,
-    current_user=Depends(get_current_user),
+    token: Optional[str] = Query(None),
+    current_user = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
 ):
     """Télécharge ou consulte un document généré (PDF en ligne, Word en téléchargement)."""
     # Sécurité : on n'accepte que les noms sans chemin traversal
     if "/" in filename or ".." in filename:
         raise HTTPException(status_code=400, detail="Nom de fichier invalide.")
+
+    # Authentification par token dans l'URL si pas de header Authorization
+    user = current_user
+    if not user and token:
+        try:
+            payload = verify_token(token)
+            sub = payload.get("sub")
+            if sub:
+                from uuid import UUID
+                try:
+                    user_uuid = UUID(sub)
+                    user = db.query(UserProfile).filter(UserProfile.user_id == user_uuid).first()
+                except ValueError:
+                    pass
+                if not user:
+                    user_obj = db.query(User).filter(User.email == sub).first()
+                    if user_obj:
+                        user = db.query(UserProfile).filter(UserProfile.user_id == user_obj.id).first()
+        except Exception:
+            raise HTTPException(status_code=401, detail="Token de téléchargement invalide ou expiré.")
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentification requise pour télécharger ce document.")
 
     file_path = os.path.join(OUTPUT_DIR, filename)
     if not os.path.exists(file_path):
