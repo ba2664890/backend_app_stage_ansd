@@ -731,7 +731,7 @@ class Document(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
-    file_type = Column(String(50), nullable=False) # 'application/pdf', 'image/jpeg', etc.
+    file_type = Column(String(255), nullable=False) # 'application/pdf', 'image/jpeg', etc.
     size = Column(String(50)) # Human readable size or bytes
     category = Column(String(50), nullable=False) # 'cv', 'diploma', 'cert', 'other'
     uploaded_at = Column(DateTime, default=func.now())
