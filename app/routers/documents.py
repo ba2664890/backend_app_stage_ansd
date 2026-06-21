@@ -5,11 +5,13 @@ import uuid
 from typing import List, Optional
 from app.services.cloudinary_service import CloudinaryService
 from app.utils import logger
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models.database_models import User, Document
-from ..utils.auth import get_current_user
+from ..models.database_models import User, Document, UserProfile
+from ..utils.auth import get_current_user, get_current_user_optional, verify_token
+from ..config import settings
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -90,28 +92,30 @@ async def upload_document(
             size_str = f"{file_size / (1024 * 1024):.1f} MB"
 
         # ----------------------------
-        # Upload Cloudinary
+        # Sauvegarde locale & Upload Cloudinary
         # ----------------------------
+        local_filename = f"{uuid.uuid4()}_{file.filename}"
+        local_path = os.path.join(UPLOAD_DIR, local_filename)
+
+        # Sauvegarde locale (sert à l'extraction et de fallback de stockage)
+        with open(local_path, "wb") as buffer:
+            buffer.write(content)
+
+        file_path_db = local_path
 
         try:
-            upload_result = CloudinaryService.upload_file(
-                file.file
-            )
-
-            cloudinary_url = upload_result["url"]
-            cloudinary_public_id = upload_result["public_id"]
-
-            logger.info(
-                f"✅ Upload Cloudinary réussi: {cloudinary_public_id}"
-            )
-
+            # Uploader sur Cloudinary si configuré
+            if hasattr(settings, "CLOUDINARY_URL") and settings.CLOUDINARY_URL:
+                file.file.seek(0)
+                upload_result = CloudinaryService.upload_file(file.file)
+                cloudinary_url = upload_result["url"]
+                cloudinary_public_id = upload_result["public_id"]
+                file_path_db = cloudinary_url
+                logger.info(f"✅ Upload Cloudinary réussi: {cloudinary_public_id}")
+            else:
+                logger.info("ℹ️ Cloudinary non configuré, stockage local utilisé uniquement.")
         except Exception as e:
-            logger.exception("Erreur Cloudinary")
-
-            raise HTTPException(
-                status_code=500,
-                detail=f"Erreur upload Cloudinary: {str(e)}"
-            )
+            logger.warning(f"⚠️ Échec upload Cloudinary ({e}), stockage local conservé.")
 
         # ----------------------------
         # Extraction du texte
@@ -120,13 +124,9 @@ async def upload_document(
         extracted_text = None
 
         try:
-            file.file.seek(0)
-
+            # Utiliser le fichier local pour l'extraction de texte (plus robuste)
             file_service = FileService()
-
-            extracted_text = (
-                await file_service.extract_text_from_upload(file)
-            )
+            extracted_text = await file_service.extract_text_from_file(local_path)
 
             if extracted_text:
                 logger.info(
@@ -147,7 +147,7 @@ async def upload_document(
             new_doc = Document(
                 user_id=current_user.user_id,
                 name=file.filename,
-                file_path=cloudinary_url,
+                file_path=file_path_db,
                 cloudinary_url=cloudinary_url,
                 cloudinary_public_id=cloudinary_public_id,
                 file_type=file.content_type,
@@ -168,6 +168,11 @@ async def upload_document(
             logger.exception(
                 "Erreur base de données"
             )
+
+            # nettoyage fichier local
+            if os.path.exists(local_path):
+                try: os.remove(local_path)
+                except: pass
 
             # nettoyage Cloudinary
             if cloudinary_public_id:
@@ -191,7 +196,7 @@ async def upload_document(
             "category": new_doc.category,
             "uploaded_at": new_doc.uploaded_at,
             "is_verified": new_doc.is_verified,
-            "url": cloudinary_url
+            "url": f"/api/v1/documents/download/{new_doc.id}"
         }
 
     except HTTPException:
@@ -232,11 +237,7 @@ def get_documents(
             "category": doc.category,
             "uploaded_at": doc.uploaded_at,
             "is_verified": doc.is_verified,
-            "url": doc.cloudinary_url if doc.cloudinary_url else (
-                doc.file_path if (doc.file_path and doc.file_path.startswith('http'))
-                else (f"/api/v1/documents/generate/download/{os.path.basename(doc.file_path)}" if "generated" in str(doc.file_path)
-                      else f"/static/uploads/{os.path.basename(doc.file_path)}")
-            )
+            "url": f"/api/v1/documents/download/{doc.id}"
         }
         for doc in docs
     ]
@@ -265,3 +266,63 @@ def delete_document(
     db.commit()
     
     return {"message": "Document supprimé avec succès."}
+
+
+@router.get("/download/{document_id}")
+def download_document(
+    document_id: str,
+    token: Optional[str] = Query(None),
+    current_user = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    # Authentification par token dans l'URL ou en-tête
+    user = current_user
+    if not user and token:
+        try:
+            payload = verify_token(token)
+            sub = payload.get("sub")
+            if sub:
+                from uuid import UUID
+                try:
+                    user_uuid = UUID(sub)
+                    user = db.query(UserProfile).filter(UserProfile.user_id == user_uuid).first()
+                except ValueError:
+                    pass
+                if not user:
+                    user_obj = db.query(User).filter(User.email == sub).first()
+                    if user_obj:
+                        user = db.query(UserProfile).filter(UserProfile.user_id == user_obj.id).first()
+        except Exception:
+            raise HTTPException(status_code=401, detail="Token de téléchargement invalide ou expiré.")
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentification requise pour télécharger ce document.")
+
+    # Récupérer le document
+    try:
+        doc_uuid = uuid.UUID(document_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ID de document invalide.")
+
+    doc = db.query(Document).filter(Document.id == doc_uuid).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document non trouvé.")
+
+    # Si le fichier existe localement
+    if doc.file_path and not doc.file_path.startswith("http") and os.path.exists(doc.file_path):
+        media_type = doc.file_type or "application/octet-stream"
+        disposition = "inline" if media_type == "application/pdf" or doc.name.endswith(".pdf") else "attachment"
+        return FileResponse(
+            path=doc.file_path,
+            media_type=media_type,
+            filename=doc.name,
+            headers={"Content-Disposition": f"{disposition}; filename={doc.name}"},
+        )
+
+    # Sinon, si on a un URL Cloudinary, on redirige vers Cloudinary
+    if doc.cloudinary_url:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=doc.cloudinary_url)
+
+    # Si c'est un chemin local mais le fichier physique n'existe plus sur le serveur (container redémarré)
+    raise HTTPException(status_code=404, detail="Le fichier physique est introuvable sur ce serveur.")
