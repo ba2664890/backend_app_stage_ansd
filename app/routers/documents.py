@@ -319,10 +319,32 @@ def download_document(
             headers={"Content-Disposition": f"{disposition}; filename={doc.name}"},
         )
 
-    # Sinon, si on a un URL Cloudinary, on redirige vers Cloudinary
+    # Sinon, si on a un URL Cloudinary, on le télécharge depuis Cloudinary et on le renvoie pour contourner CORS
     if doc.cloudinary_url:
-        from fastapi.responses import RedirectResponse
-        return RedirectResponse(url=doc.cloudinary_url)
+        import requests
+        from fastapi.responses import StreamingResponse
+        try:
+            response = requests.get(doc.cloudinary_url, stream=True)
+            if response.status_code == 200:
+                media_type = response.headers.get("content-type") or doc.file_type or "application/octet-stream"
+                disposition = "inline" if media_type == "application/pdf" or doc.name.endswith(".pdf") else "attachment"
+                
+                def file_stream():
+                    for chunk in response.iter_content(chunk_size=8192):
+                        yield chunk
+                
+                return StreamingResponse(
+                    file_stream(),
+                    media_type=media_type,
+                    headers={
+                        "Content-Disposition": f"{disposition}; filename={doc.name}",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Erreur de streaming Cloudinary: {e}")
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=doc.cloudinary_url)
 
     # Si c'est un chemin local mais le fichier physique n'existe plus sur le serveur (container redémarré)
     raise HTTPException(status_code=404, detail="Le fichier physique est introuvable sur ce serveur.")
