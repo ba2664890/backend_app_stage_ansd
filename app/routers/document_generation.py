@@ -88,6 +88,8 @@ def _profile_from_db(db_profile: UserProfile, user: User) -> UserProfileData:
         languages=db_profile.languages,
         experiences=db_profile.experiences,
         certifications=db_profile.certifications,
+        avatar_url=db_profile.avatar_url,
+        interests=db_profile.interests or [],
     )
 
 

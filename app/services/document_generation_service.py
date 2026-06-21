@@ -61,6 +61,8 @@ class UserProfileData:
     languages: Optional[Any] = None
     experiences: Optional[Any] = None
     certifications: Optional[Any] = None
+    avatar_url: Optional[str] = None
+    interests: Optional[List[str]] = field(default_factory=list)
 
 
 @dataclass
