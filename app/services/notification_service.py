@@ -20,6 +20,74 @@ logger = logging.getLogger(__name__)
 class NotificationService:
     """Service pour gérer les notifications."""
     
+    def _get_base_email_html(
+        self,
+        title: str,
+        content_html: str,
+        action_url: Optional[str] = None,
+        action_label: Optional[str] = None
+    ) -> str:
+        """Retourne un template HTML d'e-mail premium unifié."""
+        action_button_html = ""
+        if action_url and action_label:
+            action_button_html = f"""
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 30px; margin-bottom: 10px; border-collapse: collapse;">
+              <tr>
+                <td align="center">
+                  <a href="{action_url}" style="display: inline-block; background-color: #124E27; color: #ffffff; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 15px; text-decoration: none; font-family: sans-serif;">{action_label}</a>
+                </td>
+              </tr>
+            </table>
+            """
+            
+        return f"""
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>{title}</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 10px; border-collapse: collapse;">
+            <tr>
+              <td align="center">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05); overflow: hidden; border: 1px solid #e2e8f0; border-collapse: collapse;">
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #124E27 0%, #1c753b 100%); padding: 35px 40px; text-align: center;">
+                      <h1 style="color: #ffffff; font-size: 28px; font-weight: 800; margin: 0; font-family: sans-serif; letter-spacing: -0.5px;">SunuSouba</h1>
+                      <p style="color: #a7f3d0; font-size: 13px; font-weight: 600; margin: 8px 0 0 0; text-transform: uppercase; letter-spacing: 1.5px; font-family: sans-serif;">Notifications & Mises à jour</p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 40px 30px 40px;">
+                      {content_html}
+                      {action_button_html}
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f8fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0; text-align: center;">
+                      <p style="font-size: 12px; color: #94a3b8; margin: 0 0 10px 0; font-family: sans-serif;">Vous recevez cet e-mail suite à votre activité sur SunuSouba.</p>
+                      <p style="font-size: 12px; color: #94a3b8; margin: 0; font-family: sans-serif;">
+                        <a href="{settings.FRONTEND_URL}/candidate/settings" style="color: #124E27; text-decoration: underline; font-weight: 600;">Gérer mes alertes</a> • 
+                        <a href="{settings.FRONTEND_URL}/contact" style="color: #124E27; text-decoration: underline; font-weight: 600;">Support</a>
+                      </p>
+                      <p style="font-size: 11px; color: #cbd5e1; margin-top: 20px; font-weight: 500; font-family: sans-serif;">&copy; {datetime.utcnow().year} SunuSouba. Tous droits réservés.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        """
+
     def create_notification(
         self,
         db: Session,
@@ -247,19 +315,21 @@ class NotificationService:
             
             # Envoyer email
             if user.email:
+                content_html = f"""
+                <h2 style="color: #0f172a; margin: 0 0 16px 0; font-size: 20px; font-weight: 700; font-family: sans-serif;">{notification_data["title"]}</h2>
+                <p style="white-space: pre-line; color: #475569; font-size: 15px; line-height: 1.6; font-family: sans-serif;">{notification_data["message"]}</p>
+                """
+                html_body = self._get_base_email_html(
+                    title=notification_data["title"],
+                    content_html=content_html,
+                    action_url=f"{settings.FRONTEND_URL}/applications/{application.id}",
+                    action_label="Voir ma candidature"
+                )
                 await self.send_email(
                     to_email=user.email,
                     subject=notification_data["title"],
                     body=notification_data["message"] + f"\n\nConsultez votre candidature: {settings.FRONTEND_URL}/applications/{application.id}",
-                    html_body=f"""
-                    <html>
-                        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                            <h2 style="color: #1a5c32;">{notification_data["title"]}</h2>
-                            <p style="white-space: pre-line;">{notification_data["message"]}</p>
-                            <p style="margin-top: 24px;"><a href="{settings.FRONTEND_URL}/applications/{application.id}" style="background-color: #1a5c32; color: white; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-weight: bold;">Voir ma candidature</a></p>
-                        </body>
-                    </html>
-                    """
+                    html_body=html_body
                 )
     
     async def notify_new_application(
@@ -273,19 +343,21 @@ class NotificationService:
         candidate_name = f"{application.user.profile.first_name} {application.user.profile.last_name}" if application.user.profile else "Candidat"
         
         for email in recruiter_emails:
+            content_html = f"""
+            <h2 style="color: #0f172a; margin: 0 0 16px 0; font-size: 20px; font-weight: 700; font-family: sans-serif;">Nouvelle candidature</h2>
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; font-family: sans-serif;"><strong>{candidate_name}</strong> a postulé pour le poste <strong>{job_title}</strong>.</p>
+            """
+            html_body = self._get_base_email_html(
+                title=f"Nouvelle candidature: {job_title}",
+                content_html=content_html,
+                action_url=f"{settings.FRONTEND_URL}/applications/{application.id}",
+                action_label="Voir la candidature"
+            )
             await self.send_email(
                 to_email=email,
                 subject=f"Nouvelle candidature: {job_title}",
                 body=f"Une nouvelle candidature a été reçue de {candidate_name} pour le poste '{job_title}'.",
-                html_body=f"""
-                <html>
-                    <body>
-                        <h2>Nouvelle candidature</h2>
-                        <p><strong>{candidate_name}</strong> a postulé pour <strong>{job_title}</strong></p>
-                        <p><a href="{settings.FRONTEND_URL}/applications/{application.id}">Voir la candidature</a></p>
-                    </body>
-                </html>
-                """
+                html_body=html_body
             )
     
     async def send_interview_reminder(
@@ -327,10 +399,30 @@ class NotificationService:
         
         # Envoyer email
         if user.email:
+            content_html = f"""
+            <h2 style="color: #0f172a; margin: 0 0 16px 0; font-size: 20px; font-weight: 700; font-family: sans-serif;">📅 Rappel d'entretien</h2>
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; font-family: sans-serif; white-space: pre-line;">Bonjour,
+
+            Ceci est un rappel pour votre entretien concernant le poste <strong>'{job_title}'</strong>.
+            
+            <strong>📅 Date :</strong> {application.interview_date.strftime('%d/%m/%Y à %H:%M')}
+            <strong>🔗 Format :</strong> {fmt_map[application.interview_type] if application.interview_type in fmt_map else 'Non spécifié'}
+            {location_info.strip()}
+            {instructions_info.strip()}
+
+            Bonne chance !</p>
+            """
+            html_body = self._get_base_email_html(
+                title=f"Rappel: Entretien pour {job_title}",
+                content_html=content_html,
+                action_url=f"{settings.FRONTEND_URL}/applications/{application.id}",
+                action_label="Consulter ma candidature"
+            )
             await self.send_email(
                 to_email=user.email,
                 subject=f"Rappel: Entretien pour {job_title}",
-                body=f"Bonjour,\n\nCeci est un rappel pour votre entretien concernant le poste '{job_title}' prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}.{location_info}{instructions_info}\n\nBonne chance !"
+                body=f"Bonjour,\n\nCeci est un rappel pour votre entretien concernant le poste '{job_title}' prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}.{location_info}{instructions_info}\n\nBonne chance !",
+                html_body=html_body
             )
 
     async def send_job_recommendations_email(
@@ -371,53 +463,124 @@ class NotificationService:
             contract_type = r.get("contract_type", "Non spécifié")
             job_id = r.get("job_id")
             
-            salary_str = ""
-            if salary_min and salary_max:
-                salary_str = f" • {salary_min:,} - {salary_max:,} FCFA"
-            elif salary_min:
-                salary_str = f" • Min. {salary_min:,} FCFA"
+            salary_badge_html = ""
+            if salary_min:
+                salary_str = f"{salary_min:,}"
+                if salary_max:
+                    salary_str += f" - {salary_max:,}"
+                salary_badge_html = f"""
+                <td width="8"></td>
+                <td style="background-color: #f0fdf4; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #166534; font-family: sans-serif; white-space: nowrap;">
+                  💵 {salary_str} FCFA
+                </td>
+                """
                 
             badge_color = "#10b981" if score >= 80 else ("#f59e0b" if score >= 70 else "#6b7280")
+            badge_color_light = "#ecfdf5" if score >= 80 else ("#fffbeb" if score >= 70 else "#f3f4f6")
             job_url = f"{settings.FRONTEND_URL}/candidate/job/{job_id}"
             
             recos_html += f"""
-            <div style="border: 1px solid #e5e7eb; border-radius: 16px; padding: 18px; margin-bottom: 16px; background-color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                <table style="width: 100%; border-collapse: collapse;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border-collapse: collapse;">
+              <tr>
+                <td style="padding: 24px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
                     <tr>
-                        <td>
-                            <h3 style="margin: 0 0 6px 0; color: #111827; font-size: 18px; font-weight: 700; font-family: sans-serif;">{title}</h3>
-                        </td>
-                        <td style="text-align: right; vertical-align: top;">
-                            <span style="background-color: {badge_color}1a; color: {badge_color}; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; white-space: nowrap; font-family: sans-serif;">
-                                {score}% Match
-                            </span>
-                        </td>
+                      <td style="vertical-align: top;">
+                        <h3 style="margin: 0 0 4px 0; color: #0f172a; font-size: 17px; font-weight: 700; line-height: 1.4; font-family: sans-serif;">{title}</h3>
+                        <p style="margin: 0 0 12px 0; color: #475569; font-size: 14px; font-weight: 600; font-family: sans-serif;">{company}</p>
+                      </td>
+                      <td align="right" valign="top" style="padding-left: 10px; vertical-align: top;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" style="background-color: {badge_color_light}; border-radius: 99px; border-collapse: collapse;">
+                          <tr>
+                            <td style="padding: 6px 14px; font-size: 12px; font-weight: 800; color: {badge_color}; text-align: center; white-space: nowrap; font-family: sans-serif;">
+                              {score}% Match
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
                     </tr>
-                </table>
-                <p style="margin: 0 0 8px 0; color: #4b5563; font-size: 14px; font-weight: 600; font-family: sans-serif;">{company} • {location}</p>
-                <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 13px; font-family: sans-serif;">Contrat : {contract_type}{salary_str}</p>
-                <a href="{job_url}" style="display: inline-block; background-color: #1a5c32; color: #ffffff; padding: 10px 16px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: sans-serif;">Voir l'offre</a>
-            </div>
+                  </table>
+                  
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 20px; border-collapse: collapse;">
+                    <tr>
+                      <td style="background-color: #f1f5f9; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #475569; font-family: sans-serif; white-space: nowrap;">
+                        {contract_type}
+                      </td>
+                      <td width="8"></td>
+                      <td style="background-color: #f1f5f9; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #475569; font-family: sans-serif; white-space: nowrap;">
+                        📍 {location}
+                      </td>
+                      {salary_badge_html}
+                    </tr>
+                  </table>
+                  
+                  <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                    <tr>
+                      <td>
+                        <a href="{job_url}" style="display: inline-block; background-color: #f0fdf4; color: #124E27; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; border: 1px solid #bbf7d0; font-family: sans-serif;">Voir l'offre</a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
             """
             
         html_body = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f9fafb; padding: 20px;">
-                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 24px; padding: 32px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                    <div style="text-align: center; margin-bottom: 24px;">
-                        <h2 style="color: #1a5c32; margin: 0; font-size: 24px; font-weight: 800;">SunuSouba</h2>
-                        <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 14px; font-weight: 600; text-transform: uppercase; tracking-wider: 0.1em;">Vos Recommandations Personnalisées</p>
-                    </div>
-                    <p style="font-size: 16px; color: #111827; font-weight: 600;">Bonjour {candidate_name},</p>
-                    <p style="font-size: 14px; color: #4b5563; margin-bottom: 24px;">Notre intelligence artificielle a analysé le marché de l'emploi et a sélectionné ces opportunités qui correspondent parfaitement à vos compétences et à vos critères :</p>
-                    
-                    {recos_html}
-                    
-                    <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-t: 1px solid #e5e7eb;">
-                        <a href="{settings.FRONTEND_URL}/candidate/recommendations" style="display: inline-block; background-color: #1a5c32; color: white; padding: 12px 24px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 14px;">Découvrir toutes les offres</a>
-                    </div>
-                </div>
-            </body>
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Opportunités d'emploi SunuSouba</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 10px; border-collapse: collapse;">
+            <tr>
+              <td align="center">
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05); overflow: hidden; border: 1px solid #e2e8f0; border-collapse: collapse;">
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #124E27 0%, #1c753b 100%); padding: 35px 40px; text-align: center;">
+                      <h1 style="color: #ffffff; font-size: 28px; font-weight: 800; margin: 0; font-family: sans-serif; letter-spacing: -0.5px;">SunuSouba</h1>
+                      <p style="color: #a7f3d0; font-size: 13px; font-weight: 600; margin: 8px 0 0 0; text-transform: uppercase; letter-spacing: 1.5px; font-family: sans-serif;">Vos recommandations intelligentes</p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 40px 30px 40px;">
+                      <p style="font-size: 18px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 12px; font-family: sans-serif;">Bonjour {candidate_name},</p>
+                      <p style="font-size: 15px; line-height: 1.6; color: #475569; margin: 0 0 30px 0; font-family: sans-serif;">Notre intelligence artificielle a analysé votre profil et sélectionné <strong>{len(recommendations)} opportunités d'emploi</strong> qui correspondent parfaitement à vos compétences. Voici les meilleures offres du moment :</p>
+                      
+                      {recos_html}
+                      
+                      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 20px; margin-bottom: 20px; border-collapse: collapse;">
+                        <tr>
+                          <td align="center">
+                            <a href="{settings.FRONTEND_URL}/candidate/recommendations" style="display: inline-block; background-color: #124E27; color: #ffffff; padding: 14px 32px; border-radius: 12px; font-weight: 700; font-size: 15px; text-decoration: none; font-family: sans-serif;">Découvrir toutes les offres</a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f8fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0; text-align: center;">
+                      <p style="font-size: 12px; color: #94a3b8; margin: 0 0 10px 0; font-family: sans-serif;">Vous recevez cet e-mail suite à vos préférences de notifications sur SunuSouba.</p>
+                      <p style="font-size: 12px; color: #94a3b8; margin: 0; font-family: sans-serif;">
+                        <a href="{settings.FRONTEND_URL}/candidate/settings" style="color: #124E27; text-decoration: underline; font-weight: 600;">Gérer mes alertes</a> • 
+                        <a href="{settings.FRONTEND_URL}/contact" style="color: #124E27; text-decoration: underline; font-weight: 600;">Support</a>
+                      </p>
+                      <p style="font-size: 11px; color: #cbd5e1; margin-top: 20px; font-weight: 500; font-family: sans-serif;">&copy; {datetime.utcnow().year} SunuSouba. Tous droits réservés.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
         </html>
         """
         
