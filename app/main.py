@@ -1531,6 +1531,14 @@ async def get_user_profile_by_id(
     return response
 
 
+async def send_automatic_recommendation_email(email: str, name: str, recommendations: list):
+    """Envoie en tâche de fond les offres matchées par email."""
+    try:
+        from .services.notification_service import NotificationService
+        ns = NotificationService()
+        await ns.send_job_recommendations_email(email, name, recommendations)
+    except Exception as e:
+        logger.error(f"Erreur envoi d'email automatique: {e}")
 
 
 @app.post("/api/v1/recommendations", response_model=RecommendationResponse)
@@ -1548,8 +1556,77 @@ async def get_job_recommendations(
         raise HTTPException(status_code=500, detail="Erreur lors de la génération des recommandations")
 
 
+@app.post("/api/v1/recommendations/send-email")
+async def send_recommendations_email(
+    request: RecommendationRequest,
+    background_tasks: BackgroundTasks,
+    user=Depends(get_current_user),
+    db=Depends(get_db)
+):
+    """Génère et envoie les 5 à 10 meilleures recommandations d'emploi par email au candidat."""
+    try:
+        # 1. Générer les recommandations
+        reco_response = app.state.recommendation_service.get_recommendations(db, str(user.id), request)
+        top_recos = reco_response.recommendations[:10]
+        
+        if not top_recos:
+            return {"status": "success", "message": "Aucune recommandation à envoyer."}
+            
+        candidate_name = f"{user.first_name}" if user.first_name else "Candidat"
+        
+        # 2. Formater
+        recos_list = [
+            {
+                "title": r.title,
+                "company_name": r.company_name,
+                "location": r.location,
+                "match_score": int(r.match_score * 100),
+                "salary_min": r.salary_min,
+                "salary_max": r.salary_max,
+                "contract_type": r.contract_type or "Non spécifié",
+                "job_id": r.job_id
+            }
+            for r in top_recos
+        ]
+        
+        # 3. Envoyer asynchronement
+        background_tasks.add_task(
+            send_automatic_recommendation_email,
+            user.email,
+            candidate_name,
+            recos_list
+        )
+        
+        return {"status": "success", "message": f"Envoi de l'email contenant {len(top_recos)} offres lancé en arrière-plan."}
+    except Exception as e:
+        logger.error(f"Error initiating recommendations email: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/recommendations/trigger-digests")
+async def trigger_recommendations_digests(
+    db=Depends(get_db),
+    user=Depends(get_current_user)
+):
+    """Déclenche l'envoi des digests hebdomadaires/quotidiens de recommandations (Admin)."""
+    role = getattr(getattr(user, "user", None), "role", None)
+    role_val = getattr(role, "value", role) or ""
+    if role_val != "admin":
+        raise HTTPException(status_code=403, detail="Accès refusé.")
+        
+    try:
+        from scripts.send_recommendation_digests import run_digest_generation
+        count = await run_digest_generation(db)
+        return {"status": "success", "message": f"Script de digest exécuté. {count} email(s) envoyé(s)."}
+    except Exception as e:
+        logger.error(f"Error triggering digests: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.post("/api/v1/recommendations/cv-match")
 async def match_cv_with_jobs(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user_id: Optional[str] = None,
     generate_ai_explanations: bool = True,
@@ -1582,6 +1659,28 @@ async def match_cv_with_jobs(
         cv_skills, cv_experience, cv_sectors = (
             app.state.recommendation_service._extract_cv_info_robust(raw_text)
         )
+
+        # Envoyer l'email automatique des offres matchées en arrière-plan
+        if user.email:
+            recos_list = [
+                {
+                    "title": rec.title,
+                    "company_name": rec.company_name,
+                    "location": rec.location,
+                    "match_score": int(rec.match_score * 100),
+                    "salary_min": rec.salary_min,
+                    "salary_max": rec.salary_max,
+                    "contract_type": rec.contract_type or "Non spécifié",
+                    "job_id": rec.job_id
+                }
+                for rec in rec_response.recommendations[:10]
+            ]
+            background_tasks.add_task(
+                send_automatic_recommendation_email,
+                user.email,
+                f"{user.first_name}" if user.first_name else "Candidat",
+                recos_list
+            )
 
         return {
             "user_id": actual_user_id,

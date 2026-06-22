@@ -301,3 +301,99 @@ class NotificationService:
                 subject=f"Rappel: Entretien pour {job_title}",
                 body=f"Bonjour,\n\nCeci est un rappel pour votre entretien concernant le poste '{job_title}' prévu le {application.interview_date.strftime('%d/%m/%Y à %H:%M')}.{location_info}{instructions_info}\n\nBonne chance !"
             )
+
+    async def send_job_recommendations_email(
+        self,
+        to_email: str,
+        candidate_name: str,
+        recommendations: List[Dict]
+    ) -> bool:
+        """Envoie les meilleures recommandations d'emploi matchées par email."""
+        if not recommendations:
+            return False
+            
+        subject = f"🎯 {len(recommendations)} opportunités d'emploi qui vous correspondent"
+        
+        # Version texte brute
+        body_text = f"Bonjour {candidate_name},\n\nVoici les meilleures offres d'emploi sélectionnées pour vous par notre IA :\n\n"
+        for r in recommendations:
+            title = r.get("title", "Offre d'emploi")
+            company = r.get("company_name", "Entreprise")
+            location = r.get("location", "Non spécifiée")
+            score = r.get("match_score", 0)
+            contract = r.get("contract_type", "Non spécifié")
+            job_id = r.get("job_id")
+            body_text += f"- {title} chez {company} ({location}) - Match {score}% - Contrat: {contract}\n"
+            body_text += f"  Voir l'offre: {settings.FRONTEND_URL}/candidate/job/{job_id}\n\n"
+        
+        body_text += f"\nRetrouvez toutes vos recommandations sur : {settings.FRONTEND_URL}/candidate/recommendations"
+        
+        # Version HTML premium
+        recos_html = ""
+        for r in recommendations:
+            title = r.get("title", "Offre d'emploi")
+            company = r.get("company_name", "Entreprise")
+            location = r.get("location", "Non spécifiée")
+            score = r.get("match_score", 0)
+            salary_min = r.get("salary_min")
+            salary_max = r.get("salary_max")
+            contract_type = r.get("contract_type", "Non spécifié")
+            job_id = r.get("job_id")
+            
+            salary_str = ""
+            if salary_min and salary_max:
+                salary_str = f" • {salary_min:,} - {salary_max:,} FCFA"
+            elif salary_min:
+                salary_str = f" • Min. {salary_min:,} FCFA"
+                
+            badge_color = "#10b981" if score >= 80 else ("#f59e0b" if score >= 70 else "#6b7280")
+            job_url = f"{settings.FRONTEND_URL}/candidate/job/{job_id}"
+            
+            recos_html += f"""
+            <div style="border: 1px solid #e5e7eb; border-radius: 16px; padding: 18px; margin-bottom: 16px; background-color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td>
+                            <h3 style="margin: 0 0 6px 0; color: #111827; font-size: 18px; font-weight: 700; font-family: sans-serif;">{title}</h3>
+                        </td>
+                        <td style="text-align: right; vertical-align: top;">
+                            <span style="background-color: {badge_color}1a; color: {badge_color}; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; white-space: nowrap; font-family: sans-serif;">
+                                {score}% Match
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+                <p style="margin: 0 0 8px 0; color: #4b5563; font-size: 14px; font-weight: 600; font-family: sans-serif;">{company} • {location}</p>
+                <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 13px; font-family: sans-serif;">Contrat : {contract_type}{salary_str}</p>
+                <a href="{job_url}" style="display: inline-block; background-color: #1a5c32; color: #ffffff; padding: 10px 16px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 700; font-family: sans-serif;">Voir l'offre</a>
+            </div>
+            """
+            
+        html_body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f9fafb; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 24px; padding: 32px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <h2 style="color: #1a5c32; margin: 0; font-size: 24px; font-weight: 800;">SunuSouba</h2>
+                        <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 14px; font-weight: 600; text-transform: uppercase; tracking-wider: 0.1em;">Vos Recommandations Personnalisées</p>
+                    </div>
+                    <p style="font-size: 16px; color: #111827; font-weight: 600;">Bonjour {candidate_name},</p>
+                    <p style="font-size: 14px; color: #4b5563; margin-bottom: 24px;">Notre intelligence artificielle a analysé le marché de l'emploi et a sélectionné ces opportunités qui correspondent parfaitement à vos compétences et à vos critères :</p>
+                    
+                    {recos_html}
+                    
+                    <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-t: 1px solid #e5e7eb;">
+                        <a href="{settings.FRONTEND_URL}/candidate/recommendations" style="display: inline-block; background-color: #1a5c32; color: white; padding: 12px 24px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 14px;">Découvrir toutes les offres</a>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            body=body_text,
+            html_body=html_body
+        )
+
