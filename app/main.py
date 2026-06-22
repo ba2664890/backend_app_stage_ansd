@@ -485,7 +485,8 @@ app = FastAPI(
 
 ALLOWED_ORIGINS = [
     "https://frontend-webscraping-pvfqjzk4q-cardans-projects-cb73ad15.vercel.app",
-    "https://sunusouba.vercel.app",
+    "https://backend-app-stage-ansd.onrender.com",
+    "https://www.sunu-souba.com",
 ]
 
 app.add_middleware(
