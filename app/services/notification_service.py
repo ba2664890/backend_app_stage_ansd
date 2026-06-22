@@ -175,7 +175,7 @@ class NotificationService:
             if resend_key:
                 import requests
                 payload = {
-                    "from": "Sunusouba <onboarding@resend.dev>",
+                    "from": "Sunusouba <no-reply@sunu-souba.com>",
                     "to": [to_email],
                     "subject": subject,
                     "text": body
@@ -253,19 +253,19 @@ class NotificationService:
         # Messages selon le statut
         status_messages = {
             "shortlisted": {
-                "title": "🎯 Votre candidature a été présélectionnée !",
+                "title": " Votre candidature a été présélectionnée !",
                 "message": f"Bonne nouvelle ! Votre candidature pour '{job_title}' a été présélectionnée."
             },
             "interview_scheduled": {
-                "title": "📅 Entretien planifié",
+                "title": " Entretien planifié",
                 "message": f"Un entretien a été planifié pour votre candidature à '{job_title}'."
             },
             "offer_made": {
-                "title": "🎉 Offre d'emploi reçue !",
+                "title": " Offre d'emploi reçue !",
                 "message": f"Félicitations ! Une offre vous a été faite pour '{job_title}'."
             },
             "hired": {
-                "title": "✅ Candidature acceptée !",
+                "title": " Candidature acceptée !",
                 "message": f"Félicitations ! Vous avez été retenu(e) pour '{job_title}'."
             },
             "rejected": {
@@ -391,7 +391,7 @@ class NotificationService:
             db,
             user_id=user.id,
             type="interview_reminder",
-            title="📅 Rappel: Entretien demain",
+            title=" Rappel: Entretien demain",
             message=msg,
             action_url=f"/applications/{application.id}",
             extra_data={"application_id": str(application.id)}
@@ -405,8 +405,8 @@ class NotificationService:
 
             Ceci est un rappel pour votre entretien concernant le poste <strong>'{job_title}'</strong>.
             
-            <strong>📅 Date :</strong> {application.interview_date.strftime('%d/%m/%Y à %H:%M')}
-            <strong>🔗 Format :</strong> {fmt_map[application.interview_type] if application.interview_type in fmt_map else 'Non spécifié'}
+            <strong> Date :</strong> {application.interview_date.strftime('%d/%m/%Y à %H:%M')}
+            <strong> Format :</strong> {fmt_map[application.interview_type] if application.interview_type in fmt_map else 'Non spécifié'}
             {location_info.strip()}
             {instructions_info.strip()}
 
@@ -435,7 +435,7 @@ class NotificationService:
         if not recommendations:
             return False
             
-        subject = f"🎯 {len(recommendations)} opportunités d'emploi qui vous correspondent"
+        subject = f"{len(recommendations)} opportunités d'emploi qui vous correspondent"
         
         # Version texte brute
         body_text = f"Bonjour {candidate_name},\n\nVoici les meilleures offres d'emploi sélectionnées pour vous par notre IA :\n\n"
