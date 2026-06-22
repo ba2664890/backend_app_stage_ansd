@@ -76,6 +76,6 @@ reportlab
 cloudinary 
 python-multipart
 
-# AI Services
+# AI Servicess
 pinecone
 google-generativeai>=0.4.0
