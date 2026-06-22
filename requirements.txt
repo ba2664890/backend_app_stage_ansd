@@ -70,7 +70,6 @@ tenacity
 geopandas
 openpyxl
 groq
-chromadb
 python-dotenv
 openai
 reportlab
