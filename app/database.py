@@ -6,7 +6,7 @@ from typing import Generator
 
 # ✅ Configuration de la base de données PostgreSQL
 DATABASE_URL = os.getenv(
-    "DATABASE_URL" , "postgresql://neondb_owner:npg_dMZCO35gNoeP@ep-long-resonance-a4y4jpe4-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+    "DATABASE_URL" ,)
 
 # ✅ Créer l'engine SQLAlchemy (sans StaticPool)
 engine = create_engine(
