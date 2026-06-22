@@ -461,7 +461,7 @@ Rédige la lettre complète avec formules de politesse adaptées.
         p_right = right_cell.paragraphs[0]
         p_right.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         p_right.paragraph_format.line_spacing = 1.15
-        run_date = p_right.add_run(f"Dakar, le {datetime.now().strftime('%d %B %Y')}\n\n")
+        run_date = p_right.add_run(f"Dakar, le {_format_date_fr(datetime.now())}\n\n")
         run_date.font.size = Pt(9.5)
         run_date.font.color.rgb = text_grey
         
@@ -631,7 +631,7 @@ Rédige la lettre complète avec formules de politesse adaptées.
         set_cell_shading(right_cell, "FFFFFF")
 
         # ── Colonne Gauche (Sidebar) ──────────────────────
-        # Monogramme / Initiales (image circulaire générée — fiable, sans relief de fond carré)
+        # Photo (si disponible) ou monogramme / initiales — image circulaire (fiable, sans relief de fond carré)
         initials = ""
         if profile.first_name: initials += profile.first_name[0]
         if profile.last_name: initials += profile.last_name[0]
@@ -642,9 +642,25 @@ Rédige la lettre complète avec formules de politesse adaptées.
         p_mono.paragraph_format.space_before = Pt(12)
         p_mono.paragraph_format.space_after = Pt(14)
 
-        mono_path = self._circular_monogram_path(initials)
-        if mono_path:
-            p_mono.add_run().add_picture(mono_path, width=Inches(1.15), height=Inches(1.15))
+        avatar_path = None
+        if profile.avatar_url:
+            try:
+                import requests
+                import tempfile
+                r = requests.get(profile.avatar_url, timeout=5)
+                if r.status_code == 200:
+                    temp_photo = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                    temp_photo.write(r.content)
+                    temp_photo.close()
+                    avatar_path = self._circular_image_path(temp_photo.name)
+            except Exception as e:
+                logger.warning(f"Impossible de charger la photo pour le Word : {e}")
+
+        if not avatar_path:
+            avatar_path = self._circular_monogram_path(initials)
+
+        if avatar_path:
+            p_mono.add_run().add_picture(avatar_path, width=Inches(1.15), height=Inches(1.15))
         else:
             run_mono = p_mono.add_run(f" {initials.upper()} ")
             run_mono.bold = True
@@ -690,25 +706,6 @@ Rédige la lettre complète avec formules de politesse adaptées.
 
         add_rule(left_cell)
 
-        # Profil / Bio
-        if profile.bio:
-            p_bio_lbl = left_cell.add_paragraph()
-            p_bio_lbl.paragraph_format.space_after = Pt(4)
-            run_lbl = p_bio_lbl.add_run("PROFIL")
-            run_lbl.bold = True
-            run_lbl.font.color.rgb = teal_color
-            run_lbl.font.size = Pt(9.5)
-
-            p_bio = left_cell.add_paragraph()
-            p_bio.paragraph_format.space_after = Pt(8)
-            p_bio.paragraph_format.line_spacing = 1.2
-            p_bio.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            run_bio = p_bio.add_run(profile.bio)
-            run_bio.font.size = Pt(8.6)
-            run_bio.font.color.rgb = text_dark
-
-            add_rule(left_cell)
-
         # Compétences — étiquettes mises en valeur (fond teinté derrière le texte)
         if profile.skills:
             p_skills_lbl = left_cell.add_paragraph()
@@ -722,6 +719,115 @@ Rédige la lettre complète avec formules de politesse adaptées.
                 p_skill = left_cell.add_paragraph()
                 p_skill.paragraph_format.space_after = Pt(5)
                 run_chip = p_skill.add_run(f" {skill} ")
+                run_chip.bold = True
+                run_chip.font.size = Pt(8.3)
+                run_chip.font.color.rgb = teal_dark
+                shd_chip = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{chip_bg}"/>')
+                run_chip._r.get_or_add_rPr().append(shd_chip)
+
+            add_rule(left_cell)
+
+        # Langues — un item structuré par langue, avec barre de niveau (colonne latérale)
+        if profile.languages:
+            p_lang_lbl = left_cell.add_paragraph()
+            p_lang_lbl.paragraph_format.space_after = Pt(6)
+            run_lbl = p_lang_lbl.add_run("LANGUES")
+            run_lbl.bold = True
+            run_lbl.font.color.rgb = teal_color
+            run_lbl.font.size = Pt(9.5)
+
+            langs = profile.languages if isinstance(profile.languages, list) else list(profile.languages.items())
+            for lang in langs:
+                if isinstance(lang, (list, tuple)):
+                    label, level_str = lang[0], lang[1]
+                else:
+                    label, level_str = str(lang), "Moyen"
+
+                lower_lvl = level_str.lower()
+                if "maternelle" in lower_lvl or "bilingue" in lower_lvl or "parfait" in lower_lvl:
+                    level_val = 1.0
+                elif "courant" in lower_lvl or "avance" in lower_lvl or "avancé" in lower_lvl:
+                    level_val = 0.8
+                elif "intermediaire" in lower_lvl or "intermédiaire" in lower_lvl or "moyen" in lower_lvl:
+                    level_val = 0.6
+                else:
+                    level_val = 0.3
+                level_val = min(max(level_val, 0.06), 0.94)
+
+                p_lname = left_cell.add_paragraph()
+                p_lname.paragraph_format.space_after = Pt(0)
+                run_lname = p_lname.add_run(label)
+                run_lname.bold = True
+                run_lname.font.size = Pt(9)
+                run_lname.font.color.rgb = ink_color
+
+                p_llvl = left_cell.add_paragraph()
+                p_llvl.paragraph_format.space_after = Pt(3)
+                run_llvl = p_llvl.add_run(level_str)
+                run_llvl.font.size = Pt(7.8)
+                run_llvl.font.color.rgb = text_grey
+
+                side_bar_width = Inches(2.0)
+                bar_table = left_cell.add_table(rows=1, cols=2)
+                remove_table_borders(bar_table)
+                for c in bar_table.rows[0].cells:
+                    tcPr = c._tc.get_or_add_tcPr()
+                    tcMar = OxmlElement('w:tcMar')
+                    for side in ('top', 'bottom', 'left', 'right'):
+                        m = OxmlElement(f'w:{side}')
+                        m.set(qn('w:w'), '0')
+                        m.set(qn('w:type'), 'dxa')
+                        tcMar.append(m)
+                    tcPr.append(tcMar)
+                fill_w = Inches(2.0 * level_val)
+                track_w = Inches(2.0 * (1 - level_val))
+                set_table_fixed_layout(bar_table, side_bar_width)
+                bar_table.columns[0].width = fill_w
+                bar_table.columns[1].width = track_w
+                bar_table.rows[0].cells[0].width = fill_w
+                bar_table.rows[0].cells[1].width = track_w
+                set_cell_shading(bar_table.rows[0].cells[0], "0F766E")
+                set_cell_shading(bar_table.rows[0].cells[1], "DCE7E5")
+                for c in bar_table.rows[0].cells:
+                    c.paragraphs[0].paragraph_format.space_after = Pt(0)
+                    c.paragraphs[0].paragraph_format.space_before = Pt(0)
+                    c.paragraphs[0].paragraph_format.line_spacing = 1.0
+                    run_pad = c.paragraphs[0].add_run(" ")
+                    run_pad.font.size = Pt(2)
+
+                p_lgap = left_cell.add_paragraph()
+                p_lgap.paragraph_format.space_after = Pt(8)
+
+            add_rule(left_cell)
+
+        # Centres d'intérêt / Certifications — étiquettes mises en valeur (colonne latérale)
+        interests_list_left = []
+        if hasattr(profile, 'interests') and profile.interests:
+            if isinstance(profile.interests, list):
+                interests_list_left.extend(profile.interests)
+            else:
+                interests_list_left.append(str(profile.interests))
+
+        left_title_text = "CENTRES D'INTÉRÊT"
+        if not interests_list_left and hasattr(profile, 'certifications') and profile.certifications:
+            left_title_text = "CERTIFICATIONS"
+            certs = profile.certifications if isinstance(profile.certifications, list) else [profile.certifications]
+            for cert in certs:
+                label = cert.get("name", str(cert)) if isinstance(cert, dict) else str(cert)
+                interests_list_left.append(label)
+
+        if interests_list_left:
+            p_int_lbl = left_cell.add_paragraph()
+            p_int_lbl.paragraph_format.space_after = Pt(6)
+            run_lbl = p_int_lbl.add_run(left_title_text)
+            run_lbl.bold = True
+            run_lbl.font.color.rgb = teal_color
+            run_lbl.font.size = Pt(9.5)
+
+            for item in interests_list_left:
+                p_item = left_cell.add_paragraph()
+                p_item.paragraph_format.space_after = Pt(5)
+                run_chip = p_item.add_run(f" {item} ")
                 run_chip.bold = True
                 run_chip.font.size = Pt(8.3)
                 run_chip.font.color.rgb = teal_dark
@@ -745,6 +851,32 @@ Rédige la lettre complète avec formules de politesse adaptées.
         run_title.bold = True
         run_title.font.size = Pt(11.5)
         run_title.font.color.rgb = teal_color
+
+        # Profil professionnel (résumé) — colonne principale, sous le titre
+        if profile.bio:
+            p_profil_lbl = right_cell.add_paragraph()
+            p_profil_lbl.paragraph_format.space_after = Pt(6)
+            pPr = p_profil_lbl._p.get_or_add_pPr()
+            pBdr = OxmlElement('w:pBdr')
+            bottom = OxmlElement('w:bottom')
+            bottom.set(qn('w:val'), 'single')
+            bottom.set(qn('w:sz'), '4')
+            bottom.set(qn('w:space'), '2')
+            bottom.set(qn('w:color'), line_grey)
+            pBdr.append(bottom)
+            pPr.append(pBdr)
+            run_profil_lbl = p_profil_lbl.add_run("PROFIL PROFESSIONNEL")
+            run_profil_lbl.bold = True
+            run_profil_lbl.font.color.rgb = ink_color
+            run_profil_lbl.font.size = Pt(11)
+
+            p_profil = right_cell.add_paragraph()
+            p_profil.paragraph_format.space_after = Pt(14)
+            p_profil.paragraph_format.line_spacing = 1.2
+            p_profil.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            run_profil = p_profil.add_run(profile.bio)
+            run_profil.font.size = Pt(9.5)
+            run_profil.font.color.rgb = text_dark
 
         # Timeline en tableau imbriqué (mise en page fixe pour éviter tout débordement)
         timeline_table = right_cell.add_table(rows=0, cols=2)
@@ -857,110 +989,6 @@ Rédige la lettre complète avec formules de politesse adaptées.
                 school = " — ".join(lines[1:]) if len(lines) > 1 else ""
                 add_timeline_item(degree, school)
 
-        # 3. Langues — un item structuré par langue, avec barre de niveau
-        if profile.languages:
-            add_timeline_section("Langues")
-            langs = profile.languages if isinstance(profile.languages, list) else list(profile.languages.items())
-            for lang in langs:
-                if isinstance(lang, (list, tuple)):
-                    label, level_str = lang[0], lang[1]
-                else:
-                    label, level_str = str(lang), "Moyen"
-
-                lower_lvl = level_str.lower()
-                if "maternelle" in lower_lvl or "bilingue" in lower_lvl or "parfait" in lower_lvl:
-                    level_val = 1.0
-                elif "courant" in lower_lvl or "avance" in lower_lvl or "avancé" in lower_lvl:
-                    level_val = 0.8
-                elif "intermediaire" in lower_lvl or "intermédiaire" in lower_lvl or "moyen" in lower_lvl:
-                    level_val = 0.6
-                else:
-                    level_val = 0.3
-
-                row = timeline_table.add_row()
-                row.cells[0].width = time_widths[0]
-                row.cells[1].width = time_widths[1]
-                set_cell_left_border(row.cells[1], color_hex=line_grey)
-
-                p_lang = row.cells[1].paragraphs[0]
-                p_lang.paragraph_format.space_after = Pt(1)
-                run_lang = p_lang.add_run(label)
-                run_lang.bold = True
-                run_lang.font.size = Pt(9.5)
-                run_lang.font.color.rgb = ink_color
-
-                p_lvl = row.cells[1].add_paragraph()
-                p_lvl.paragraph_format.space_after = Pt(3)
-                run_lvl = p_lvl.add_run(level_str)
-                run_lvl.font.size = Pt(8)
-                run_lvl.font.color.rgb = text_grey
-
-                bar_table = row.cells[1].add_table(rows=1, cols=2)
-                remove_table_borders(bar_table)
-                for c in bar_table.rows[0].cells:
-                    tcPr = c._tc.get_or_add_tcPr()
-                    tcMar = OxmlElement('w:tcMar')
-                    for side in ('top', 'bottom', 'left', 'right'):
-                        m = OxmlElement(f'w:{side}')
-                        m.set(qn('w:w'), '0')
-                        m.set(qn('w:type'), 'dxa')
-                        tcMar.append(m)
-                    tcPr.append(tcMar)
-                level_val_clamped = min(max(level_val, 0.06), 0.94)
-                fill_w = Inches(2.6 * level_val_clamped)
-                track_w = Inches(2.6 * (1 - level_val_clamped))
-                set_table_fixed_layout(bar_table, Inches(2.6))
-                bar_table.columns[0].width = fill_w
-                bar_table.columns[1].width = track_w
-                bar_table.rows[0].cells[0].width = fill_w
-                bar_table.rows[0].cells[1].width = track_w
-                set_cell_shading(bar_table.rows[0].cells[0], "0F766E")
-                set_cell_shading(bar_table.rows[0].cells[1], "DCE7E5")
-                for c in bar_table.rows[0].cells:
-                    c.paragraphs[0].paragraph_format.space_after = Pt(0)
-                    c.paragraphs[0].paragraph_format.space_before = Pt(0)
-                    c.paragraphs[0].paragraph_format.line_spacing = 1.0
-                    run_pad = c.paragraphs[0].add_run(" ")
-                    run_pad.font.size = Pt(2)
-
-                p_gap = row.cells[1].add_paragraph()
-                p_gap.paragraph_format.space_after = Pt(4)
-
-        # 4. Centres d'intérêt / Certifications — étiquettes mises en valeur
-        interests_list = []
-        if hasattr(profile, 'interests') and profile.interests:
-            if isinstance(profile.interests, list):
-                interests_list.extend(profile.interests)
-            else:
-                interests_list.append(str(profile.interests))
-
-        title_text = "Centres d'Intérêt"
-        if not interests_list and hasattr(profile, 'certifications') and profile.certifications:
-            title_text = "Certifications"
-            certs = profile.certifications if isinstance(profile.certifications, list) else [profile.certifications]
-            for cert in certs:
-                label = cert.get("name", str(cert)) if isinstance(cert, dict) else str(cert)
-                interests_list.append(label)
-
-        if interests_list:
-            add_timeline_section(title_text)
-            row = timeline_table.add_row()
-            row.cells[0].width = time_widths[0]
-            row.cells[1].width = time_widths[1]
-            set_cell_left_border(row.cells[1], color_hex=line_grey)
-
-            p_int = row.cells[1].paragraphs[0]
-            p_int.paragraph_format.space_after = Pt(6)
-            for i, item in enumerate(interests_list):
-                if i > 0:
-                    p_int.add_run("   ")
-                run_chip = p_int.add_run(f" {item} ")
-                run_chip.bold = True
-                run_chip.font.size = Pt(8.3)
-                run_chip.font.color.rgb = teal_dark
-                shd_chip = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{chip_bg}"/>')
-                run_chip._r.get_or_add_rPr().append(shd_chip)
-
         doc.save(file_path)
         logger.info(f"DOCX CV généré : {file_path}")
         return file_path
@@ -1011,13 +1039,14 @@ Rédige la lettre complète avec formules de politesse adaptées.
     def _make_chip(self, text: str, styles) -> Table:
         """Étiquette arrondie (tag) pour une compétence — largeur ajustée au texte."""
         p = Paragraph(text, styles["cv_chip"])
-        w = pdfmetrics.stringWidth(text, "Helvetica-Bold", 8.2) + 16
+        text_w = pdfmetrics.stringWidth(text, "Helvetica-Bold", 8.2)
+        w = text_w + 20  # marge de sécurité pour éviter tout retour à la ligne
         t = Table([[p]], colWidths=[w])
         t.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, -1), TINT_STRONG),
             ("ROUNDEDCORNERS", [7, 7, 7, 7]),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING", (0, 0), (-1, -1), 9),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 9),
             ("TOPPADDING", (0, 0), (-1, -1), 4),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ]))
@@ -1174,8 +1203,8 @@ Rédige la lettre complète avec formules de politesse adaptées.
         ]))
         return wrapper
 
-    def _create_progress_bar(self, level: float) -> Table:
-        width_total = 3.6 * cm
+    def _create_progress_bar(self, level: float, total_width=3.6 * cm) -> Table:
+        width_total = total_width
         width_fill = max(width_total * level, 0.18 * cm)
         width_empty = width_total - width_fill
 
@@ -1270,93 +1299,6 @@ Rédige la lettre complète avec formules de politesse adaptées.
             blocks.append(section_block(rows))
             blocks.append(Spacer(1, 8))
 
-        # 3. LANGUES
-        if profile.languages:
-            header_row = Table(
-                [[self._square_marker(PRIMARY, 9), Paragraph("LANGUES", styles["cv_section_right"])]],
-                colWidths=[MARKER_COL, CONTENT_COL],
-                style=TableStyle([
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                ])
-            )
-            blocks.append(header_row)
-            blocks.append(Spacer(1, 6))
-
-            langs = profile.languages if isinstance(profile.languages, list) else list(profile.languages.items())
-            lang_flowables = []
-            for lang in langs:
-                if isinstance(lang, (list, tuple)):
-                    label, level_str = lang[0], lang[1]
-                else:
-                    label, level_str = str(lang), "Moyen"
-
-                lower_lvl = level_str.lower()
-                if "maternelle" in lower_lvl or "bilingue" in lower_lvl or "parfait" in lower_lvl:
-                    level_val = 1.0
-                elif "courant" in lower_lvl or "avance" in lower_lvl or "avancé" in lower_lvl:
-                    level_val = 0.8
-                elif "intermediaire" in lower_lvl or "intermédiaire" in lower_lvl or "moyen" in lower_lvl:
-                    level_val = 0.6
-                else:
-                    level_val = 0.3
-
-                lang_bar = self._create_progress_bar(level_val)
-                lang_item_table = Table(
-                    [[Paragraph(label, styles["cv_lang_name"])],
-                     [Paragraph(level_str, styles["cv_lang_level"])],
-                     [lang_bar]],
-                    colWidths=[5.9 * cm], rowHeights=[13, 11, 10],
-                    style=TableStyle([
-                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0), ("TOPPADDING", (0, 0), (-1, -1), 0),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ])
-                )
-                lang_flowables.append(lang_item_table)
-
-            lang_pairs = []
-            for i in range(0, len(lang_flowables), 2):
-                pair = [lang_flowables[i], lang_flowables[i + 1] if i + 1 < len(lang_flowables) else ""]
-                lang_pairs.append(pair)
-
-            lang_table = Table(lang_pairs, colWidths=[6.05 * cm, 6.05 * cm])
-            lang_table.setStyle(TableStyle([
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 10), ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ]))
-            blocks.append(lang_table)
-            blocks.append(Spacer(1, 4))
-
-        # 4. CENTRES D'INTÉRÊT / CERTIFICATIONS
-        interests_list = []
-        if hasattr(profile, 'interests') and profile.interests:
-            if isinstance(profile.interests, list):
-                interests_list.extend(profile.interests)
-            else:
-                interests_list.append(str(profile.interests))
-
-        title_text = "CENTRES D'INTÉRÊT"
-        if not interests_list and hasattr(profile, 'certifications') and profile.certifications:
-            title_text = "CERTIFICATIONS"
-            certs = profile.certifications if isinstance(profile.certifications, list) else [profile.certifications]
-            for cert in certs:
-                label = cert.get("name", str(cert)) if isinstance(cert, dict) else str(cert)
-                interests_list.append(label)
-
-        if interests_list:
-            blocks.append(self._section_header(title_text, styles))
-            blocks.append(Spacer(1, 6))
-            chip_rows = self._pack_chips(interests_list, styles, CONTENT_COL)
-            indented = Table([[r] for r in chip_rows], colWidths=[CONTENT_COL],
-                              style=TableStyle([
-                                  ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                                  ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                              ]))
-            blocks.append(indented)
-
         return blocks
 
     def _cv_left_column(self, profile: UserProfileData, styles) -> List:
@@ -1402,16 +1344,67 @@ Rédige la lettre complète avec formules de politesse adaptées.
         items.append(Spacer(1, 4))
         items.append(HRFlowable(width="100%", thickness=1, color=LINE, spaceAfter=12))
 
-        if profile.bio:
-            items.append(Paragraph("PROFIL", styles["cv_section_left"]))
-            items.append(Paragraph(profile.bio, styles["cv_bio"]))
-            items.append(Spacer(1, 10))
-            items.append(HRFlowable(width="100%", thickness=1, color=LINE, spaceAfter=12))
-
         if profile.skills:
             items.append(Paragraph("COMPÉTENCES", styles["cv_section_left"]))
             items.append(Spacer(1, 2))
             items.extend(self._pack_chips(profile.skills, styles, SIDE_WIDTH))
+            items.append(Spacer(1, 8))
+            items.append(HRFlowable(width="100%", thickness=1, color=LINE, spaceAfter=12))
+
+        if profile.languages:
+            items.append(Paragraph("LANGUES", styles["cv_section_left"]))
+            items.append(Spacer(1, 4))
+
+            langs = profile.languages if isinstance(profile.languages, list) else list(profile.languages.items())
+            for lang in langs:
+                if isinstance(lang, (list, tuple)):
+                    label, level_str = lang[0], lang[1]
+                else:
+                    label, level_str = str(lang), "Moyen"
+
+                lower_lvl = level_str.lower()
+                if "maternelle" in lower_lvl or "bilingue" in lower_lvl or "parfait" in lower_lvl:
+                    level_val = 1.0
+                elif "courant" in lower_lvl or "avance" in lower_lvl or "avancé" in lower_lvl:
+                    level_val = 0.8
+                elif "intermediaire" in lower_lvl or "intermédiaire" in lower_lvl or "moyen" in lower_lvl:
+                    level_val = 0.6
+                else:
+                    level_val = 0.3
+
+                items.append(Paragraph(label, styles["cv_lang_name"]))
+                items.append(Paragraph(level_str, styles["cv_lang_level"]))
+                items.append(Spacer(1, 3))
+                bar = self._create_progress_bar(level_val, total_width=SIDE_WIDTH)
+                bar_wrap = Table([[bar]], colWidths=[SIDE_WIDTH],
+                                  style=TableStyle([
+                                      ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                      ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+                                  ]))
+                items.append(bar_wrap)
+
+            items.append(Spacer(1, 2))
+            items.append(HRFlowable(width="100%", thickness=1, color=LINE, spaceAfter=12))
+
+        interests_list = []
+        if hasattr(profile, 'interests') and profile.interests:
+            if isinstance(profile.interests, list):
+                interests_list.extend(profile.interests)
+            else:
+                interests_list.append(str(profile.interests))
+
+        title_text = "CENTRES D'INTÉRÊT"
+        if not interests_list and hasattr(profile, 'certifications') and profile.certifications:
+            title_text = "CERTIFICATIONS"
+            certs = profile.certifications if isinstance(profile.certifications, list) else [profile.certifications]
+            for cert in certs:
+                label = cert.get("name", str(cert)) if isinstance(cert, dict) else str(cert)
+                interests_list.append(label)
+
+        if interests_list:
+            items.append(Paragraph(title_text, styles["cv_section_left"]))
+            items.append(Spacer(1, 2))
+            items.extend(self._pack_chips(interests_list, styles, SIDE_WIDTH))
 
         return items
 
@@ -1443,7 +1436,13 @@ Rédige la lettre complète avec formules de politesse adaptées.
                                                 ("ROUNDEDCORNERS", [2, 2, 2, 2])]))
         right_col_flowables.append(accent_rule)
         right_col_flowables.append(Spacer(1, 14))
-        
+
+        if profile.bio:
+            right_col_flowables.append(self._section_header("PROFIL PROFESSIONNEL", styles))
+            right_col_flowables.append(Spacer(1, 6))
+            right_col_flowables.append(Paragraph(profile.bio, styles["body_normal"]))
+            right_col_flowables.append(Spacer(1, 12))
+
         right_col_flowables.extend(self._build_timeline_table(profile, target_job, styles))
 
         body_table = Table(
