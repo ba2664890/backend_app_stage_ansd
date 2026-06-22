@@ -324,6 +324,12 @@ class UserCreate(BaseModel):
             return v.lower()
         return v
 
+    @validator('category', pre=True, always=True)
+    def validate_category(cls, v):
+        if v == "" or v is None:
+            return None
+        return v
+
 class UserStatusUpdate(BaseModel):
     """Modèle pour mettre à jour le statut d'un utilisateur."""
     is_active: bool
