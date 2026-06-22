@@ -64,6 +64,8 @@ from .db.init_postgis import PostGISManager
 from .core.exceptions import AppError, setup_exception_handlers
 from app.services import job_service
 from .utils.job_title_extraction import backfill_job_titles
+from .config import settings
+
 
 # Configuration du logging
 setup_logging()
