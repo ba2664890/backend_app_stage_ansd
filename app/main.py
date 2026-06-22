@@ -1614,7 +1614,7 @@ async def send_recommendations_email(
         # 3. Envoyer asynchronement
         background_tasks.add_task(
             send_automatic_recommendation_email,
-            user.email,
+            user.user.email if user.user else "",
             candidate_name,
             recos_list
         )
@@ -1683,7 +1683,7 @@ async def match_cv_with_jobs(
         )
 
         # Envoyer l'email automatique des offres matchées en arrière-plan
-        if user.email:
+        if user.user and user.user.email:
             recos_list = [
                 {
                     "title": rec.title,
@@ -1724,7 +1724,7 @@ async def match_cv_with_jobs(
                 
             background_tasks.add_task(
                 send_automatic_recommendation_email,
-                user.email,
+                user.user.email,
                 f"{user.first_name}" if user.first_name else "Candidat",
                 recos_list
             )
