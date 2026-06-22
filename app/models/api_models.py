@@ -816,3 +816,15 @@ class TrajectoryStepResponse(BaseModel):
         instance.ai_insight = obj.comment or ""
         return instance
 
+
+class RegisterResponse(BaseModel):
+    status: str = "pending_verification"
+    email: str
+    message: str
+
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+
+

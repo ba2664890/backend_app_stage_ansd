@@ -33,7 +33,7 @@ from .models.api_models import (
     ChoroplethResponse, CompanyHiringStats, ContractTypeEvolution, JobOfferResponse, JobAnalyticsResponse, RecommendationRequest, RecommendationResponse, SalaryByExperience, SaveJobRequest,
     UserProfileCreate, UserProfileResponse, JobSearchParams, AuthResponse,
     PaginatedResponse, JobStatisticsResponse ,GeographicStats , SkillsAnalysis ,SalaryTrend , SectorAnalysis , FullAnalyticsResponse, DashboardStats , HeatmapData, UserResponse,
-    TrajectoryStepResponse, RewardResponse
+    TrajectoryStepResponse, RewardResponse, RegisterResponse, VerifyCodeRequest
 )
 
 
@@ -1131,8 +1131,8 @@ from .services.user_service import UserService
 
 user_service = UserService()
 
-async def send_verification_email(email: str, name: str, link: str):
-    """Envoie l'email de vérification de compte."""
+async def send_verification_email(email: str, name: str, code: str):
+    """Envoie l'email de vérification de compte avec un code à 6 chiffres."""
     try:
         from .services.notification_service import NotificationService
         ns = NotificationService()
@@ -1141,20 +1141,23 @@ async def send_verification_email(email: str, name: str, link: str):
         <h2 style="color: #0f172a; margin: 0 0 16px 0; font-size: 20px; font-weight: 700; font-family: sans-serif;">Activez votre compte</h2>
         <p style="color: #475569; font-size: 15px; line-height: 1.6; font-family: sans-serif;">
             Bienvenue sur SunuSouba ! Nous sommes ravis de vous compter parmi nous.<br><br>
-            Pour finaliser la création de votre compte, veuillez confirmer votre adresse e-mail en cliquant sur le bouton ci-dessous :
+            Pour finaliser la création de votre compte, veuillez saisir le code de vérification ci-dessous sur l'application :
         </p>
+        <div style="background-color: #f1f5f9; padding: 16px; border-radius: 12px; font-size: 28px; font-weight: 800; text-align: center; letter-spacing: 6px; color: #124E27; margin: 24px 0; border: 1px solid #e2e8f0; font-family: monospace;">
+            {code}
+        </div>
         """
         html_body = ns._get_base_email_html(
             title="Activez votre compte SunuSouba",
             content_html=content_html,
-            action_url=link,
-            action_label="Confirmer mon e-mail"
+            action_url=None,
+            action_label=None
         )
         
         await ns.send_email(
             to_email=email,
-            subject="Activez votre compte SunuSouba 🚀",
-            body=f"Bonjour {name},\n\nBienvenue sur SunuSouba ! Veuillez copier ce lien dans votre navigateur pour vérifier votre e-mail : {link}",
+            subject="Votre code de vérification SunuSouba 🚀",
+            body=f"Bonjour {name},\n\nBienvenue sur SunuSouba ! Voici votre code de vérification à 6 chiffres : {code}",
             html_body=html_body
         )
     except Exception as e:
@@ -1162,7 +1165,7 @@ async def send_verification_email(email: str, name: str, link: str):
 
 
 # ==================== ENDPOINT /register ====================
-@app.post("/register", response_model=AuthResponse)
+@app.post("/register", response_model=RegisterResponse)
 async def register_user(
     user_in: UserCreate,
     request: Request,
@@ -1171,22 +1174,22 @@ async def register_user(
 ):
     """
     Inscription utilisateur.
-    Crée un utilisateur et un profil vide, puis connecte l'utilisateur en retournant un token d'accès.
+    Crée un utilisateur et un profil vide, puis envoie un code à 6 chiffres par email.
     """
     # Vérifie si l'email existe déjà
     existing_user = db.query(User).filter(User.email == user_in.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email déjà utilisé")
     
-    import secrets
-    verification_token = secrets.token_urlsafe(32)
+    import random
+    verification_code = "".join(random.choices("0123456789", k=6))
     
     # Création de l'utilisateur
     user = User(
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),
         role=UserRole(user_in.role) if user_in.role else UserRole.CANDIDATE,
-        verification_token=verification_token
+        verification_token=verification_code
     )
     db.add(user)
     db.commit()
@@ -1202,37 +1205,78 @@ async def register_user(
         current_title=user_in.current_title,
         experience_years=user_in.experience_years,
         category=user_in.category,
-        verification_token=verification_token
+        verification_token=verification_code
     )
     db.add(profile)
     db.commit()
     db.refresh(profile)
 
-    access_token = create_access_token(data={"sub": user.email})
-    
-    # Construction de la réponse utilisateur via l'ORM
-    user_response = UserProfileResponse.from_orm(profile)
-    user_response.role = user.role.value if user.role else "candidate"
-    user_response.email = user.email
-
-    # Envoyer le mail de vérification en arrière-plan
-    verification_link = f"{request.base_url}verify/{verification_token}"
     candidate_name = f"{user_in.first_name}" if user_in.first_name else "Candidat"
     
     background_tasks.add_task(
         send_verification_email,
         user.email,
         candidate_name,
-        verification_link
+        verification_code
     )
 
+    return RegisterResponse(
+        status="pending_verification",
+        email=user.email,
+        message="Un code de vérification vous a été envoyé par e-mail. Veuillez le saisir pour confirmer la création de votre compte."
+    )
+
+
+
+
+# ==================== ENDPOINT /verify-code ====================
+@app.post("/verify-code", response_model=AuthResponse)
+async def verify_code(req: VerifyCodeRequest, db: Session = Depends(get_db)):
+    """
+    Vérification du code de confirmation à 6 chiffres.
+    Active le compte et retourne le token d'authentification.
+    """
+    user = db.query(User).filter(User.email == req.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+        
+    if user.is_verified:
+        raise HTTPException(status_code=400, detail="Ce compte est déjà activé. Veuillez vous connecter.")
+
+    if not user.verification_token or user.verification_token != req.code:
+        raise HTTPException(status_code=400, detail="Code de vérification incorrect ou expiré")
+
+    # Activer l'utilisateur
+    user.is_verified = True
+    user.verification_token = None
+    
+    # Activer aussi dans le profil si applicable
+    profile = user.profile
+    if profile:
+        profile.verification_token = None
+    
+    db.commit()
+    db.refresh(user)
+    if profile:
+        db.refresh(profile)
+    else:
+        profile = UserProfile(user_id=user.id, last_login=datetime.now())
+        db.add(profile)
+        db.commit()
+        db.refresh(profile)
+
+    # Création du token d'accès
+    access_token = create_access_token(data={"sub": user.email})
+    
+    user_response = UserProfileResponse.from_orm(profile)
+    user_response.role = user.role.value if user.role else "candidate"
+    user_response.email = user.email
+
     return AuthResponse(
-        access_token=access_token, 
+        access_token=access_token,
         token_type="bearer",
         user=user_response
     )
-
-
 
 
 # ==================== LOGIN ====================
@@ -1245,6 +1289,9 @@ async def login(username: str, password: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == username).first()
     if not user or not verify_password(password, str(user.hashed_password)):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
+    
+    if not user.is_verified:
+        raise HTTPException(status_code=400, detail="Veuillez d'abord vérifier votre adresse e-mail.")
     
     access_token = create_access_token(data={"sub": user.email})
     
