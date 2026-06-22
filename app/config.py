@@ -86,6 +86,10 @@ class Settings:
         "OPENAI_API_KEY"
     )
 
+    RESEND_API_KEY: Optional[str] = os.getenv(
+        "RESEND_API_KEY"
+    )
+
     XAI_API_KEY: Optional[str] = os.getenv(
         "XAI_API_KEY"
     )

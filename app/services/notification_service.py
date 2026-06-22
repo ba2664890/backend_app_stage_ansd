@@ -102,14 +102,45 @@ class NotificationService:
         - SMTP_PASSWORD
         """
         try:
-            # Configuration SMTP (à adapter selon votre provider)
+            # 1. Option alternative Resend par HTTP (nécessaire sur Render Free car SMTP (port 587) y est bloqué)
+            resend_key = getattr(settings, 'RESEND_API_KEY', None)
+            if resend_key:
+                import requests
+                payload = {
+                    "from": "Sunusouba <onboarding@resend.dev>",
+                    "to": [to_email],
+                    "subject": subject,
+                    "text": body
+                }
+                if html_body:
+                    payload["html"] = html_body
+                
+                try:
+                    res = requests.post(
+                        "https://api.resend.com/emails",
+                        json=payload,
+                        headers={
+                            "Authorization": f"Bearer {resend_key}",
+                            "Content-Type": "application/json"
+                        },
+                        timeout=15
+                    )
+                    if res.status_code in [200, 201, 202]:
+                        logger.info(f"Email envoyé avec succès via Resend HTTP API à {to_email}")
+                        return True
+                    else:
+                        logger.error(f"Échec de l'envoi d'email via Resend HTTP API ({res.status_code}): {res.text}")
+                except Exception as res_err:
+                    logger.error(f"Erreur de connexion à l'API Resend : {res_err}")
+
+            # 2. Configuration SMTP standard (fallback local ou si payant)
             smtp_host = getattr(settings, 'SMTP_HOST', 'smtp.gmail.com')
             smtp_port = getattr(settings, 'SMTP_PORT', 587)
             smtp_user = getattr(settings, 'SMTP_USER', '')
             smtp_password = getattr(settings, 'SMTP_PASSWORD', '')
             
             if not smtp_user or not smtp_password:
-                logger.warning("SMTP non configuré, email non envoyé")
+                logger.warning("SMTP non configuré et pas de clé Resend active, email non envoyé")
                 return False
             
             # Créer le message
