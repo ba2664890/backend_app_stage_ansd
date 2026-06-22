@@ -21,6 +21,11 @@ class Settings:
     # =========================
     # API Configuration
     # =========================
+    FRONTEND_URL: str = os.getenv(
+        "FRONTEND_URL",
+        "https://sunusouba.vercel.app"
+    )
+
     API_SECRET_KEY: str = os.getenv(
         "API_SECRET_KEY",
         "your-secret-key-here"
