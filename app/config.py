@@ -69,6 +69,11 @@ class Settings:
         "EMAIL_PASSWORD"
     )
 
+    # Alias de configuration pour la compatibilité avec notification_service
+    SMTP_HOST: str = os.getenv("SMTP_HOST") or os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    SMTP_USER: Optional[str] = os.getenv("SMTP_USER") or os.getenv("EMAIL_USER")
+    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD") or os.getenv("EMAIL_PASSWORD")
+
     # =========================
     # External API Keys
     # =========================
