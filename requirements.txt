@@ -69,7 +69,6 @@ geoalchemy2
 tenacity
 geopandas
 openpyxl
-grok
 groq
 chromadb
 python-dotenv
