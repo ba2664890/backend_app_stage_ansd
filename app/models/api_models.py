@@ -285,6 +285,7 @@ class UserProfileResponse(UserProfileBase):
     user_id: UUID
     role: Optional[str] = Field(None, description="Rôle utilisateur")
     email: Optional[str] = Field(None, description="Email de l'utilisateur")
+    is_verified: bool = Field(False, description="Est vérifié")
     settings: Optional[Dict[str, Any]] = None
     
     class Config:

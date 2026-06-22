@@ -4,9 +4,9 @@ Provides REST API endpoints for job data, analytics, and recommendations.
 """
 
 from pydoc import text
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, UploadFile, File, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Depends, UploadFile, File, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse, Response
+from fastapi.responses import JSONResponse, FileResponse, Response, HTMLResponse
 from contextlib import asynccontextmanager
 import asyncio
 import logging
@@ -1128,9 +1128,44 @@ from .services.user_service import UserService
 
 user_service = UserService()
 
+async def send_verification_email(email: str, name: str, link: str):
+    """Envoie l'email de vérification de compte."""
+    try:
+        from .services.notification_service import NotificationService
+        ns = NotificationService()
+        
+        content_html = f"""
+        <h2 style="color: #0f172a; margin: 0 0 16px 0; font-size: 20px; font-weight: 700; font-family: sans-serif;">Activez votre compte</h2>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6; font-family: sans-serif;">
+            Bienvenue sur SunuSouba ! Nous sommes ravis de vous compter parmi nous.<br><br>
+            Pour finaliser la création de votre compte, veuillez confirmer votre adresse e-mail en cliquant sur le bouton ci-dessous :
+        </p>
+        """
+        html_body = ns._get_base_email_html(
+            title="Activez votre compte SunuSouba",
+            content_html=content_html,
+            action_url=link,
+            action_label="Confirmer mon e-mail"
+        )
+        
+        await ns.send_email(
+            to_email=email,
+            subject="Activez votre compte SunuSouba 🚀",
+            body=f"Bonjour {name},\n\nBienvenue sur SunuSouba ! Veuillez copier ce lien dans votre navigateur pour vérifier votre e-mail : {link}",
+            html_body=html_body
+        )
+    except Exception as e:
+        logger.error(f"Erreur envoi email de vérification: {e}")
+
+
 # ==================== ENDPOINT /register ====================
 @app.post("/register", response_model=AuthResponse)
-async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
+async def register_user(
+    user_in: UserCreate,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     """
     Inscription utilisateur.
     Crée un utilisateur et un profil vide, puis connecte l'utilisateur en retournant un token d'accès.
@@ -1176,6 +1211,17 @@ async def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
     user_response = UserProfileResponse.from_orm(profile)
     user_response.role = user.role.value if user.role else "candidate"
     user_response.email = user.email
+
+    # Envoyer le mail de vérification en arrière-plan
+    verification_link = f"{request.base_url}verify/{verification_token}"
+    candidate_name = f"{user_in.first_name}" if user_in.first_name else "Candidat"
+    
+    background_tasks.add_task(
+        send_verification_email,
+        user.email,
+        candidate_name,
+        verification_link
+    )
 
     return AuthResponse(
         access_token=access_token, 
@@ -1393,7 +1439,85 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
         # Chercher dans UserProfile au cas où (fallback)
         profile = db.query(UserProfile).filter(UserProfile.verification_token == token).first()
         if not profile:
-            raise HTTPException(status_code=404, detail="Token de vérification invalide ou expiré")
+            return HTMLResponse(status_code=404, content=f"""
+            <!DOCTYPE html>
+            <html lang="fr">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Lien invalide - SunuSouba</title>
+              <style>
+                body {{
+                  margin: 0;
+                  padding: 0;
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                  background-color: #f1f5f9;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  height: 100vh;
+                }}
+                .card {{
+                  background-color: #ffffff;
+                  border-radius: 24px;
+                  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+                  padding: 40px;
+                  text-align: center;
+                  max-width: 450px;
+                  width: 90%;
+                  border: 1px solid #e2e8f0;
+                }}
+                .icon-container {{
+                  background: #fef2f2;
+                  width: 80px;
+                  height: 80px;
+                  border-radius: 50%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  margin: 0 auto 24px auto;
+                  color: #ef4444;
+                }}
+                h1 {{
+                  color: #0f172a;
+                  font-size: 24px;
+                  margin: 0 0 12px 0;
+                  font-weight: 800;
+                }}
+                p {{
+                  color: #475569;
+                  font-size: 15px;
+                  line-height: 1.6;
+                  margin: 0 0 32px 0;
+                }}
+                .btn {{
+                  display: inline-block;
+                  background-color: #475569;
+                  color: #ffffff;
+                  padding: 14px 32px;
+                  border-radius: 12px;
+                  font-weight: 700;
+                  font-size: 15px;
+                  text-decoration: none;
+                  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                  font-family: sans-serif;
+                }}
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <div class="icon-container">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 40px; height: 40px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                </div>
+                <h1>Lien de vérification invalide</h1>
+                <p>Ce lien est invalide ou a déjà été utilisé pour vérifier votre adresse e-mail. Veuillez vous connecter ou demander un nouveau lien.</p>
+                <a href="{settings.FRONTEND_URL}/login" class="btn">Aller à l'accueil</a>
+              </div>
+            </body>
+            </html>
+            """)
         user = profile.user
 
     # Mettre à jour le statut de vérification
@@ -1407,7 +1531,90 @@ async def verify_email(token: str, db: Session = Depends(get_db)):
     
     db.commit()
     
-    return {"message": "Email vérifié avec succès. Vous pouvez maintenant vous connecter."}
+    return HTMLResponse(content=f"""
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Email Vérifié - SunuSouba</title>
+      <style>
+        body {{
+          margin: 0;
+          padding: 0;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          background-color: #f1f5f9;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+        }}
+        .card {{
+          background-color: #ffffff;
+          border-radius: 24px;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+          padding: 40px;
+          text-align: center;
+          max-width: 450px;
+          width: 90%;
+          border: 1px solid #e2e8f0;
+        }}
+        .icon-container {{
+          background: #ecfdf5;
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 24px auto;
+          color: #10b981;
+        }}
+        h1 {{
+          color: #0f172a;
+          font-size: 24px;
+          margin: 0 0 12px 0;
+          font-weight: 800;
+        }}
+        p {{
+          color: #475569;
+          font-size: 15px;
+          line-height: 1.6;
+          margin: 0 0 32px 0;
+        }}
+        .btn {{
+          display: inline-block;
+          background-color: #124E27;
+          color: #ffffff;
+          padding: 14px 32px;
+          border-radius: 12px;
+          font-weight: 700;
+          font-size: 15px;
+          text-decoration: none;
+          box-shadow: 0 4px 6px -1px rgba(18, 78, 39, 0.2);
+          transition: transform 0.2s, background-color 0.2s;
+          font-family: sans-serif;
+        }}
+        .btn:hover {{
+          background-color: #1a753b;
+          transform: translateY(-1px);
+        }}
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="icon-container">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 40px; height: 40px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+        </div>
+        <h1>Adresse e-mail vérifiée !</h1>
+        <p>Merci d'avoir validé votre adresse. Votre compte SunuSouba est désormais pleinement actif et vous pouvez maintenant vous connecter.</p>
+        <a href="{settings.FRONTEND_URL}/login" class="btn">Se connecter à SunuSouba</a>
+      </div>
+    </body>
+    </html>
+    """)
 
 # ==================== PROFIL UTILISATEUR ====================
 @app.post("/api/v1/users/profile", response_model=UserProfileResponse)
