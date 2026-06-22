@@ -91,12 +91,6 @@ async def run_digest_generation(db: Session) -> int:
                 reco_response = rec_service.get_recommendations(db, str(user.id), request_payload)
                 top_recos = reco_response.recommendations[:10]
                 
-                if not top_recos:
-                    logger.info(f"Aucune recommandation trouvée pour {user.email}.")
-                    continue
-                    
-                candidate_name = f"{profile.first_name}" if profile.first_name else "Candidat"
-                
                 # Formater les recommandations pour l'email
                 recos_list = [
                     {
@@ -112,6 +106,33 @@ async def run_digest_generation(db: Session) -> int:
                     for r in top_recos
                 ]
                 
+                # Fallback de test s'il n'y a aucune offre en base de données
+                if not recos_list:
+                    recos_list = [
+                        {
+                            "title": "Développeur Fullstack React / FastAPI (Exemple)",
+                            "company_name": "Sunusouba Tech",
+                            "location": "Dakar, Sénégal",
+                            "match_score": 95,
+                            "salary_min": 500000,
+                            "salary_max": 800000,
+                            "contract_type": "CDI",
+                            "job_id": "test-job-1"
+                        },
+                        {
+                            "title": "Chargé de Clientèle & Support (Exemple)",
+                            "company_name": "Dakar Digital Services",
+                            "location": "Saint-Louis, Sénégal",
+                            "match_score": 82,
+                            "salary_min": 300000,
+                            "salary_max": 450000,
+                            "contract_type": "CDD",
+                            "job_id": "test-job-2"
+                        }
+                    ]
+                
+                candidate_name = f"{profile.first_name}" if profile.first_name else "Candidat"
+
                 # Envoyer l'email
                 success = await notif_service.send_job_recommendations_email(
                     to_email=user.email,
