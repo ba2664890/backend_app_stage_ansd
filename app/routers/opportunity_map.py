@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.database_models import (
     CandidateCategory,
+    JobRecommendation,
     OffreEmploiBrute,
     OffreEmploiEnrichie,
     SenegalAdminBoundary,
@@ -162,14 +163,17 @@ def _request_center(
     return None, "unavailable"
 
 
-def _skills_overlap_score(user_skills: list[str], target_skills: list[str], base: int = 62) -> int:
-    normalized_user = {_normalize(skill) for skill in user_skills if skill}
-    normalized_target = {_normalize(skill) for skill in target_skills if skill}
-    if not normalized_target:
-        return base
-    overlap = len(normalized_user.intersection(normalized_target))
-    score = base + min(30, overlap * 10)
-    return max(45, min(98, score))
+def _load_recommendation_scores(db: Session, user_profile_id: Any) -> Dict[str, int]:
+    """Charge depuis job_recommendations les scores IA déjà calculés.
+
+    Retourne un dict {enrichie_id_str -> score_percent} (0–100).
+    """
+    rows = (
+        db.query(JobRecommendation.job_id, JobRecommendation.match_score)
+        .filter(JobRecommendation.user_id == user_profile_id)
+        .all()
+    )
+    return {str(row.job_id): round(float(row.match_score) * 100) for row in rows}
 
 
 def _job_payload(
@@ -177,7 +181,7 @@ def _job_payload(
     enrichie: Optional[OffreEmploiEnrichie],
     boundaries: list[Dict[str, Any]],
     center: Optional[Dict[str, float]],
-    user_skills: Optional[list[str]] = None,
+    recommendation_scores: Optional[Dict[str, int]] = None,
 ) -> Optional[Dict[str, Any]]:
     boundary = _resolve_boundary(boundaries, brute.location, brute.admin_boundary_id)
     if not boundary:
@@ -186,6 +190,10 @@ def _job_payload(
     coordinates = boundary["coordinates"]
     skills = list(enrichie.extracted_skills or []) if enrichie else []
     distance = round(_distance_km(center, coordinates), 1) if center and coordinates else None
+
+    # Score IA précalculé depuis job_recommendations, 0 si absent
+    enrichie_id = str(enrichie.id) if enrichie else None
+    match_score = (recommendation_scores or {}).get(enrichie_id, 0) if enrichie_id else 0
 
     return {
         "id": str(brute.id),
@@ -210,7 +218,7 @@ def _job_payload(
             "parent_name": boundary["parent_name"],
         },
         "distance_km": distance,
-        "match_score": _skills_overlap_score(user_skills or [], skills),
+        "match_score": match_score,
         "detail_path": f"/candidate/job/{brute.id}",
     }
 
@@ -219,7 +227,6 @@ def _candidate_payload(
     profile: UserProfile,
     boundaries: list[Dict[str, Any]],
     center: Optional[Dict[str, float]],
-    search_skills: list[str],
 ) -> Optional[Dict[str, Any]]:
     boundary = _resolve_boundary(boundaries, profile.location, profile.admin_boundary_id)
     if not boundary:
@@ -251,7 +258,7 @@ def _candidate_payload(
         "availability": profile.availability,
         "category": getattr(profile.category, "value", profile.category),
         "distance_km": distance,
-        "match_score": _skills_overlap_score(search_skills, skills, base=65),
+        "match_score": 0,  # les talents n'ont pas de score IA individuel sur la carte
         "detail_path": f"/enterprise/candidates/{profile.user_id}",
     }
 
@@ -392,7 +399,9 @@ async def get_candidate_radar(
     boundaries = _boundary_rows(db)
     center, center_source = _request_center(current_user, boundaries, lat, lng, location)
     user_category = getattr(current_user.category, "value", current_user.category)
-    user_skills = list(current_user.skills or [])
+
+    # Charge les scores IA déjà calculés (via recommendation_service)
+    recommendation_scores = _load_recommendation_scores(db, current_user.id)
 
     query = _jobs_query(db, search, location, contract_type, sector, skill, user_category)
     rows = query.limit(limit * 2).all()
@@ -400,7 +409,7 @@ async def get_candidate_radar(
     radius_km = radius_meters / 1000.0
     jobs: list[Dict[str, Any]] = []
     for brute, enrichie in rows:
-        payload = _job_payload(brute, enrichie, boundaries, center, user_skills)
+        payload = _job_payload(brute, enrichie, boundaries, center, recommendation_scores)
         if not payload:
             continue
         if center and payload["distance_km"] is not None and payload["distance_km"] > radius_km:
@@ -452,7 +461,8 @@ async def get_recruiter_radar(
     job_rows = _jobs_query(db, search, location, contract_type, sector, skill, None).limit(limit).all()
     jobs: list[Dict[str, Any]] = []
     for brute, enrichie in job_rows:
-        payload = _job_payload(brute, enrichie, boundaries, center, [])
+        # En mode recruteur, pas de score IA candidat → 0
+        payload = _job_payload(brute, enrichie, boundaries, center, {})
         if not payload:
             continue
         payload["detail_path"] = f"/enterprise/jobs"
@@ -487,11 +497,10 @@ async def get_recruiter_radar(
             text("user_profiles.skills::text ILIKE :talent_skill").params(talent_skill=f"%{skill}%")
         )
 
-    requested_skills = [part.strip() for part in [skill, search] if part and part.strip()]
     talent_rows = talent_query.limit(limit * 2).all()
     talents: list[Dict[str, Any]] = []
     for profile in talent_rows:
-        payload = _candidate_payload(profile, boundaries, center, requested_skills)
+        payload = _candidate_payload(profile, boundaries, center)
         if not payload:
             continue
         if center and payload["distance_km"] is not None and payload["distance_km"] > radius_km:
