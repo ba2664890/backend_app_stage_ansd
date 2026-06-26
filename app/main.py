@@ -1469,9 +1469,14 @@ async def auth_google(req: GoogleAuthRequest, db: Session = Depends(get_db)):
     user_response.role = user.role.value
     user_response.email = user.email
     
+    # Si le compte vient d'être créé en tant que candidat, demander au frontend
+    # de faire choisir la catégorie (pupil / student_pro / informal) avant de
+    # rediriger. On renvoie le token pour que le frontend puisse appeler PATCH
+    # /api/v1/users/profile une fois la catégorie choisie.
+    needs_category = (role_enum == UserRole.CANDIDATE)
     return GoogleAuthResponse(
         success=True,
-        is_new_user=False,
+        is_new_user=needs_category,
         access_token=access_token,
         user=user_response
     )
