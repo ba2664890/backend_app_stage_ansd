@@ -91,6 +91,8 @@ class JobOfferResponse(JobOfferBase):
     processed_at: Optional[datetime] = Field(None, description="Date de traitement NLP")
     recruiter_id: Optional[UUID] = None
     contributor_id: Optional[UUID] = None
+    match_score: Optional[float] = None
+    relevance_score: Optional[float] = None
 
     @validator("posted_date", pre=True, always=True)
     def parse_posted_date(cls, v):

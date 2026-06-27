@@ -2,10 +2,11 @@
 Routes API pour la gestion des offres d'emploi.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from uuid import UUID
+import logging
 
 from ..database import get_db
 from ..models.api_models import (
@@ -16,13 +17,16 @@ from ..models.api_models import (
 )
 from ..services.job_service import JobService
 from ..utils.auth import get_current_user, get_current_active_user_optional
-# get_current_active_user_optional est nécessaire pour la recherche publique (visiteur vs connecté)
+from ..models.database_models import OffreEmploiBrute, OffreEmploiEnrichie
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 job_service = JobService()
 
 @router.get("", response_model=PaginatedResponse[JobOfferResponse])
 async def search_jobs(
+    request: Request,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     search: Optional[str] = None,
@@ -56,21 +60,33 @@ async def search_jobs(
     # Récupérer la catégorie de l'utilisateur si connecté
     user_category = None
     if current_user:
-        # On suppose que category est accessible sur l'objet user ou via son profil
-        # Vérifions le modèle User. Il a un champ 'category' ? 
-        # Non, User a 'role'. UserProfile a peut-être 'category' ?
-        # Dans database_models.py, User a role mais pas directement category sauf si c'est un champ ajouté dynamiquement.
-        # Mais le frontend envoie 'category' dans le token ou le User context.
-        # Le model 'User' n'a PAS de champ category visiblement (step 1258).
-        # MAIS wait, le frontend fait `const category = (user as any)?.category`.
-        # On va vérifier si le User Pydantic le renvoie.
-        # Si non, on va supposer que c'est sur le profil.
         if hasattr(current_user, 'category'):
             user_category = current_user.category
         elif hasattr(current_user, 'profile') and current_user.profile and hasattr(current_user.profile, 'category'):
             user_category = current_user.profile.category
             
-    return job_service.search_jobs(db, params, user_category)
+    paginated_response = job_service.search_jobs(db, params, user_category)
+
+    # Si l'utilisateur est connecté et actif, calculer le score de matching IA dynamique pour chaque offre
+    if current_user and hasattr(request.app.state, 'recommendation_service'):
+        try:
+            reco_service = request.app.state.recommendation_service
+            for job_response in paginated_response.items:
+                result = db.query(OffreEmploiBrute, OffreEmploiEnrichie).join(
+                    OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id, isouter=True
+                ).filter(OffreEmploiBrute.id == job_response.id).first()
+                if result:
+                    brute, enrichie = result
+                    if enrichie:
+                        score, reasons, breakdown = reco_service._calculate_match_score(
+                            current_user, brute, enrichie
+                        )
+                        job_response.match_score = score
+                        job_response.relevance_score = score
+        except Exception as e:
+            logger.error(f"Error calculating dynamic match scores in search_jobs: {e}")
+
+    return paginated_response
 
 @router.get("/my", response_model=List[JobOfferResponse])
 async def get_my_jobs(
@@ -211,11 +227,36 @@ async def remove_saved_job(
 @router.get("/{job_id}", response_model=JobOfferResponse)
 async def get_job(
     job_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user_optional)
 ):
-    """Récupère une offre par son identifiant."""
-    job = job_service.get_job_by_id(db, job_id)
-    if not job:
+    """Récupère une offre par son identifiant et calcule le score de matching dynamique."""
+    try:
+        uuid_obj = UUID(job_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format d'ID invalide")
+
+    result = db.query(OffreEmploiBrute, OffreEmploiEnrichie).join(
+        OffreEmploiEnrichie, OffreEmploiBrute.id == OffreEmploiEnrichie.offre_id, isouter=True
+    ).filter(OffreEmploiBrute.id == uuid_obj).first()
+
+    if not result:
         raise HTTPException(status_code=404, detail="Offre non trouvée")
-    return job
+
+    brute, enrichie = result
+    job_response = job_service._create_job_response(brute, enrichie)
+
+    if current_user and hasattr(request.app.state, 'recommendation_service'):
+        try:
+            if enrichie:
+                reco_service = request.app.state.recommendation_service
+                score, reasons, breakdown = reco_service._calculate_match_score(
+                    current_user, brute, enrichie
+                )
+                job_response.match_score = score
+                job_response.relevance_score = score
+        except Exception as e:
+            logger.error(f"Error calculating dynamic match score for job {job_id}: {e}")
+
+    return job_response
