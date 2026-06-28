@@ -65,10 +65,12 @@ class AdvertiserService:
         db_job.contributor_id = user_id
         db.commit()
         
-        self.add_points(db, user_id, 10, "job_post_form")
+        points = 20 if getattr(job_data, "is_ocr_extracted", False) else 10
+        reason = "job_post_file" if getattr(job_data, "is_ocr_extracted", False) else "job_post_form"
+        self.add_points(db, user_id, points, reason)
         return job_response
 
-    async def post_job_file(self, db: Session, user_id: UUID, file_path: str) -> JobOfferResponse:
+    async def post_job_file(self, db: Session, user_id: UUID, file_path: str) -> JobCreate:
         """Extrait les infos d'un fichier (PDF/Word ou Image), publie l'offre et attribue des points."""
         import os
         file_ext = os.path.splitext(file_path)[1].lower()
@@ -168,17 +170,7 @@ FORMAT JSON ATTENDU:
         }
         
         logger.info(f"Données extraites et nettoyées: title={cleaned_data['title']}, company={cleaned_data['company_name']}")
-            
-        job_create = JobCreate(**cleaned_data)
-        job_response = self.job_service.create_job(db, job_create, recruiter_id=None, company_id=None)
-        
-        # Mettre à jour le contributeur
-        db_job = db.query(OffreEmploiBrute).filter(OffreEmploiBrute.id == job_response.id).first()
-        db_job.contributor_id = user_id
-        db.commit()
-        
-        self.add_points(db, user_id, 20, "job_post_file")
-        return job_response
+        return JobCreate(**cleaned_data)
 
     def list_rewards(self, db: Session) -> List[Reward]:
         """Liste les récompenses actives disponibles."""

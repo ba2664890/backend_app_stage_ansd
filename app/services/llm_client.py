@@ -117,9 +117,6 @@ class LLMClient:
         if not self.client_ready:
             raise ValueError("Le service Vision n'est pas configuré. Clé API manquante.")
 
-        # Modèle spécifique si besoin, mais gemini-1.5-flash gère la vision
-        vision_model = genai.GenerativeModel("gemini-1.5-flash")
-        
         full_prompt = (
             f"INSTRUCTION SYSTÈME:\n{system_prompt}\n\n"
             "IMPORTANT: Réponds EXCLUSIVEMENT avec un objet JSON valide, sans balises markdown.\n\n"
@@ -133,7 +130,7 @@ class LLMClient:
         }
 
         try:
-            response = await vision_model.generate_content_async(
+            response = await self.model.generate_content_async(
                 [full_prompt, image_part],
                 generation_config=GenerationConfig(
                     temperature=0.3,

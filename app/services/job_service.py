@@ -270,16 +270,7 @@ class JobService:
             raise
     
     def get_saved_jobs(self, db: Session, user_id: UUID) -> List[JobOfferResponse]:
-        """
-        Récupère les offres sauvegardées par un utilisateur.
-        
-        Args:
-            db: Session de base de données
-            user_id: UUID de l'utilisateur
-            
-        Returns:
-            Liste des offres sauvegardées
-        """
+
         try:
             # NOTE: Cette méthode nécessite une table user_saved_jobs dans votre DB
             # Exemple de requête avec jointure

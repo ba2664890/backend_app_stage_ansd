@@ -59,6 +59,7 @@ class JobCreate(BaseModel):
     languages: Optional[List[str]] = Field(None, description="Langues requises")
     benefits: Optional[List[str]] = Field(None, description="Avantages")
     nb_positions: Optional[int] = Field(1, description="Nombre de postes")
+    is_ocr_extracted: Optional[bool] = Field(False, description="Indique si l'offre a été pré-remplie par OCR")
 
 class JobOfferResponse(JobOfferBase):
     """Modèle de réponse pour une offre d'emploi enrichie."""

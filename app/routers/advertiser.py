@@ -36,7 +36,7 @@ async def post_job_form(
     """Publie une offre d'emploi via un formulaire standard."""
     return await service.post_job_form(db, current_user.user_id, job_data)
 
-@router.post("/jobs/upload", response_model=JobOfferResponse)
+@router.post("/jobs/upload", response_model=JobCreate)
 async def post_job_file(
     file: UploadFile = File(...),
     current_user = Depends(get_current_user),
