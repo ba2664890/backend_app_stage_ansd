@@ -231,7 +231,7 @@ class UserProfileBase(BaseModel):
 
     last_name: Optional[str] = Field(None, description="Nom")
     location: Optional[str] = Field(None, description="Localisation")
-    category: Optional[CandidateCategory] = Field(CandidateCategory.STUDENT_PRO, description="Catégorie de profil candidat")
+    category: Optional[CandidateCategory] = Field(None, description="Catégorie de profil candidat")
     current_title: Optional[str] = Field(None, description="Titre du poste actuel")
     experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
     education_level: Optional[str] = Field(None, description="Niveau d'éducation")
@@ -317,7 +317,7 @@ class UserCreate(BaseModel):
     location: Optional[str] = Field(None, description="Localisation")
     current_title: Optional[str] = Field(None, description="Titre actuel du poste")
     experience_years: Optional[int] = Field(None, ge=0, description="Années d'expérience")
-    category: Optional[CandidateCategory] = Field(CandidateCategory.STUDENT_PRO, description="Catégorie de profil candidat")
+    category: Optional[CandidateCategory] = Field(None, description="Catégorie de profil candidat")
 
     @validator('role', pre=True, always=True)
     def validate_role(cls, v):

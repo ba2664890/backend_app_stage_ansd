@@ -222,8 +222,7 @@ class UserProfile(Base):
             name="candidate_category_enum", 
             create_type=True,
             values_callable=lambda x: [e.value for e in x]
-        ), 
-        default=CandidateCategory.STUDENT_PRO
+        )
     )
     current_title = Column(String(255))
     experience_years = Column(Integer)
