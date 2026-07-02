@@ -87,10 +87,18 @@ class DigitalPassportService:
     
     @staticmethod
     async def get_passport_progress(db: Session, user_id: str) -> Dict:
-        """Récupérer la progression du Passeport."""
+        """Récupérer la progression du Passeport (le crée s'il n'existe pas)."""
         passport = db.query(DigitalPassport).filter_by(user_id=user_id).first()
         if not passport:
-            return None
+            # Créer automatiquement le passeport pour éviter le 404
+            passport = DigitalPassport(
+                user_id=user_id,
+                status=PassportStatus.CREATED,
+                issue_date=datetime.now()
+            )
+            db.add(passport)
+            db.commit()
+            db.refresh(passport)
         
         reviews = db.query(PeerReview).filter_by(passport_id=passport.id).all()
         
