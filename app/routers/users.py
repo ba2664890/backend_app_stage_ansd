@@ -159,16 +159,64 @@ async def update_user_settings(
     """
     return user_service.update_settings(db, current_user.user_id, settings)
 
-@router.delete("/account", status_code=204)
-async def delete_user_account(
+@router.post("/account/delete-request")
+async def request_delete_account(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """
-    Supprime le compte utilisateur et envoie un email de confirmation.
+    Génère un code de confirmation et l'envoie à l'utilisateur par email.
     """
-    user_email = current_user.user.email if current_user.user else None
+    import random
+    if not current_user.user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+        
+    code = f"{random.randint(100000, 999999)}"
+    current_user.user.verification_token = code
+    db.commit()
+    
+    user_email = current_user.user.email
+    first_name = current_user.first_name
+    
+    try:
+        ns = NotificationService()
+        html_body = ns._get_base_email_html(
+            title="Sécurité : Code de confirmation de suppression",
+            content_html=f"<p>Bonjour {first_name or ''},</p><p>Vous avez demandé la suppression définitive de votre compte sur la plateforme Sunu Souba.</p><p>Pour valider cette action, veuillez saisir le code de vérification suivant :</p><p style='font-size: 24px; font-weight: bold; letter-spacing: 4px; text-align: center; color: #1a5c32; margin: 20px 0;'>{code}</p><p>Ce code est strictement personnel. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail en toute sécurité.</p>",
+            action_url=None,
+            action_label=None
+        )
+        background_tasks.add_task(
+            ns.send_email,
+            to_email=user_email,
+            subject="Code de confirmation de suppression - Sunu Souba 🔒",
+            body=f"Bonjour {first_name or ''},\n\nVous avez demandé la suppression de votre compte Sunu Souba. Saisissez ce code à 6 chiffres pour confirmer : {code}",
+            html_body=html_body
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Impossible d'envoyer l'email de confirmation")
+        
+    return {"message": "Code de confirmation envoyé par e-mail"}
+
+@router.delete("/account", status_code=204)
+async def delete_user_account(
+    code: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Valide le code et supprime définitivement le compte utilisateur.
+    """
+    if not current_user.user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+        
+    stored_code = current_user.user.verification_token
+    if not stored_code or stored_code != code:
+        raise HTTPException(status_code=400, detail="Code de confirmation incorrect ou expiré")
+        
+    user_email = current_user.user.email
     first_name = current_user.first_name
     
     success = user_service.delete_user(db, current_user.user_id)
@@ -180,7 +228,7 @@ async def delete_user_account(
             ns = NotificationService()
             html_body = ns._get_base_email_html(
                 title="Suppression de votre compte Sunu Souba",
-                content_html=f"<p>Bonjour {first_name or ''},</p><p>Nous vous confirmons que votre compte Sunu Souba ainsi que toutes les données associées ont été définitivement supprimés à votre demande.</p><p>Nous vous remercions d'avoir utilisé notre plateforme et vous souhaitons une excellente continuation dans vos projets professionnels.</p>",
+                content_html=f"<p>Bonjour {first_name or ''},</p><p>Nous vous confirmons que votre compte Sunu Souba ainsi que toutes les données associées ont été définitivement supprimés à votre demande.</p><p>Nous vous remercions d'avoir utilisé notre plateforme et vous souhaitons le meilleur pour votre avenir professionnel.</p>",
                 action_url=None,
                 action_label=None
             )
@@ -188,11 +236,10 @@ async def delete_user_account(
                 ns.send_email,
                 to_email=user_email,
                 subject="Confirmation de la suppression de votre compte - Sunu Souba 🗑️",
-                body=f"Bonjour {first_name or ''},\n\nNous vous confirmons que votre compte Sunu Souba ainsi que toutes les données associées ont été définitivement supprimés à votre demande.\n\nNous vous remercions d'avoir utilisé notre plateforme.",
+                body=f"Bonjour {first_name or ''},\n\nNous vous confirmons que votre compte Sunu Souba a été définitivement supprimé.",
                 html_body=html_body
             )
         except Exception as e:
-            # Ne pas bloquer la réponse de suppression en cas d'erreur de préparation d'email
             pass
             
     return None
