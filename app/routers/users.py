@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Body, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from uuid import UUID
@@ -9,6 +9,7 @@ from ..models.api_models import JobOfferResponse
 from ..models.database_models import UserProfile, UserRole
 from ..services.user_service import UserService
 from ..services.job_service import JobService
+from ..services.notification_service import NotificationService
 from ..utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
@@ -160,15 +161,40 @@ async def update_user_settings(
 
 @router.delete("/account", status_code=204)
 async def delete_user_account(
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """
-    Supprime le compte utilisateur.
+    Supprime le compte utilisateur et envoie un email de confirmation.
     """
+    user_email = current_user.user.email if current_user.user else None
+    first_name = current_user.first_name
+    
     success = user_service.delete_user(db, current_user.user_id)
     if not success:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+        
+    if user_email:
+        try:
+            ns = NotificationService()
+            html_body = ns._get_base_email_html(
+                title="Suppression de votre compte Sunu Souba",
+                content_html=f"<p>Bonjour {first_name or ''},</p><p>Nous vous confirmons que votre compte Sunu Souba ainsi que toutes les données associées ont été définitivement supprimés à votre demande.</p><p>Nous vous remercions d'avoir utilisé notre plateforme et vous souhaitons une excellente continuation dans vos projets professionnels.</p>",
+                action_url=None,
+                action_label=None
+            )
+            background_tasks.add_task(
+                ns.send_email,
+                to_email=user_email,
+                subject="Confirmation de la suppression de votre compte - Sunu Souba 🗑️",
+                body=f"Bonjour {first_name or ''},\n\nNous vous confirmons que votre compte Sunu Souba ainsi que toutes les données associées ont été définitivement supprimés à votre demande.\n\nNous vous remercions d'avoir utilisé notre plateforme.",
+                html_body=html_body
+            )
+        except Exception as e:
+            # Ne pas bloquer la réponse de suppression en cas d'erreur de préparation d'email
+            pass
+            
     return None
 
 @router.get("/export")

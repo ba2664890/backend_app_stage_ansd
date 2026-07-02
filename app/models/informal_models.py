@@ -6,7 +6,7 @@ Inclut: Passeport numérique, Portfolio, Mentoring, Badges, Micro-crédits, etc.
 from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Boolean, ARRAY, JSON, ForeignKey, UniqueConstraint, Index, Enum as SQLAlchemyEnum
 import enum
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 import uuid
 from datetime import datetime
@@ -110,7 +110,7 @@ class DigitalPassport(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relations
-    user = relationship("User", backref="digital_passport")
+    user = relationship("User", backref=backref("digital_passport", cascade="all, delete-orphan"))
     peer_reviews = relationship("PeerReview", back_populates="passport", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -206,7 +206,7 @@ class ProjectPortfolio(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relations
-    user = relationship("User", backref="projects")
+    user = relationship("User", backref=backref("projects", cascade="all, delete-orphan"))
     portfolio_feedbacks = relationship("PortfolioFeedback", back_populates="project", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -286,7 +286,7 @@ class UserBadge(Base):
     evidence = Column(JSON)  # Preuve d'obtention (id de peer review, projet, etc.)
     
     # Relations
-    user = relationship("User", backref="badges")
+    user = relationship("User", backref=backref("badges", cascade="all, delete-orphan"))
     badge = relationship("Badge", back_populates="user_badges")
     
     __table_args__ = (
@@ -332,8 +332,8 @@ class Mentorship(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relations
-    mentor = relationship("User", foreign_keys=[mentor_id], backref="mentorships_as_mentor")
-    apprentice = relationship("User", foreign_keys=[apprentice_id], backref="mentorships_as_apprentice")
+    mentor = relationship("User", foreign_keys=[mentor_id], backref=backref("mentorships_as_mentor", cascade="all, delete-orphan"))
+    apprentice = relationship("User", foreign_keys=[apprentice_id], backref=backref("mentorships_as_apprentice", cascade="all, delete-orphan"))
     sessions = relationship("MentorshipSession", back_populates="mentorship", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -425,7 +425,7 @@ class TrustBond(Base):
     user = relationship(
         "User",
         foreign_keys=[user_id],
-        backref="trust_bonds"
+        backref=backref("trust_bonds", cascade="all, delete-orphan")
     )
 
     # admin / expert qui valide
@@ -561,7 +561,7 @@ class CourseEnrollment(Base):
     
     # Relations
     course = relationship("TrainingCourse", back_populates="enrollments")
-    user = relationship("User", backref="training_enrollments")
+    user = relationship("User", backref=backref("training_enrollments", cascade="all, delete-orphan"))
     
     __table_args__ = (
         UniqueConstraint('course_id', 'user_id', name='uq_course_user_enrollment'),
@@ -624,7 +624,7 @@ class MicroLoan(Base):
     user = relationship(
         "User",
         foreign_keys=[user_id],
-        backref="micro_loans"
+        backref=backref("micro_loans", cascade="all, delete-orphan")
     )
 
     approver = relationship(
@@ -705,7 +705,7 @@ class InformalSkillMapping(Base):
     user = relationship(
         "User",
         foreign_keys=[user_id],
-        backref="skill_mappings"
+        backref=backref("skill_mappings", cascade="all, delete-orphan")
     )
 
     validator = relationship(
@@ -750,8 +750,8 @@ class PeerRecommendation(Base):
     created_at = Column(DateTime, default=func.now())
     
     # Relations
-    recommender = relationship("User", foreign_keys=[recommender_id], backref="peer_recommendations_given")
-    recommended = relationship("User", foreign_keys=[recommended_id], backref="peer_recommendations_received")
+    recommender = relationship("User", foreign_keys=[recommender_id], backref=backref("peer_recommendations_given", cascade="all, delete-orphan"))
+    recommended = relationship("User", foreign_keys=[recommended_id], backref=backref("peer_recommendations_received", cascade="all, delete-orphan"))
     
     __table_args__ = (
         Index('idx_recommendation_recommender', 'recommender_id'),
@@ -794,7 +794,7 @@ class CareerProgression(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relations
-    user = relationship("User", backref="career_progression", uselist=False)
+    user = relationship("User", backref=backref("career_progression", cascade="all, delete-orphan"), uselist=False)
     
     __table_args__ = (
         Index('idx_career_user', 'user_id'),
